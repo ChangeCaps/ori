@@ -84,6 +84,9 @@ pub(crate) fn convert_key(key: VirtualKeyCode) -> Option<Key> {
         // Symbol keys
         VirtualKeyCode::Equals | VirtualKeyCode::NumpadAdd | VirtualKeyCode::Plus => Key::Plus,
         VirtualKeyCode::Minus | VirtualKeyCode::NumpadSubtract => Key::Minus,
+        VirtualKeyCode::Asterisk | VirtualKeyCode::NumpadMultiply => Key::Asterisk,
+        VirtualKeyCode::Slash | VirtualKeyCode::NumpadDivide => Key::Slash,
+        VirtualKeyCode::Backslash => Key::Backslash,
         VirtualKeyCode::Period | VirtualKeyCode::NumpadDecimal => Key::Period,
         VirtualKeyCode::Comma | VirtualKeyCode::NumpadComma => Key::Comma,
         // Arrow keys

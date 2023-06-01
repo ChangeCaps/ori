@@ -50,6 +50,8 @@ button text {
 
 text.result {
 	font-size: 3em;
+	text-wrap: none;
+	text-align: end;
 	text-valign: center;
 	color: #ffffff;
 }

@@ -35,7 +35,6 @@ impl Div {
         callback: impl FnMut(&PointerEvent) + Send + 'static,
     ) -> Self {
         self.on_click.bind(cx, callback);
-
         self
     }
 
@@ -46,7 +45,6 @@ impl Div {
         callback: impl FnMut(&PointerEvent) + Send + 'static,
     ) -> Self {
         self.on_release.bind(cx, callback);
-
         self
     }
 

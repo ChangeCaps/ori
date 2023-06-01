@@ -6,7 +6,7 @@ use fontdue::{
 };
 use glam::Vec2;
 
-use crate::{FontAtlas, FontQuery, Mesh, Rect, Renderer, TextSection, Vertex};
+use crate::{FontAtlas, FontQuery, Mesh, Rect, Renderer, TextAlign, TextSection, TextWrap, Vertex};
 
 /// An error that occurred while loading fonts.
 #[derive(Debug)]
@@ -134,11 +134,21 @@ impl Fonts {
     }
 
     fn text_layout_inner(&mut self, font: &Font, text: &TextSection<'_>) -> Option<Layout> {
+        let max_width = match text.wrap {
+            TextWrap::None => None,
+            _ => Some(text.rect.width()),
+        };
+
+        let max_height = match text.wrap {
+            TextWrap::None => Some(text.rect.height()),
+            _ => None,
+        };
+
         let settings = LayoutSettings {
             x: text.rect.min.x,
             y: text.rect.min.y,
-            max_width: Some(text.rect.width()),
-            max_height: Some(text.rect.height()),
+            max_width,
+            max_height,
             horizontal_align: text.h_align.to_horizontal(),
             vertical_align: text.v_align.to_vertical(),
             line_height: text.line_height,
@@ -167,9 +177,7 @@ impl Fonts {
         self.text_layout_inner(&font, text)
     }
 
-    pub fn measure_text(&mut self, text: &TextSection<'_>) -> Option<Rect> {
-        let layout = self.text_layout(text)?;
-
+    fn measure_layout(&self, layout: &Layout, font_size: f32) -> Option<Rect> {
         if layout.glyphs().is_empty() {
             return None;
         }
@@ -186,15 +194,21 @@ impl Fonts {
         let width = max - min.x;
         let height = layout.height();
         let rect = Rect::min_size(min, Vec2::new(width, height));
-        let rect = rect.expand(Vec2::new(0.2, 0.0) * text.font_size);
+        let rect = rect.expand(Vec2::new(0.2, 0.0) * font_size);
 
         Some(rect)
+    }
+
+    pub fn measure_text(&mut self, text: &TextSection<'_>) -> Option<Rect> {
+        let layout = self.text_layout(text)?;
+        self.measure_layout(&layout, text.font_size)
     }
 
     pub fn text_mesh(&mut self, renderer: &dyn Renderer, text: &TextSection<'_>) -> Option<Mesh> {
         let id = self.query_id(&text.font_query())?;
         let font = self.get_font(id)?;
         let layout = self.text_layout_inner(&font, text)?;
+        let layout_rect = self.measure_layout(&layout, text.font_size)?;
         let atlas = self.get_atlas(id);
 
         let mut glyphs = Vec::<Rect>::new();
@@ -213,6 +227,20 @@ impl Fonts {
             break;
         }
 
+        let x_offset = match text.h_align {
+            TextAlign::Left => 0.0,
+            TextAlign::Center => (text.rect.width() - layout_rect.width()) / 2.0,
+            TextAlign::Right => text.rect.width() - layout_rect.width(),
+        };
+
+        let y_offset = match text.v_align {
+            TextAlign::Top => 0.0,
+            TextAlign::Center => (text.rect.height() - layout_rect.height()) / 2.0,
+            TextAlign::Bottom => text.rect.height() - layout_rect.height(),
+        };
+
+        let offset = Vec2::new(x_offset, y_offset);
+
         let mut mesh = Mesh::new();
 
         for (glyph, uv) in layout.glyphs().iter().zip(glyphs) {
@@ -223,22 +251,22 @@ impl Fonts {
             let index = mesh.vertices.len() as u32;
 
             mesh.vertices.push(Vertex {
-                position: glyph_rect.top_left(),
+                position: glyph_rect.top_left() + offset,
                 uv: uv.top_left(),
                 color: text.color,
             });
             mesh.vertices.push(Vertex {
-                position: glyph_rect.top_right(),
+                position: glyph_rect.top_right() + offset,
                 uv: uv.top_right(),
                 color: text.color,
             });
             mesh.vertices.push(Vertex {
-                position: glyph_rect.bottom_right(),
+                position: glyph_rect.bottom_right() + offset,
                 uv: uv.bottom_right(),
                 color: text.color,
             });
             mesh.vertices.push(Vertex {
-                position: glyph_rect.bottom_left(),
+                position: glyph_rect.bottom_left() + offset,
                 uv: uv.bottom_left(),
                 color: text.color,
             });

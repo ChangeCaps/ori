@@ -2,8 +2,8 @@ use proc_macro2::TokenStream;
 use proc_macro_error::abort;
 use quote::quote;
 use syn::{
-    parse_macro_input, spanned::Spanned, Attribute, Data, DataStruct, DeriveInput, Fields,
-    FieldsNamed, Ident,
+    parse_macro_input, parse_quote, spanned::Spanned, Attribute, Data, DataStruct, DeriveInput,
+    Fields, FieldsNamed, Generics, Ident,
 };
 
 use crate::krate::find_crate;
@@ -74,24 +74,37 @@ fn data(input: &DeriveInput) -> (&DataStruct, &FieldsNamed) {
     }
 }
 
+fn setter_generics(input: &DeriveInput) -> Generics {
+    let mut generics = input.generics.clone();
+
+    generics.params.push(parse_quote!('__setter));
+
+    generics
+}
+
 fn properties(input: &DeriveInput) -> TokenStream {
     let name = &input.ident;
     let setter = prop_setter(input);
 
     let ori_core = find_crate("core");
 
+    let setter_generics = setter_generics(input);
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+    let (setter_impl_generics, setter_ty_generics, setter_where_clause) =
+        setter_generics.split_for_impl();
+
     quote! {
         const _: () = {
-            pub struct Setter<'a> {
-                this: &'a mut #name,
+            pub struct Setter #setter_impl_generics #setter_where_clause {
+                this: &'__setter mut #name #ty_generics,
             }
 
-            impl<'a> Setter<'a> {
+            impl #setter_impl_generics Setter #setter_ty_generics #setter_where_clause {
                 #setter
             }
 
-            impl #ori_core::Properties for #name {
-                type Setter<'a> = Setter<'a>;
+            impl #impl_generics #ori_core::Properties for #name #ty_generics #where_clause {
+                type Setter<'__setter> = Setter #setter_ty_generics;
 
                 fn setter(&mut self) -> Self::Setter<'_> {
                     Setter { this: self }
@@ -107,18 +120,23 @@ fn events(input: &DeriveInput) -> TokenStream {
 
     let ori_core = find_crate("core");
 
+    let setter_generics = setter_generics(input);
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+    let (setter_impl_generics, setter_ty_generics, setter_where_clause) =
+        setter_generics.split_for_impl();
+
     quote! {
         const _: () = {
-            pub struct Setter<'a> {
-                this: &'a mut #name,
+            pub struct Setter #setter_impl_generics #setter_where_clause {
+                this: &'__setter mut #name #ty_generics,
             }
 
-            impl<'a> Setter<'a> {
+            impl #setter_impl_generics Setter #setter_ty_generics #setter_where_clause {
                 #setter
             }
 
-            impl #ori_core::Events for #name {
-                type Setter<'a> = Setter<'a>;
+            impl #impl_generics #ori_core::Events for #name #ty_generics #where_clause {
+                type Setter<'__setter> = Setter #setter_ty_generics;
 
                 fn setter(&mut self) -> Self::Setter<'_> {
                     Setter { this: self }
@@ -134,18 +152,23 @@ fn bindings(input: &DeriveInput) -> TokenStream {
 
     let ori_core = find_crate("core");
 
+    let setter_generics = setter_generics(input);
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+    let (setter_impl_generics, setter_ty_generics, setter_where_clause) =
+        setter_generics.split_for_impl();
+
     quote! {
         const _: () = {
-            pub struct Setter<'a> {
-                this: &'a mut #name,
+            pub struct Setter #setter_impl_generics #setter_where_clause {
+                this: &'__setter mut #name #ty_generics,
             }
 
-            impl<'a> Setter<'a> {
+            impl #setter_impl_generics Setter #setter_ty_generics #setter_where_clause {
                 #setter
             }
 
-            impl #ori_core::Bindings for #name {
-                type Setter<'a> = Setter<'a>;
+            impl #impl_generics #ori_core::Bindings for #name #ty_generics #where_clause {
+                type Setter<'__setter> = Setter #setter_ty_generics;
 
                 fn setter(&mut self) -> Self::Setter<'_> {
                     Setter { this: self }
@@ -171,8 +194,10 @@ fn children(input: &DeriveInput) -> TokenStream {
             return None;
         }
 
+        let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+
         Some(quote! {
-            impl #ori_core::Parent for #name {
+            impl #impl_generics #ori_core::Parent for #name #ty_generics #where_clause {
                 type Child = <#ty as #ori_core::Parent>::Child;
 
                 fn clear_children(&mut self) {

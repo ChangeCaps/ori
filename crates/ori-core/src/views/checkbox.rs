@@ -67,12 +67,8 @@ impl View for Checkbox {
         }
     }
 
-    fn layout(&self, _: &mut Self::State, cx: &mut LayoutContext, space: AvailableSpace) -> Vec2 {
-        cx.state.active = self.checked.get();
-
-        let width = cx.style_range("width", space.x_axis());
-        let height = cx.style_range("height", space.y_axis());
-        space.constrain(Vec2::new(width, height))
+    fn layout(&self, _: &mut Self::State, _: &mut LayoutContext, space: AvailableSpace) -> Vec2 {
+        space.max
     }
 
     fn draw(&self, _: &mut Self::State, cx: &mut DrawContext) {

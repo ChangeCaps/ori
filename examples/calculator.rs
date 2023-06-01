@@ -322,10 +322,100 @@ fn buttons(
     }
 }
 
+fn handle_keyboard_event(
+    cx: Scope,
+    operator: Signal<Operator>,
+    result: Signal<Number>,
+    rhs: Signal<Number>,
+) {
+    cx.on(move |event: &KeyboardEvent| {
+        if !event.is_press() {
+            return;
+        }
+
+        if event.is_pressed(Key::Escape) {
+            operator.set(Operator::None);
+            result.set(Number::new(0.0));
+            rhs.set(Number::new(0.0));
+        }
+
+        if event.is_pressed(Key::Backspace) {
+            if matches!(operator.get(), Operator::None) {
+                result.modify().remove_digit();
+            } else {
+                rhs.modify().remove_digit();
+            }
+        }
+
+        if event.is_pressed(Key::Enter) {
+            let mut result = result.modify();
+            let mut rhs = rhs.modify();
+            let mut operator = operator.modify();
+            match *operator {
+                Operator::None => {}
+                Operator::Add => {
+                    *result = Number::new(result.value + rhs.value);
+                }
+                Operator::Subtract => {
+                    *result = Number::new(result.value - rhs.value);
+                }
+                Operator::Multiply => {
+                    *result = Number::new(result.value * rhs.value);
+                }
+                Operator::Divide => {
+                    *result = Number::new(result.value / rhs.value);
+                }
+            }
+            *operator = Operator::None;
+            *rhs = Number::new(0.0);
+        }
+
+        if event.is_pressed(Key::Plus) {
+            operator.set(Operator::Add);
+        }
+
+        if event.is_pressed(Key::Minus) {
+            operator.set(Operator::Subtract);
+        }
+
+        if event.is_pressed(Key::Asterisk) {
+            operator.set(Operator::Multiply);
+        }
+
+        if event.is_pressed(Key::Slash) {
+            operator.set(Operator::Divide);
+        }
+
+        if event.is_pressed(Key::Period) {
+            if let Some(position) = result.get().position {
+                if position < 0 {
+                    return;
+                }
+            }
+
+            if matches!(operator.get(), Operator::None) {
+                result.modify().position = Some(-1);
+            } else {
+                rhs.modify().position = Some(-1);
+            }
+        }
+
+        if let Some(digit) = event.key.and_then(Key::as_digit) {
+            if matches!(operator.get(), Operator::None) {
+                result.modify().add_digit(digit);
+            } else {
+                rhs.modify().add_digit(digit);
+            }
+        }
+    });
+}
+
 fn ui(cx: Scope) -> Node {
     let operator = cx.signal(Operator::None);
     let result = cx.signal(Number::new(0.0));
     let rhs = cx.signal(Number::new(0.0));
+
+    handle_keyboard_event(cx, operator, result, rhs);
 
     view! {
         { result_bar(cx, operator, result, rhs) }

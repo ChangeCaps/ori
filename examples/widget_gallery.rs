@@ -24,6 +24,7 @@ fn ui(cx: Scope) -> Node {
     let knob_value = cx.signal(0.0);
     let long_text = cx.signal(String::from(LONG_TEXT));
     let text = cx.signal(String::new());
+    let radio_button = cx.signal(0);
 
     // popup state
     let popup_window = cx.signal(None);
@@ -85,13 +86,34 @@ fn ui(cx: Scope) -> Node {
             </Div>
             <Slider style:direction=Axis::Vertical style:height=Em(10.0) min=-1.0 bind:value=knob_value />
             <Div class="column">
-                <Slider />
-                <Slider />
-                <Slider />
-                <Slider />
-                <Slider />
-                <Slider />
-                <Slider />
+                <Div class="row" style:justify-content=JustifyContent::Start>
+                    <Radio selected=radio_button.get()==0 on:click=move |_| radio_button.set(0) />
+                    "Hello"
+                </Div>
+                <Div class="row" style:justify-content=JustifyContent::Start>
+                    <Radio selected=radio_button.get()==1 on:click=move |_| radio_button.set(1) />
+                    "Here"
+                </Div>
+                <Div class="row" style:justify-content=JustifyContent::Start>
+                    <Radio selected=radio_button.get()==2 on:click=move |_| radio_button.set(2) />
+                    "Are"
+                </Div>
+                <Div class="row" style:justify-content=JustifyContent::Start>
+                    <Radio selected=radio_button.get()==3 on:click=move |_| radio_button.set(3) />
+                    "Some"
+                </Div>
+                <Div class="row" style:justify-content=JustifyContent::Start>
+                    <Radio selected=radio_button.get()==4 on:click=move |_| radio_button.set(4) />
+                    "Radio"
+                </Div>
+                <Div class="row" style:justify-content=JustifyContent::Start>
+                    <Radio selected=radio_button.get()==5 on:click=move |_| radio_button.set(5) />
+                    "Buttons"
+                </Div>
+                <Div class="row" style:justify-content=JustifyContent::Start>
+                    <Radio selected=radio_button.get()==6 on:click=move |_| radio_button.set(6) />
+                    { format!("{}", radio_button.get()) }
+                </Div>
             </Div>
         </Div>
     }
@@ -100,6 +122,7 @@ fn ui(cx: Scope) -> Node {
 fn main() {
     App::new(ui) // create a new app with the ui function
         .title("Widget Gallery (examples/widget_gallery.rs)") // set the window title
+        .night_theme()
         .style("examples/style/widget-gallery.css") // load a custom stylesheet
         .run(); // run the app
 }

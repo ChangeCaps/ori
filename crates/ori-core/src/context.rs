@@ -48,12 +48,17 @@ pub struct LayoutContext<'a> {
 impl<'a> LayoutContext<'a> {
     /// Gets the available space, constrained by the element's style.
     pub fn style_constraints(&mut self, space: AvailableSpace) -> AvailableSpace {
-        let parent_space = self.parent_space;
-        let min_width = self.style_range_group(&["min-width", "width"], parent_space.x_axis());
-        let max_width = self.style_range_group(&["max-width", "width"], parent_space.x_axis());
+        let min_width_group = &["min-width", "width", "size"];
+        let max_width_group = &["max-width", "width", "size"];
+        let min_height_group = &["min-height", "height", "size"];
+        let max_height_group = &["max-height", "height", "size"];
 
-        let min_height = self.style_range_group(&["min-height", "height"], parent_space.y_axis());
-        let max_height = self.style_range_group(&["max-height", "height"], parent_space.y_axis());
+        let parent = self.parent_space;
+        let min_width = self.style_range_group(min_width_group, parent.x_axis());
+        let max_width = self.style_range_group(max_width_group, parent.x_axis());
+
+        let min_height = self.style_range_group(min_height_group, parent.y_axis());
+        let max_height = self.style_range_group(max_height_group, parent.y_axis());
 
         let min_size = space.constrain(Vec2::new(min_width, min_height));
         let max_size = space.constrain(Vec2::new(max_width, max_height));
@@ -175,7 +180,7 @@ impl<'a> DrawContext<'a> {
     /// - `border-bottom-left-radius`: The bottom left border radius of the quad.
     /// - `border-width`: The border width of the quad.
     pub fn draw_quad(&mut self) {
-        let range = 0.0..self.rect().max.min_element() / 2.0;
+        let range = 0.0..self.rect().size().min_element();
 
         let tl = "border-top-left-radius";
         let tr = "border-top-right-radius";

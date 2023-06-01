@@ -1,17 +1,17 @@
-checkbox {
+radio {
 	color: #d0d0d0;
 	background-color: #363636;
-	border-radius: 5px;
+	border-radius: 50%;
 	border-width: 1.5px;
 	border-color: #404040;
 
-	size: 1.5em;
+	size: 1em;
 }
 
-checkbox:hover {
+radio:hover {
 	border-color: #606060 0.05s;
 }
 
-checkbox:active {
+radio:active {
 	border-color: #606060 0.05s;
 }

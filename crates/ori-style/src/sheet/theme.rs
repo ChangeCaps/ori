@@ -16,6 +16,7 @@ theme!(
     "knob.css",
     "scroll.css",
     "slider.css",
+    "radio.css",
     "text-input.css",
     "text.css",
 );
@@ -29,6 +30,7 @@ theme!(
     "knob.css",
     "scroll.css",
     "slider.css",
+    "radio.css",
     "text-input.css",
     "text.css",
 );
