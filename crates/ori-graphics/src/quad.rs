@@ -1,15 +1,20 @@
-use std::f32::consts::FRAC_PI_2;
+use crate::{Color, Rect};
 
-use glam::Vec2;
-
-use crate::{Color, Curve, Rect};
-
+/// A rectangle with rounded corners, and an optional border.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Quad {
+    /// The rectangle of the quad.
     pub rect: Rect,
+    /// The background color of the quad.
     pub background: Color,
+    /// The radius of the quad's corners.
+    ///
+    /// The radius of each corner is specified in the following order:
+    /// top-left, top-right, bottom-right, bottom-left.
     pub border_radius: [f32; 4],
+    /// The width of the quad's border.
     pub border_width: f32,
+    /// The color of the quad's border.
     pub border_color: Color,
 }
 
@@ -26,76 +31,11 @@ impl Default for Quad {
 }
 
 impl Quad {
+    /// Rounds the rectangle of the quad to the nearest integer.
     pub fn round(self) -> Self {
         Self {
             rect: self.rect.round(),
             ..self
         }
-    }
-
-    pub fn inside_curve(self) -> Curve {
-        fn corner(curve: &mut Curve, center: Vec2, radius: f32, start_angle: f32) {
-            let start = start_angle;
-            let end = start_angle + FRAC_PI_2;
-
-            let corner = Curve::arc_center_angle(center, radius, start, end);
-            curve.extend(corner);
-        }
-
-        let mut curve = Curve::new();
-
-        let [mut tl, mut tr, mut br, mut bl] = self.border_radius;
-        tl -= self.border_width;
-        tr -= self.border_width;
-        br -= self.border_width;
-        bl -= self.border_width;
-
-        let rect = self.rect.shrink(self.border_width);
-
-        let ctl = Vec2::new(rect.left() + tl, rect.top() + tl);
-        let ctr = Vec2::new(rect.right() - tr, rect.top() + tr);
-        let cbr = Vec2::new(rect.right() - br, rect.bottom() - br);
-        let cbl = Vec2::new(rect.left() + bl, rect.bottom() - bl);
-
-        corner(&mut curve, ctr, tr, FRAC_PI_2 * 3.0);
-        corner(&mut curve, cbr, br, FRAC_PI_2 * 0.0);
-        corner(&mut curve, cbl, bl, FRAC_PI_2 * 1.0);
-        corner(&mut curve, ctl, tl, FRAC_PI_2 * 2.0);
-
-        curve
-    }
-
-    pub fn border_curve(self) -> Curve {
-        fn corner(curve: &mut Curve, center: Vec2, radius: f32, start_angle: f32) {
-            let start = start_angle;
-            let end = start_angle + FRAC_PI_2;
-
-            let corner = Curve::arc_center_angle(center, radius, start, end);
-            curve.extend(corner);
-        }
-
-        let mut curve = Curve::new();
-
-        let [mut tl, mut tr, mut br, mut bl] = self.border_radius;
-        tl -= self.border_width / 2.0;
-        tr -= self.border_width / 2.0;
-        br -= self.border_width / 2.0;
-        bl -= self.border_width / 2.0;
-
-        let rect = self.rect.shrink(self.border_width / 2.0);
-
-        let ctl = Vec2::new(rect.left() + tl, rect.top() + tl);
-        let ctr = Vec2::new(rect.right() - tr, rect.top() + tr);
-        let cbr = Vec2::new(rect.right() - br, rect.bottom() - br);
-        let cbl = Vec2::new(rect.left() + bl, rect.bottom() - bl);
-
-        corner(&mut curve, ctr, tr, FRAC_PI_2 * 3.0);
-        corner(&mut curve, cbr, br, FRAC_PI_2 * 0.0);
-        corner(&mut curve, cbl, bl, FRAC_PI_2 * 1.0);
-        corner(&mut curve, ctl, tl, FRAC_PI_2 * 2.0);
-
-        curve.add_point(curve[0]);
-
-        curve
     }
 }

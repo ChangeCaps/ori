@@ -55,6 +55,7 @@ impl Fonts {
         Ok(())
     }
 
+    /// Loads all fonts from a directory.
     pub fn load_fonts_dir(&mut self, path: impl AsRef<Path>) {
         self.db.load_fonts_dir(path);
     }

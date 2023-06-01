@@ -3,7 +3,7 @@ use std::f32::consts::PI;
 use bytemuck::{Pod, Zeroable};
 use glam::Vec2;
 
-use crate::{Color, Curve, ImageHandle, Quad, Rect};
+use crate::{Color, Curve, ImageHandle, Rect};
 
 /// A vertex with position, UV coordinates, and color.
 ///
@@ -95,23 +95,6 @@ impl Mesh {
         }
 
         mesh
-    }
-
-    /// Creates a mesh from a [`Quad`].
-    pub fn quad(quad: Quad) -> Self {
-        let inside_curve = quad.inside_curve();
-        let outside_curve = quad.border_curve();
-
-        let mut inside = inside_curve.fill(quad.background);
-        let outside = outside_curve.stroke(quad.border_width / 2.0, quad.border_color);
-
-        inside.extend(&outside);
-
-        Self {
-            vertices: inside.vertices,
-            indices: inside.indices,
-            image: None,
-        }
     }
 
     /// Extends this mesh with the given `other` mesh.
