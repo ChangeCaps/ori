@@ -17,8 +17,8 @@ use ori_reactive::{CallbackEmitter, Event, EventSink, Scope, Task};
 use std::{collections::HashMap, fmt::Debug};
 
 use crate::{
-    Body, CloseWindow, Element, Key, KeyboardEvent, Modifiers, Node, OpenWindow, PointerButton,
-    PointerEvent, RequestRedrawEvent, WindowClosedEvent, WindowResizedEvent,
+    Body, CloseWindow, Cursor, Element, Key, KeyboardEvent, Modifiers, Node, OpenWindow,
+    PointerButton, PointerEvent, RequestRedrawEvent, WindowClosedEvent, WindowResizedEvent,
 };
 
 const TEXT_FONT: &[u8] = include_bytes!("../../fonts/NotoSans-Medium.ttf");
@@ -71,6 +71,8 @@ impl<R: Renderer> WindowUi<R> {
             self.window.cursor = window.cursor;
             window_backend.set_cursor(window.id(), window.cursor);
         }
+
+        self.scope.window().set(window.clone());
     }
 }
 
@@ -421,6 +423,7 @@ where
             ui.event_emitter.emit(event);
 
             let mut window = ui.scope.window().get();
+            window.cursor = Cursor::default();
 
             ori_reactive::effect::delay_effects(|| {
                 ui.element.event_root_inner(
@@ -470,6 +473,7 @@ where
             self.frame.clear();
 
             let mut window = ui.scope.window().get();
+            window.cursor = Cursor::default();
 
             ori_reactive::effect::delay_effects(|| {
                 ui.element.draw_root_inner(

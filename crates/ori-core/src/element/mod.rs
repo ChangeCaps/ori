@@ -138,8 +138,8 @@ impl<T: ElementView> Element<T> {
         let mut element_state = self.element_state();
 
         let size = element_state.local_rect.size();
-        element_state.local_rect = Rect::min_size(element_state.margin.top_left() + offset, size);
-        element_state.local_rect = element_state.local_rect.round();
+        let min = element_state.margin.top_left() + offset.floor();
+        element_state.local_rect = Rect::min_size(min, size);
     }
 
     /// Get the style of the element, for a given key.
@@ -223,8 +223,8 @@ impl<T: ElementView> Element<T> {
         event: &PointerEvent,
         is_handled: bool,
     ) -> bool {
-        let is_over =
-            element_state.global_rect.contains(event.position) && !event.left && !is_handled;
+        let contains = element_state.global_rect.contains(event.position);
+        let is_over = contains && !event.left && !is_handled;
         if is_over != element_state.hovered && event.is_motion() {
             element_state.hovered = is_over;
             true
@@ -344,14 +344,12 @@ impl<T: ElementView> Element<T> {
 
         let size = self.view().layout(&mut self.view_state(), &mut cx, space);
 
-        Self::update_cursor(&mut cx);
-
         let local_offset = state.local_rect.min + state.margin.top_left();
         let global_offset = state.global_rect.min + state.margin.top_left();
         state.local_rect = Rect::min_size(local_offset, size);
         state.global_rect = Rect::min_size(global_offset, size);
 
-        Vec2::round(size + state.margin.size())
+        Vec2::ceil(size + state.margin.size())
     }
 
     /// Relayout the element.
