@@ -104,7 +104,7 @@ pub(crate) fn convert_key(key: VirtualKeyCode) -> Option<Key> {
         VirtualKeyCode::PageDown => Key::PageDown,
         VirtualKeyCode::Back => Key::Backspace,
         VirtualKeyCode::Tab => Key::Tab,
-        VirtualKeyCode::Return => Key::Enter,
+        VirtualKeyCode::Return | VirtualKeyCode::NumpadEnter => Key::Enter,
         VirtualKeyCode::Space => Key::Space,
         // Modifier keys
         VirtualKeyCode::LShift | VirtualKeyCode::RShift => Key::Shift,
