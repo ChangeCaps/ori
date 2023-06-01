@@ -145,8 +145,8 @@ impl Fonts {
         };
 
         let settings = LayoutSettings {
-            x: text.rect.min.x,
-            y: text.rect.min.y,
+            x: text.rect.min.x.round(),
+            y: text.rect.min.y.round(),
             max_width,
             max_height,
             horizontal_align: text.h_align.to_horizontal(),
@@ -170,6 +170,7 @@ impl Fonts {
         Some(layout)
     }
 
+    /// Creates a text layout for `text`.
     pub fn text_layout(&mut self, text: &TextSection<'_>) -> Option<Layout> {
         let id = self.query_id(&text.font_query())?;
         let font = self.get_font(id)?;
@@ -177,38 +178,52 @@ impl Fonts {
         self.text_layout_inner(&font, text)
     }
 
-    fn measure_layout(&self, layout: &Layout, font_size: f32) -> Option<Rect> {
+    fn measure_layout(&self, font: &Font, layout: &Layout) -> Option<Vec2> {
         if layout.glyphs().is_empty() {
             return None;
         }
 
-        let mut min = Vec2::splat(f32::INFINITY);
-        let mut max = f32::NEG_INFINITY;
+        let mut width = 0.0;
 
-        for glyph in layout.glyphs() {
-            let position = Vec2::new(glyph.x, glyph.y);
-            min = Vec2::min(min, position);
-            max = f32::max(max, position.x + glyph.width as f32);
+        for line in layout.lines().into_iter().flatten() {
+            let mut line_width = 0.0;
+
+            if line.glyph_end <= line.glyph_start {
+                continue;
+            }
+
+            for glyph in &layout.glyphs()[line.glyph_start..=line.glyph_end] {
+                let metrics = if !glyph.char_data.is_control() {
+                    font.metrics(glyph.parent, glyph.key.px)
+                } else {
+                    continue;
+                };
+                let advance = metrics.advance_width.ceil();
+
+                line_width += advance;
+            }
+
+            width = f32::max(width, line_width);
         }
 
-        let width = max - min.x;
-        let height = layout.height();
-        let rect = Rect::min_size(min, Vec2::new(width, height));
-        let rect = rect.expand(Vec2::new(0.2, 0.0) * font_size);
+        Some(Vec2::new(width, layout.height()))
+    }
 
+    /// Measures the size of `text`, and returns the smallest [`Rect`] that can contains it.
+    pub fn measure_text(&mut self, text: &TextSection<'_>) -> Option<Rect> {
+        let font = self.query(&text.font_query())?;
+        let layout = self.text_layout_inner(&font, text)?;
+        let size = self.measure_layout(&font, &layout)?;
+        let rect = Rect::min_size(text.rect.min, size);
         Some(rect)
     }
 
-    pub fn measure_text(&mut self, text: &TextSection<'_>) -> Option<Rect> {
-        let layout = self.text_layout(text)?;
-        self.measure_layout(&layout, text.font_size)
-    }
-
+    /// Creates a mesh for `text`.
     pub fn text_mesh(&mut self, renderer: &dyn Renderer, text: &TextSection<'_>) -> Option<Mesh> {
         let id = self.query_id(&text.font_query())?;
         let font = self.get_font(id)?;
         let layout = self.text_layout_inner(&font, text)?;
-        let layout_rect = self.measure_layout(&layout, text.font_size)?;
+        let layout_size = self.measure_layout(&font, &layout)?;
         let atlas = self.get_atlas(id);
 
         let mut glyphs = Vec::<Rect>::new();
@@ -227,16 +242,20 @@ impl Fonts {
             break;
         }
 
-        let x_offset = match text.h_align {
-            TextAlign::Left => 0.0,
-            TextAlign::Center => (text.rect.width() - layout_rect.width()) / 2.0,
-            TextAlign::Right => text.rect.width() - layout_rect.width(),
+        let x_offset = if text.wrap == TextWrap::None {
+            match text.h_align {
+                TextAlign::Left => 0.0,
+                TextAlign::Center => (text.rect.width() - layout_size.x) / 2.0,
+                TextAlign::Right => text.rect.width() - layout_size.x,
+            }
+        } else {
+            0.0
         };
 
         let y_offset = match text.v_align {
             TextAlign::Top => 0.0,
-            TextAlign::Center => (text.rect.height() - layout_rect.height()) / 2.0,
-            TextAlign::Bottom => text.rect.height() - layout_rect.height(),
+            TextAlign::Center => (text.rect.height() - layout_size.y) / 2.0,
+            TextAlign::Bottom => text.rect.height() - layout_size.y,
         };
 
         let offset = Vec2::new(x_offset, y_offset);

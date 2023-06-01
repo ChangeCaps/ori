@@ -81,8 +81,7 @@ fn ui(cx: Scope) -> Node {
             </Scroll>
             <Div class="column">
                 <Knob bind:value=knob_value max=2.0 />
-                <Text style:text-align=TextAlign::Center
-                    text=format!("{:.2}", knob_value.get()) />
+                <Text style:text-align=TextAlign::Center text=format!("{:.2}", knob_value.get()) />
             </Div>
             <Slider style:direction=Axis::Vertical style:height=Em(10.0) min=-1.0 bind:value=knob_value />
             <Div class="column">

@@ -138,7 +138,7 @@ impl<T: ElementView> Element<T> {
         let mut element_state = self.element_state();
 
         let size = element_state.local_rect.size();
-        let min = element_state.margin.top_left() + offset.floor();
+        let min = element_state.margin.top_left() + offset;
         element_state.local_rect = Rect::min_size(min, size);
     }
 
@@ -349,7 +349,7 @@ impl<T: ElementView> Element<T> {
         state.local_rect = Rect::min_size(local_offset, size);
         state.global_rect = Rect::min_size(global_offset, size);
 
-        Vec2::ceil(size + state.margin.size())
+        size + state.margin.size()
     }
 
     /// Relayout the element.

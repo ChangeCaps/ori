@@ -8,7 +8,7 @@ pub enum PrimitiveKind {
 
 impl From<Quad> for PrimitiveKind {
     fn from(quad: Quad) -> Self {
-        Self::Quad(quad)
+        Self::Quad(quad.round())
     }
 }
 
