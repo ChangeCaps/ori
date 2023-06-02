@@ -28,7 +28,7 @@ use std::{cell::RefCell, fmt::Debug, ops::DerefMut, panic::Location, sync::Arc};
 
 use parking_lot::Mutex;
 
-use crate::{Callback, Resource, ScopeId, WeakCallbackEmitter};
+use crate::{Callback, Resource, ScopeId, WeakEmitter};
 
 thread_local! {
     static EFFECT_STACK: RefCell<Vec<*mut EffectState>> = Default::default();
@@ -38,7 +38,7 @@ thread_local! {
 pub(crate) struct EffectState {
     location: &'static Location<'static>,
     callback: Callback<'static>,
-    dependencies: Vec<WeakCallbackEmitter>,
+    dependencies: Vec<WeakEmitter>,
 }
 
 impl EffectState {
@@ -71,7 +71,7 @@ impl Debug for EffectState {
 }
 
 /// Subscribes the last effect on the effect stack to the given `emitter`.
-pub fn track_callback(emitter: WeakCallbackEmitter) {
+pub fn track_callback(emitter: WeakEmitter) {
     EFFECT_STACK.with(|effects| {
         if let Some(effect) = effects.borrow().last() {
             // SAFETY: EFFECT_STACK is thread local, and no other mutable references to `effect`

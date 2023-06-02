@@ -50,7 +50,7 @@ impl FontAtlas {
         UVec2::new(size.width as u32, size.height as u32)
     }
 
-    /// Resizes the atlas.
+    /// Grows the atlas to the next power of two.
     pub fn grow(&mut self, renderer: &dyn Renderer) {
         let size = if self.size().x == 0 {
             UVec2::splat(512)
@@ -72,7 +72,7 @@ impl FontAtlas {
 
     /// Rasterizes a glyph and returns its [`Rect`] in the atlas.
     ///
-    /// Returns `None` if the atlas is full, in which case [`FontAtlas::resize`], should be called.
+    /// Returns `None` if the atlas is full, in which case [`FontAtlas::grow`], should be called.
     pub fn glyph_rect(
         &mut self,
         renderer: &dyn Renderer,
@@ -117,7 +117,7 @@ impl FontAtlas {
 
     /// Rasterizes a glyph and returns its [`Rect`], in uv coodinates.
     ///
-    /// Returns `None` if the atlas is full, in which case [`FontAtlas::resize`], should be called.
+    /// Returns `None` if the atlas is full, in which case [`FontAtlas::grow`], should be called.
     pub fn glyph_rect_uv(
         &mut self,
         renderer: &dyn Renderer,

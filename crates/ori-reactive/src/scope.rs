@@ -3,8 +3,8 @@ use std::{any::Any, future::Future, mem, sync::Arc};
 use parking_lot::Mutex;
 
 use crate::{
-    context::Contexts, Callback, CallbackEmitter, Event, EventSink, OwnedSignal, ReadSignal,
-    Resource, Runtime, ScopeId, Signal, Task,
+    context::Contexts, Callback, Emitter, Event, EventSink, OwnedSignal, ReadSignal, Resource,
+    Runtime, ScopeId, Signal, Task,
 };
 
 use super::effect;
@@ -15,7 +15,7 @@ pub struct Scope {
     pub(crate) id: ScopeId,
     pub(crate) contexts: Resource<Contexts>,
     pub(crate) event_sink: Resource<EventSink>,
-    pub(crate) event_emitter: Resource<CallbackEmitter<Event>>,
+    pub(crate) event_emitter: Resource<Emitter<Event>>,
 }
 
 impl Scope {
@@ -26,7 +26,7 @@ impl Scope {
     /// when [`Scope::emit`] is called.
     /// - `event_emitter`: The callback emitter to use for this scope. When emitted callbacks
     /// registered with [`Scope::on_event`] and [`Scope::on`] will be called.
-    pub fn new(event_sink: EventSink, event_emitter: CallbackEmitter<Event>) -> Self {
+    pub fn new(event_sink: EventSink, event_emitter: Emitter<Event>) -> Self {
         let contexts = Resource::new_leaking(Contexts::new());
         let event_sink = Resource::new_leaking(event_sink);
         let event_emitter = Resource::new_leaking(event_emitter);
@@ -49,7 +49,7 @@ impl Scope {
     /// This is primarily used for testing.
     pub fn immediate<T>(f: impl FnOnce(Scope) -> T) -> T {
         let event_sink = EventSink::new(());
-        let event_emitter = CallbackEmitter::new();
+        let event_emitter = Emitter::new();
 
         let scope = Scope::new(event_sink, event_emitter);
         let result = f(scope);
@@ -121,8 +121,8 @@ impl Scope {
         self.event_sink.get().expect("event sink was dropped")
     }
 
-    /// Returns the [`CallbackEmitter`] for this scope.
-    pub fn event_emitter(self) -> CallbackEmitter<Event> {
+    /// Returns the [`Emitter`] for this scope.
+    pub fn event_emitter(self) -> Emitter<Event> {
         (self.event_emitter.get()).expect("event callback emitter was dropped")
     }
 

@@ -1,7 +1,7 @@
 use glam::Vec2;
 use ori_graphics::{FontFamily, TextAlign, TextSection};
 use ori_macro::Build;
-use ori_reactive::{CallbackEmitter, Event, OwnedSignal, Signal};
+use ori_reactive::{Emitter, Event, OwnedSignal, Signal};
 use ori_style::Style;
 
 use crate::{
@@ -17,7 +17,7 @@ pub struct Checkbox {
     pub checked: OwnedSignal<bool>,
     /// On click callback.
     #[event]
-    pub on_click: CallbackEmitter<PointerEvent>,
+    pub on_click: Emitter<PointerEvent>,
 }
 
 impl Checkbox {

@@ -10,7 +10,7 @@ macro_rules! include_image {
     };
 }
 
-/// Image data, see [`ImageSource`] and [`ImageHandle`].
+/// Image data, see [`ImageSource`](crate::ImageSource) and [`ImageHandle`](crate::ImageHandle).
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct ImageData {
     width: u32,

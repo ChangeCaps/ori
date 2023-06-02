@@ -1,7 +1,7 @@
 use glam::Vec2;
 use ori_graphics::{Color, Quad};
 use ori_macro::Build;
-use ori_reactive::{CallbackEmitter, Event};
+use ori_reactive::{Emitter, Event};
 use ori_style::Style;
 
 use crate::{
@@ -16,7 +16,7 @@ pub struct Radio {
     pub selected: bool,
     /// The callback to be invoked when the radio button is clicked.
     #[event]
-    pub on_click: CallbackEmitter<PointerEvent>,
+    pub on_click: Emitter<PointerEvent>,
 }
 
 impl Radio {

@@ -80,11 +80,11 @@ type Callbacks<T> = Mutex<CallbackSet<T>>;
 ///
 /// This is used to store a list of callbacks and call them all.
 /// All the callbacks are weak, so they must be kept alive by the user.
-pub struct CallbackEmitter<T = ()> {
+pub struct Emitter<T = ()> {
     callbacks: Arc<Callbacks<T>>,
 }
 
-impl<T> Default for CallbackEmitter<T> {
+impl<T> Default for Emitter<T> {
     fn default() -> Self {
         Self {
             callbacks: Arc::new(Mutex::new(CallbackSet::new())),
@@ -92,7 +92,7 @@ impl<T> Default for CallbackEmitter<T> {
     }
 }
 
-impl<T> Clone for CallbackEmitter<T> {
+impl<T> Clone for Emitter<T> {
     fn clone(&self) -> Self {
         Self {
             callbacks: self.callbacks.clone(),
@@ -100,7 +100,7 @@ impl<T> Clone for CallbackEmitter<T> {
     }
 }
 
-impl<T> CallbackEmitter<T> {
+impl<T> Emitter<T> {
     /// Creates an empty callback emitter.
     pub fn new() -> Self {
         Self::default()
@@ -116,9 +116,9 @@ impl<T> CallbackEmitter<T> {
         self.len() == 0
     }
 
-    /// Downgrades the callback emitter to a [`WeakCallbackEmitter`].
-    pub fn downgrade(&self) -> WeakCallbackEmitter<T> {
-        WeakCallbackEmitter {
+    /// Downgrades the callback emitter to a [`WeakEmitter`].
+    pub fn downgrade(&self) -> WeakEmitter<T> {
+        WeakEmitter {
             callbacks: Arc::downgrade(&self.callbacks),
         }
     }
@@ -174,14 +174,14 @@ impl<T> CallbackEmitter<T> {
     }
 }
 
-impl CallbackEmitter {
+impl Emitter {
     /// Tracks `self` in the current `effect`.
     pub fn track(&self) {
         self.downgrade().track();
     }
 }
 
-impl<T> Debug for CallbackEmitter<T> {
+impl<T> Debug for Emitter<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CallbackEmitter")
             .field("callbacks", &self.callbacks)
@@ -189,23 +189,23 @@ impl<T> Debug for CallbackEmitter<T> {
     }
 }
 
-/// A weak reference to a [`CallbackEmitter`].
+/// A weak reference to an [`Emitter`].
 ///
-/// This is usually created by [`CallbackEmitter::downgrade`].
-pub struct WeakCallbackEmitter<T = ()> {
+/// This is usually created by [`Emitter::downgrade`].
+pub struct WeakEmitter<T = ()> {
     callbacks: Weak<Callbacks<T>>,
 }
 
-impl<T> WeakCallbackEmitter<T> {
-    /// Tries to upgrade the weak callback emitter to a [`CallbackEmitter`].
-    pub fn upgrade(&self) -> Option<CallbackEmitter<T>> {
-        Some(CallbackEmitter {
+impl<T> WeakEmitter<T> {
+    /// Tries to upgrade the weak callback emitter to a [`Emitter`].
+    pub fn upgrade(&self) -> Option<Emitter<T>> {
+        Some(Emitter {
             callbacks: self.callbacks.upgrade()?,
         })
     }
 }
 
-impl<T> Clone for WeakCallbackEmitter<T> {
+impl<T> Clone for WeakEmitter<T> {
     fn clone(&self) -> Self {
         Self {
             callbacks: self.callbacks.clone(),
@@ -213,14 +213,14 @@ impl<T> Clone for WeakCallbackEmitter<T> {
     }
 }
 
-impl WeakCallbackEmitter {
+impl WeakEmitter {
     /// Tracks `self` in the current **effect**.
     pub fn track(&self) {
         crate::effect::track_callback(self.clone());
     }
 }
 
-impl<T> Debug for WeakCallbackEmitter<T> {
+impl<T> Debug for WeakEmitter<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("WeakCallbackEmitter")
             .field("callbacks", &self.callbacks)

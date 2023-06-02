@@ -1,6 +1,6 @@
 use glam::Vec2;
 use ori_macro::Build;
-use ori_reactive::{CallbackEmitter, Event, Scope};
+use ori_reactive::{Emitter, Event, Scope};
 use ori_style::Style;
 
 use crate::{
@@ -13,10 +13,10 @@ use crate::{
 pub struct Div {
     /// On click callback.
     #[event]
-    pub on_click: CallbackEmitter<PointerEvent>,
+    pub on_click: Emitter<PointerEvent>,
     /// On release callback.
     #[event]
-    pub on_release: CallbackEmitter<PointerEvent>,
+    pub on_release: Emitter<PointerEvent>,
     /// The children of the div.
     #[children]
     pub children: Children,

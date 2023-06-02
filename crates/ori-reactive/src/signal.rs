@@ -4,14 +4,14 @@ use std::{
     panic::Location,
 };
 
-use crate::{Callback, CallbackEmitter, Resource};
+use crate::{Callback, Emitter, Resource};
 
 use super::effect;
 
 /// A signal that can be read from, and subscribed to, see [`Signal`].
 pub struct ReadSignal<T: 'static> {
     pub(crate) resource: Resource<T>,
-    pub(crate) emitter: Resource<CallbackEmitter>,
+    pub(crate) emitter: Resource<Emitter>,
 }
 
 impl<T: Send + Sync> ReadSignal<T> {
@@ -19,7 +19,7 @@ impl<T: Send + Sync> ReadSignal<T> {
     pub fn new_leaking(value: T) -> Self {
         Self {
             resource: Resource::new_leaking(value),
-            emitter: Resource::new_leaking(CallbackEmitter::new()),
+            emitter: Resource::new_leaking(Emitter::new()),
         }
     }
 
@@ -91,7 +91,7 @@ impl<T: Send + Sync> ReadSignal<T> {
     }
 
     /// Tries to get the signal's emitter.
-    pub fn emitter(self) -> Option<CallbackEmitter> {
+    pub fn emitter(self) -> Option<Emitter> {
         self.emitter.get()
     }
 
@@ -197,7 +197,7 @@ impl<T: Send + Sync> Signal<T> {
 
     /// Runs all callbacks subscribed to the signal's emitter.
     ///
-    /// **Note** this will call [`CallbackEmitter::clear_and_emit`] on the emitter, which will
+    /// **Note** this will call [`Emitter::clear_and_emit`] on the emitter, which will
     /// clear the emitter's callbacks, and then run them. Dependencies will be re-tracked if
     /// accessed during the callbacks.
     #[track_caller]

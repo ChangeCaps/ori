@@ -6,7 +6,7 @@
 //! - [`Scope`] - A reactive context that can be used to create [`Signal`]s, and [`effect`]s.
 //! - [`effect`] - A reactive effect that can be used to perform side effects.
 //! - [`Event`] and [`EventSink`] - An event that can be used to send messages between components.
-//! - [`Callback`] and [`CallbackEmitter`] - Callbacks that can be subscribed to and emitted.
+//! - [`Callback`] and [`Emitter`] - Callbacks that can be subscribed to and emitted.
 
 mod atom;
 mod atom_ref;
@@ -35,7 +35,7 @@ pub mod prelude {
 
     pub use crate::atom::Atom;
     pub use crate::atom_ref::AtomRef;
-    pub use crate::callback::{Callback, CallbackEmitter};
+    pub use crate::callback::{Callback, Emitter};
     pub use crate::effect;
     pub use crate::event::Event;
     pub use crate::scope::Scope;

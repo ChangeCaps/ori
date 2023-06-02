@@ -12,7 +12,7 @@ pub use scope::*;
 
 use glam::{UVec2, Vec2};
 use ori_graphics::{Fonts, Frame, ImageCache, RenderBackend, Renderer};
-use ori_reactive::{CallbackEmitter, Event, EventSink, Scope, Task};
+use ori_reactive::{Emitter, Event, EventSink, Scope, Task};
 
 use std::{collections::HashMap, fmt::Debug};
 
@@ -30,7 +30,7 @@ struct WindowUi<R: Renderer> {
     element: Element,
     scope: Scope,
     event_sink: EventSink,
-    event_emitter: CallbackEmitter<Event>,
+    event_emitter: Emitter<Event>,
     modifiers: Modifiers,
     pointers: HashMap<u64, Vec2>,
 }
@@ -184,7 +184,7 @@ where
             .create_event_sink(window.id())
             .map_err(WindowError::WindowBackend)?;
 
-        let event_emitter = CallbackEmitter::new();
+        let event_emitter = Emitter::new();
         let scope = Scope::new(event_sink.clone(), event_emitter.clone());
         scope.with_context(scope.signal(window.clone()));
 

@@ -1,4 +1,4 @@
-use ori_reactive::{Callback, CallbackEmitter, OwnedSignal, Scope, Signal};
+use ori_reactive::{Callback, Emitter, OwnedSignal, Scope, Signal};
 
 use crate::{ElementView, IntoNode, Node};
 
@@ -33,7 +33,7 @@ pub trait BindCallback {
     fn bind(&mut self, cx: Scope, callback: impl FnMut(&Self::Event) + Send + 'static);
 }
 
-impl<T> BindCallback for CallbackEmitter<T> {
+impl<T> BindCallback for Emitter<T> {
     type Event = T;
 
     fn bind(&mut self, cx: Scope, callback: impl FnMut(&Self::Event) + Send + 'static) {

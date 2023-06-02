@@ -3,17 +3,17 @@ use std::ops::{Deref, DerefMut};
 use once_cell::sync::OnceCell;
 use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-use crate::CallbackEmitter;
+use crate::Emitter;
 
 struct AtomRefInner<T: 'static> {
-    emitter: CallbackEmitter,
+    emitter: Emitter,
     value: RwLock<T>,
 }
 
 impl<T: 'static> AtomRefInner<T> {
     fn new(value: T) -> Self {
         Self {
-            emitter: CallbackEmitter::new(),
+            emitter: Emitter::new(),
             value: RwLock::new(value),
         }
     }
@@ -66,18 +66,18 @@ impl<T: Send + Sync> AtomRef<T> {
         &self.inner().value
     }
 
-    /// Returns a reference to the [`CallbackEmitter`] that is triggered when
+    /// Returns a reference to the [`Emitter`] that is triggered when
     /// the value is modified.
-    pub fn emitter(&self) -> &CallbackEmitter {
+    pub fn emitter(&self) -> &Emitter {
         &self.inner().emitter
     }
 
-    /// Emits the [`CallbackEmitter`].
+    /// Emits the [`Emitter`].
     pub fn emit(&self) {
         self.emitter().emit(&());
     }
 
-    /// Tracks the [`CallbackEmitter`] for the current effect.
+    /// Tracks the [`Emitter`] for the current effect.
     pub fn track(&self) {
         crate::effect::track_callback(self.emitter().downgrade());
     }
@@ -99,10 +99,10 @@ impl<T: Send + Sync> AtomRef<T> {
     }
 }
 
-/// A guard that tracks the [`CallbackEmitter`] when the value is read.
+/// A guard that tracks the [`Emitter`] when the value is read.
 pub struct AtomReadGuard<'a, T> {
     guard: RwLockReadGuard<'a, T>,
-    emitter: &'a CallbackEmitter,
+    emitter: &'a Emitter,
 }
 
 impl<'a, T> Deref for AtomReadGuard<'a, T> {
@@ -114,11 +114,11 @@ impl<'a, T> Deref for AtomReadGuard<'a, T> {
     }
 }
 
-/// A guard that tracks the [`CallbackEmitter`] when read, and emits it when
+/// A guard that tracks the [`Emitter`] when read, and emits it when
 /// dropped.
 pub struct AtomWriteGuard<'a, T> {
     guard: Option<RwLockWriteGuard<'a, T>>,
-    emitter: &'a CallbackEmitter,
+    emitter: &'a Emitter,
 }
 
 impl<'a, T> Deref for AtomWriteGuard<'a, T> {
