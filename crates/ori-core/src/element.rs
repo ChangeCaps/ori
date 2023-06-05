@@ -59,7 +59,7 @@ use crate::{AvailableSpace, DrawContext, EventContext, LayoutContext};
 #[allow(unused_variables)]
 pub trait Element: Send + Sync + 'static {
     /// The state of the element.
-    type State: Send + Sync + 'static;
+    type State: Send + 'static;
 
     /// Builds the state of the element.
     fn build(&self) -> Self::State;
@@ -93,7 +93,7 @@ pub trait Element: Send + Sync + 'static {
 /// A type-erased [`Element`].
 pub trait AnyElement: Any + Send + Sync {
     /// Builds the state of the view.
-    fn build(&self) -> Box<dyn Any + Send + Sync>;
+    fn build(&self) -> Box<dyn Any + Send>;
 
     /// Returns the style of the view.
     fn style(&self) -> Style;
@@ -109,7 +109,7 @@ pub trait AnyElement: Any + Send + Sync {
 }
 
 impl<T: Element> AnyElement for T {
-    fn build(&self) -> Box<dyn Any + Send + Sync> {
+    fn build(&self) -> Box<dyn Any + Send> {
         Box::new(self.build())
     }
 
@@ -144,22 +144,40 @@ impl<T: Element> AnyElement for T {
 }
 
 impl dyn AnyElement {
+    /// Attempts to downcast this `AnyElement` to a concrete type.
     pub fn downcast_ref<T: AnyElement>(&self) -> Option<&T> {
         if self.type_id() == TypeId::of::<T>() {
             // SAFETY: `T` and `Self` are the same type
-            unsafe { Some(&*(self as *const dyn AnyElement as *const T)) }
+            Some(unsafe { self.downcast_ref_unchecked() })
         } else {
             None
         }
     }
 
+    /// Attempts to downcast this `AnyElement` to a concrete type.
     pub fn downcast_mut<T: AnyElement>(&mut self) -> Option<&mut T> {
         if <dyn AnyElement>::type_id(self) == TypeId::of::<T>() {
             // SAFETY: `T` and `Self` are the same type
-            unsafe { Some(&mut *(self as *mut dyn AnyElement as *mut T)) }
+            Some(unsafe { self.downcast_mut_unchecked() })
         } else {
             None
         }
+    }
+
+    /// Downcasts this `AnyElement` to a concrete type.
+    ///
+    /// # Safety
+    /// - `T` must be the same type as `self`.
+    pub unsafe fn downcast_ref_unchecked<T: AnyElement>(&self) -> &T {
+        &*(self as *const dyn AnyElement as *const T)
+    }
+
+    /// Downcasts this `AnyElement` to a concrete type.
+    ///
+    /// # Safety
+    /// - `T` must be the same type as `self`.
+    pub unsafe fn downcast_mut_unchecked<T: AnyElement>(&mut self) -> &mut T {
+        &mut *(self as *mut dyn AnyElement as *mut T)
     }
 }
 

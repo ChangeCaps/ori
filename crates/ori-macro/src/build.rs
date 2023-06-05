@@ -92,6 +92,33 @@ fn build(input: &DeriveInput) -> TokenStream {
     let (setter_impl_generics, setter_ty_generics, setter_where_clause) =
         setter_generics.split_for_impl();
 
+    let properties = quote! {
+        let closure = |this: &mut Self| {
+            let setter = PropertiesSetter { this };
+            f(setter);
+        };
+        let node = view.get_node().expect("node not found");
+        node.downcast::<Self, ()>(closure).expect("downcast failed");
+    };
+
+    let events = quote! {
+        let closure = |this: &mut Self| {
+            let setter = EventsSetter { this };
+            f(setter);
+        };
+        let node = view.get_node().expect("node not found");
+        node.downcast::<Self, ()>(closure).expect("downcast failed");
+    };
+
+    let bindings = quote! {
+        let closure = |this: &mut Self| {
+            let setter = BindingsSetter { this };
+            f(setter);
+        };
+        let node = view.get_node().expect("node not found");
+        node.downcast::<Self, ()>(closure).expect("downcast failed");
+    };
+
     quote! { const _: () = {
         pub struct PropertiesSetter #setter_impl_generics #where_clause {
             this: &'__setter mut #name #ty_generics,
@@ -127,30 +154,15 @@ fn build(input: &DeriveInput) -> TokenStream {
             }
 
             fn properties(view: &#ori_core::View, f: impl ::std::ops::FnOnce(Self::Properties<'_>)) {
-                let closure = |this: &mut Self| {
-                    let setter = PropertiesSetter { this };
-                    f(setter);
-                };
-                let node = view.get_node().expect("node not found");
-                node.downcast::<Self, ()>(closure).expect("downcast failed");
+                #properties
             }
 
             fn events(view: &#ori_core::View, f: impl ::std::ops::FnOnce(Self::Events<'_>)) {
-                let closure = |this: &mut Self| {
-                    let setter = EventsSetter { this };
-                    f(setter);
-                };
-                let node = view.get_node().expect("node not found");
-                node.downcast::<Self, ()>(closure).expect("downcast failed");
+                #events
             }
 
             fn bindings(view: &#ori_core::View, f: impl ::std::ops::FnOnce(Self::Bindings<'_>)) {
-                let closure = |this: &mut Self| {
-                    let setter = BindingsSetter { this };
-                    f(setter);
-                };
-                let node = view.get_node().expect("node not found");
-                node.downcast::<Self, ()>(closure).expect("downcast failed");
+                #bindings
             }
         }
     };}
@@ -164,8 +176,6 @@ fn children(input: &DeriveInput) -> TokenStream {
 
     let fields = fields.named.iter().filter_map(|field| {
         let field_name = &field.ident;
-        let ty = &field.ty;
-
         let attrs = Attrs::parse(&field.attrs);
 
         if !attrs.is_children {
@@ -176,15 +186,13 @@ fn children(input: &DeriveInput) -> TokenStream {
 
         Some(quote! {
             impl #impl_generics #ori_core::Parent for #name #ty_generics #where_clause {
-                type Child = <#ty as #ori_core::Parent>::Child;
-
                 fn clear_children(&mut self) {
                     self.#field_name.clear_children();
                 }
 
                 fn add_children(
                     &mut self,
-                    child: impl ::std::iter::Iterator<Item = #ori_core::View<Self::Child>>,
+                    child: impl ::std::iter::Iterator<Item = #ori_core::View>,
                 ) -> ::std::primitive::usize {
                     self.#field_name.add_children(child)
                 }
@@ -192,7 +200,7 @@ fn children(input: &DeriveInput) -> TokenStream {
                 fn set_children(
                     &mut self,
                     slot: ::std::primitive::usize,
-                    child: impl ::std::iter::Iterator<Item = #ori_core::View<Self::Child>>,
+                    child: impl ::std::iter::Iterator<Item = #ori_core::View>,
                 ) {
                     self.#field_name.set_children(slot, child);
                 }

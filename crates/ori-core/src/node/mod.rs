@@ -1,10 +1,6 @@
-mod downcast;
-mod element;
 mod root;
 mod state;
 
-pub use downcast::*;
-pub use element::*;
 pub use state::*;
 
 use std::{any::Any, fmt::Debug, sync::Arc};
@@ -17,21 +13,17 @@ use parking_lot::{Mutex, MutexGuard};
 use tracing::trace_span;
 
 use crate::{
-    AnyElement, AvailableSpace, Context, DebugEvent, DrawContext, EmptyElement, EventContext,
-    LayoutContext, Margin, Padding, PointerEvent,
+    AnyElement, AvailableSpace, Context, DebugEvent, DrawContext, Element, EmptyElement,
+    EventContext, LayoutContext, Margin, Padding, PointerEvent,
 };
 
-struct NodeInner<T: NodeElement> {
-    view_state: Mutex<T::State>,
+struct NodeInner {
+    view_state: Mutex<Box<dyn Any + Send>>,
     node_state: Mutex<NodeState>,
-    element: Mutex<T>,
+    element: Mutex<Box<dyn AnyElement>>,
 }
 
-impl<T: NodeElement> Debug for NodeInner<T>
-where
-    T: Debug,
-    T::State: Debug,
-{
+impl Debug for NodeInner {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ElementInner")
             .field("view_state", &self.view_state)
@@ -41,24 +33,17 @@ where
     }
 }
 
+/// An error that occurs when downcasting an element.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub struct ElementDowncastError;
+
 /// An node in the UI tree.
-pub struct Node<T: NodeElement = Box<dyn AnyElement>> {
-    inner: Arc<NodeInner<T>>,
+#[derive(Clone)]
+pub struct Node {
+    inner: Arc<NodeInner>,
 }
 
-impl<T: NodeElement> Clone for Node<T> {
-    fn clone(&self) -> Self {
-        Self {
-            inner: self.inner.clone(),
-        }
-    }
-}
-
-impl<T: NodeElement> Debug for Node<T>
-where
-    T: Debug,
-    T::State: Debug,
-{
+impl Debug for Node {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Element")
             .field("inner", &self.inner)
@@ -69,20 +54,18 @@ where
 impl Node {
     /// Creates an empty [`Node`].
     pub fn empty() -> Self {
-        Self::new(Box::new(EmptyElement))
+        Self::new(EmptyElement)
     }
-}
 
-impl<T: NodeElement> Node<T> {
     /// Create a new element with the given [`Element`](crate::Element).
-    pub fn new(element: T) -> Self {
-        let view_state = NodeElement::build(&element);
-        let element_state = NodeState::new(NodeElement::style(&element));
+    pub fn new(element: impl Element) -> Self {
+        let view_state = Element::build(&element);
+        let element_state = NodeState::new(Element::style(&element));
 
         let inner = Arc::new(NodeInner {
-            view_state: Mutex::new(view_state),
+            view_state: Mutex::new(Box::new(view_state)),
             node_state: Mutex::new(element_state),
-            element: Mutex::new(element),
+            element: Mutex::new(Box::new(element)),
         });
 
         Self { inner }
@@ -91,7 +74,7 @@ impl<T: NodeElement> Node<T> {
     /// Returns a [`MutexGuard`] to the state of the `T`.
     ///
     /// Be careful when using this, as it can cause deadlocks.
-    pub fn element_state(&self) -> MutexGuard<'_, T::State> {
+    pub fn element_state(&self) -> MutexGuard<'_, Box<dyn Any + Send>> {
         self.inner.as_ref().view_state.lock()
     }
 
@@ -103,18 +86,15 @@ impl<T: NodeElement> Node<T> {
     }
 
     /// Returns a [`MutexGuard`] to the `T`.
-    pub fn element(&self) -> MutexGuard<'_, T> {
+    pub fn element(&self) -> MutexGuard<'_, Box<dyn AnyElement>> {
         self.inner.as_ref().element.lock()
     }
 
     /// Downcasts `T` to `U` and calls the given function with the `U`.
-    pub fn downcast<U: NodeElement, V>(
+    pub fn downcast<U: Element, V>(
         &self,
         f: impl FnOnce(&mut U) -> V,
-    ) -> Result<V, ElementDowncastError>
-    where
-        T: DowncastElement<U>,
-    {
+    ) -> Result<V, ElementDowncastError> {
         let result = if let Some(view) = self.element().downcast_mut() {
             f(view)
         } else {
@@ -209,7 +189,7 @@ impl<T: NodeElement> Node<T> {
     }
 }
 
-impl<T: NodeElement> Node<T> {
+impl Node {
     // returns true if the element should be redrawn.
     fn handle_pointer_event(
         element_state: &mut NodeState,
@@ -286,8 +266,7 @@ impl<T: NodeElement> Node<T> {
             return;
         }
 
-        self.element()
-            .event(&mut self.element_state(), &mut cx, event);
+        (self.element()).event(self.element_state().as_mut(), &mut cx, event);
 
         Self::update_cursor(&mut cx);
     }
@@ -335,9 +314,7 @@ impl<T: NodeElement> Node<T> {
         let space = cx.style_constraints(space);
         cx.space = space;
 
-        let size = self
-            .element()
-            .layout(&mut self.element_state(), &mut cx, space);
+        let size = (self.element()).layout(self.element_state().as_mut(), &mut cx, space);
 
         let local_offset = state.local_rect.min + state.margin.top_left();
         let global_offset = state.global_rect.min + state.margin.top_left();
@@ -373,7 +350,7 @@ impl<T: NodeElement> Node<T> {
             image_cache: cx.image_cache,
         };
 
-        self.element().draw(&mut self.element_state(), &mut cx);
+        self.element().draw(self.element_state().as_mut(), &mut cx);
 
         if cx.state.update_transitions() {
             cx.request_redraw();

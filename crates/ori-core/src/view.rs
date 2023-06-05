@@ -2,15 +2,15 @@ use std::sync::Arc;
 
 use ori_reactive::OwnedSignal;
 
-use crate::{AnyElement, Element, Node, NodeElement};
+use crate::{Element, Node};
 
-enum ViewKind<V: NodeElement> {
-    Element(Node<V>),
-    Fragment(Arc<[View<V>]>),
-    Dynamic(OwnedSignal<View<V>>),
+enum ViewKind {
+    Element(Node),
+    Fragment(Arc<[View]>),
+    Dynamic(OwnedSignal<View>),
 }
 
-impl<V: NodeElement> Clone for ViewKind<V> {
+impl Clone for ViewKind {
     fn clone(&self) -> Self {
         match self {
             Self::Element(element) => Self::Element(element.clone()),
@@ -21,31 +21,25 @@ impl<V: NodeElement> Clone for ViewKind<V> {
 }
 
 /// A trait for types that can be converted into a [`View`].
-pub trait IntoView<V: NodeElement = Box<dyn AnyElement>> {
+pub trait IntoView {
     /// Converts `self` into a [`Node`].
-    fn into_view(self) -> View<V>;
-}
-
-impl<V: Element> IntoView<V> for V {
-    fn into_view(self) -> View<V> {
-        View::node(Node::new(self))
-    }
+    fn into_view(self) -> View;
 }
 
 impl<V: Element> IntoView for V {
     fn into_view(self) -> View {
-        View::node(Node::new(Box::new(self)))
+        View::node(Node::new(self))
     }
 }
 
-impl<V: NodeElement> IntoView<V> for View<V> {
-    fn into_view(self) -> View<V> {
+impl IntoView for View {
+    fn into_view(self) -> View {
         self
     }
 }
 
-impl<V: NodeElement> IntoView<V> for Node<V> {
-    fn into_view(self) -> View<V> {
+impl IntoView for Node {
+    fn into_view(self) -> View {
         View::node(self)
     }
 }
@@ -56,11 +50,11 @@ impl<V: NodeElement> IntoView<V> for Node<V> {
 /// - An [`Element`].
 /// - A fragment containing a list of [`View`]s.
 /// - A dynamic [`View`] that can change over time.
-pub struct View<V: NodeElement = Box<dyn AnyElement>> {
-    kind: ViewKind<V>,
+pub struct View {
+    kind: ViewKind,
 }
 
-impl<V: NodeElement> Clone for View<V> {
+impl Clone for View {
     fn clone(&self) -> Self {
         Self {
             kind: self.kind.clone(),
@@ -68,28 +62,28 @@ impl<V: NodeElement> Clone for View<V> {
     }
 }
 
-impl<V: NodeElement> View<V> {
-    fn from_kind(kind: ViewKind<V>) -> Self {
+impl View {
+    fn from_kind(kind: ViewKind) -> Self {
         Self { kind }
     }
 
     /// Creates a new [`Node`].
-    pub fn new(into_node: impl IntoView<V>) -> Self {
+    pub fn new(into_node: impl IntoView) -> Self {
         into_node.into_view()
     }
 
     /// Creates a new [`View`] from an [`Node`].
-    pub fn node(element: Node<V>) -> Self {
+    pub fn node(element: Node) -> Self {
         Self::from_kind(ViewKind::Element(element))
     }
 
     /// Creates a new [`View`] fragment from a list of [`View`]s.
-    pub fn fragment(fragment: impl Into<Arc<[View<V>]>>) -> Self {
+    pub fn fragment(fragment: impl Into<Arc<[View]>>) -> Self {
         Self::from_kind(ViewKind::Fragment(fragment.into()))
     }
 
     /// Creates a new dynamic [`View`] from an [`OwnedSignal`].
-    pub fn dynamic(signal: OwnedSignal<View<V>>) -> Self {
+    pub fn dynamic(signal: OwnedSignal<View>) -> Self {
         Self::from_kind(ViewKind::Dynamic(signal))
     }
 
@@ -113,7 +107,7 @@ impl<V: NodeElement> View<V> {
     }
 
     /// If `self` is a node, returns a reference to the [`Node`].
-    pub fn get_node(&self) -> Option<&Node<V>> {
+    pub fn get_node(&self) -> Option<&Node> {
         match &self.kind {
             ViewKind::Element(element) => Some(element),
             _ => None,
@@ -121,7 +115,7 @@ impl<V: NodeElement> View<V> {
     }
 
     /// Tries to convert the [`View`] into a [`Node`].
-    pub fn into_node(self) -> Option<Node<V>> {
+    pub fn into_node(self) -> Option<Node> {
         match self.kind {
             ViewKind::Element(element) => Some(element),
             _ => None,
@@ -129,7 +123,7 @@ impl<V: NodeElement> View<V> {
     }
 
     /// Tries to convert the [`View`] into a fragment.
-    pub fn into_fragment(self) -> Option<Arc<[View<V>]>> {
+    pub fn into_fragment(self) -> Option<Arc<[View]>> {
         match self.kind {
             ViewKind::Fragment(fragment) => Some(fragment),
             _ => None,
@@ -137,7 +131,7 @@ impl<V: NodeElement> View<V> {
     }
 
     /// Tries to convert the [`View`] into a dynamic [`View`].
-    pub fn into_dynamic(self) -> Option<OwnedSignal<View<V>>> {
+    pub fn into_dynamic(self) -> Option<OwnedSignal<View>> {
         match self.kind {
             ViewKind::Dynamic(signal) => Some(signal),
             _ => None,
@@ -146,7 +140,7 @@ impl<V: NodeElement> View<V> {
 
     /// Returns all elements in the [`View`], including nested elements, flattened into a single
     /// [`Vec`]. Dynamic [`View`]s are fetched in a reactive manner.
-    pub fn flatten(&self) -> Vec<Node<V>> {
+    pub fn flatten(&self) -> Vec<Node> {
         match &self.kind {
             ViewKind::Element(element) => vec![element.clone()],
             ViewKind::Fragment(fragment) => fragment.iter().flat_map(View::flatten).collect(),
@@ -156,11 +150,11 @@ impl<V: NodeElement> View<V> {
 
     /// Calls the given closure on all elements in the [`View`], including nested elements.
     /// Dynamic [`View`]s are fetched in a reactive manner.
-    pub fn visit(&self, mut visitor: impl FnMut(&Node<V>)) {
+    pub fn visit(&self, mut visitor: impl FnMut(&Node)) {
         self.visit_inner(&mut visitor);
     }
 
-    fn visit_inner(&self, visitor: &mut impl FnMut(&Node<V>)) {
+    fn visit_inner(&self, visitor: &mut impl FnMut(&Node)) {
         match &self.kind {
             ViewKind::Element(element) => visitor(element),
             ViewKind::Fragment(fragment) => {

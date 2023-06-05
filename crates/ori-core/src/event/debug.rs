@@ -5,7 +5,7 @@ use std::{
 
 use ori_reactive::Event;
 
-use crate::{DebugElement, EventContext, Node, NodeElement};
+use crate::{DebugElement, EventContext, Node};
 
 /// A debug event.
 ///
@@ -39,7 +39,7 @@ impl DebugEvent {
     }
 
     /// Sets the root element of the current debug tree.
-    pub fn set_element<T: NodeElement>(&self, cx: &mut EventContext, element: &Node<T>) {
+    pub fn set_element(&self, cx: &mut EventContext, element: &Node) {
         let debug_element = DebugElement {
             selector: cx.style_tree.element.clone(),
             local_rect: element.local_rect(),
@@ -53,7 +53,7 @@ impl DebugEvent {
     /// This method is used to add a child element to the debug tree.
     ///
     /// This will call the `event` method.
-    pub fn with_element<T: NodeElement>(&self, cx: &mut EventContext, element: &Node<T>) {
+    pub fn with_element(&self, cx: &mut EventContext, element: &Node) {
         let debug_element = DebugElement {
             selector: cx.style_tree.element.clone(),
             local_rect: element.local_rect(),
@@ -62,9 +62,7 @@ impl DebugEvent {
         };
 
         let event = Event::new(DebugEvent::new(debug_element));
-        element
-            .element()
-            .event(&mut element.element_state(), cx, &event);
+        (element.element()).event(element.element_state().as_mut(), cx, &event);
 
         let child = event.get::<DebugEvent>().unwrap().take();
         self.add_child(child);

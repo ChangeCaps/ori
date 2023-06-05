@@ -1,17 +1,29 @@
 use ori_reactive::{Callback, Emitter, OwnedSignal, Scope, Signal};
 
-use crate::{AnyElement, IntoView, NodeElement, View};
+use crate::{IntoView, View};
 
-pub trait Build<V: NodeElement = Box<dyn AnyElement>> {
+/// A trait for types that can be built from a [`View`].
+pub trait Build {
+    /// The properties type.
     type Properties<'a>;
+
+    /// The events type.
     type Events<'a>;
+
+    /// The bindings type.
     type Bindings<'a>;
 
-    fn build() -> View<V>;
+    /// Builds the default view.
+    fn build() -> View;
 
-    fn properties(view: &View<V>, f: impl FnOnce(Self::Properties<'_>));
-    fn events(view: &View<V>, f: impl FnOnce(Self::Events<'_>));
-    fn bindings(view: &View<V>, f: impl FnOnce(Self::Bindings<'_>));
+    /// Retrieves the properties of the view.
+    fn properties(view: &View, f: impl FnOnce(Self::Properties<'_>));
+
+    /// Retrieves the events of the view.
+    fn events(view: &View, f: impl FnOnce(Self::Events<'_>));
+
+    /// Retrieves the bindings of the view.
+    fn bindings(view: &View, f: impl FnOnce(Self::Bindings<'_>));
 }
 
 /// A trait that is implemented for every type a callback can be subscribed to.
@@ -52,25 +64,22 @@ impl<'a, T: Send + Sync + Clone + 'static> Bindable<'a> for OwnedSignal<T> {
 
 /// A trait for setting children on an element.
 pub trait Parent {
-    /// The child type.
-    type Child: NodeElement;
-
     /// Clears all children.
     fn clear_children(&mut self);
 
     /// Adds `children` to a new slot and returns the slot index.
-    fn add_children(&mut self, children: impl Iterator<Item = View<Self::Child>>) -> usize;
+    fn add_children(&mut self, children: impl Iterator<Item = View>) -> usize;
 
     /// Sets the children of `slot` to `children`.
-    fn set_children(&mut self, slot: usize, children: impl Iterator<Item = View<Self::Child>>);
+    fn set_children(&mut self, slot: usize, children: impl Iterator<Item = View>);
 
     /// Adds `child` to a new slot and returns the slot index.
-    fn add_child(&mut self, child: impl IntoView<Self::Child>) -> usize {
+    fn add_child(&mut self, child: impl IntoView) -> usize {
         self.add_children(std::iter::once(View::new(child)))
     }
 
     /// Adds `children` to a new slot.
-    fn with_children(mut self, children: impl Iterator<Item = View<Self::Child>>) -> Self
+    fn with_children(mut self, children: impl Iterator<Item = View>) -> Self
     where
         Self: Sized,
     {
@@ -79,7 +88,7 @@ pub trait Parent {
     }
 
     /// Adds `child` to a new slot.
-    fn with_child(mut self, child: impl IntoView<Self::Child>) -> Self
+    fn with_child(mut self, child: impl IntoView) -> Self
     where
         Self: Sized,
     {

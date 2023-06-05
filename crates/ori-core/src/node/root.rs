@@ -4,11 +4,11 @@ use ori_reactive::{Event, EventSink};
 use ori_style::{StyleCache, StyleTree, Stylesheet};
 
 use crate::{
-    AvailableSpace, DebugEvent, DrawContext, EventContext, LayoutContext, Margin, Node,
-    NodeElement, Padding, PointerEvent, RequestRedrawEvent, Window, WindowResizedEvent,
+    AvailableSpace, DebugEvent, DrawContext, EventContext, LayoutContext, Margin, Node, Padding,
+    PointerEvent, RequestRedrawEvent, Window, WindowResizedEvent,
 };
 
-impl<T: NodeElement> Node<T> {
+impl Node {
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn event_root_inner(
         &self,
@@ -51,8 +51,7 @@ impl<T: NodeElement> Node<T> {
             event.set_element(&mut cx, self);
         }
 
-        self.element()
-            .event(&mut self.element_state(), &mut cx, event);
+        (self.element()).event(self.element_state().as_mut(), &mut cx, event);
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -93,9 +92,7 @@ impl<T: NodeElement> Node<T> {
         let space = cx.style_constraints(space);
         cx.space = space;
 
-        let size = self
-            .element()
-            .layout(&mut self.element_state(), &mut cx, space);
+        let size = (self.element()).layout(self.element_state().as_mut(), &mut cx, space);
 
         element_state.available_space = space;
         element_state.local_rect = Rect::min_size(element_state.local_rect.min, size);
@@ -133,7 +130,7 @@ impl<T: NodeElement> Node<T> {
             image_cache,
         };
 
-        self.element().draw(&mut self.element_state(), &mut cx);
+        self.element().draw(self.element_state().as_mut(), &mut cx);
 
         cx.state.draw();
     }

@@ -11,20 +11,8 @@ impl IntoView for String {
     }
 }
 
-impl IntoView<Text> for String {
-    fn into_view(self) -> View<Text> {
-        View::new(Text::new(self))
-    }
-}
-
 impl IntoView for &str {
     fn into_view(self) -> View {
-        View::new(Text::new(self))
-    }
-}
-
-impl IntoView<Text> for &str {
-    fn into_view(self) -> View<Text> {
         View::new(Text::new(self))
     }
 }
