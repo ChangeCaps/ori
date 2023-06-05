@@ -65,9 +65,7 @@ pub trait Element: Send + Sync + 'static {
     fn build(&self) -> Self::State;
 
     /// Returns the style of the element.
-    fn style(&self) -> Style {
-        Style::default()
-    }
+    fn style(&self) -> Style;
 
     /// Handles an event.
     fn event(&self, state: &mut Self::State, cx: &mut EventContext, event: &Event) {}
@@ -221,4 +219,8 @@ impl Element for EmptyElement {
     type State = ();
 
     fn build(&self) -> Self::State {}
+
+    fn style(&self) -> Style {
+        Style::default()
+    }
 }
