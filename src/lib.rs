@@ -46,6 +46,8 @@ pub mod prelude {
     pub use ori_reactive::prelude::*;
     pub use ori_style::prelude::*;
 
+    #[cfg(feature = "wgpu")]
+    pub use ori_wgpu::prelude::*;
     #[cfg(feature = "winit")]
     pub use ori_winit::prelude::*;
 }

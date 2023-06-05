@@ -24,6 +24,14 @@ impl ImageHandle {
         }
     }
 
+    pub fn from_arc<T: Any + Send + Sync>(handle: Arc<T>, width: u32, height: u32) -> Self {
+        Self {
+            width,
+            height,
+            handle,
+        }
+    }
+
     /// Downgrades the image handle to a [`WeakImageHandle`].
     pub fn downgrade(&self) -> WeakImageHandle {
         WeakImageHandle {

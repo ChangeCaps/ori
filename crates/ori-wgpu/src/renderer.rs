@@ -18,17 +18,17 @@ use crate::{BlitPipeline, MeshPipeline, QuadPipeline, WgpuImage};
 
 #[allow(dead_code)]
 pub struct WgpuRenderer {
-    device: Arc<Device>,
-    queue: Arc<Queue>,
-    config: SurfaceConfiguration,
-    surface: Surface,
-    msaa_texture: Texture,
-    image_bind_group_layout: BindGroupLayout,
-    default_image: WgpuImage,
-    blit_pipeline: BlitPipeline,
-    mesh_pipeline: MeshPipeline,
-    quad_pipeline: QuadPipeline,
-    staging_belt: StagingBelt,
+    pub(crate) device: Arc<Device>,
+    pub(crate) queue: Arc<Queue>,
+    pub(crate) config: SurfaceConfiguration,
+    pub(crate) surface: Surface,
+    pub(crate) msaa_texture: Texture,
+    pub(crate) image_bind_group_layout: BindGroupLayout,
+    pub(crate) default_image: WgpuImage,
+    pub(crate) blit_pipeline: BlitPipeline,
+    pub(crate) mesh_pipeline: MeshPipeline,
+    pub(crate) quad_pipeline: QuadPipeline,
+    pub(crate) staging_belt: StagingBelt,
 }
 
 impl WgpuRenderer {
@@ -120,39 +120,45 @@ impl WgpuRenderer {
         })
     }
 
-    fn create_image(
+    pub(crate) fn create_image(
         device: &Device,
         queue: &Queue,
         layout: &BindGroupLayout,
         width: u32,
         height: u32,
         data: &[u8],
+        usages: TextureUsages,
     ) -> WgpuImage {
-        let texture = device.create_texture_with_data(
-            queue,
-            &TextureDescriptor {
-                label: Some("Ily Texture"),
-                size: Extent3d {
-                    width,
-                    height,
-                    depth_or_array_layers: 1,
-                },
-                mip_level_count: 1,
-                sample_count: 1,
-                dimension: TextureDimension::D2,
-                format: TextureFormat::Rgba8Unorm,
-                usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST,
-                view_formats: &[],
+        let desc = TextureDescriptor {
+            label: Some("Ily Texture"),
+            size: Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
             },
-            data,
-        );
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: TextureDimension::D2,
+            format: TextureFormat::Rgba8Unorm,
+            usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST | usages,
+            view_formats: &[],
+        };
+
+        let texture = if data.is_empty() {
+            device.create_texture(&desc)
+        } else {
+            device.create_texture_with_data(queue, &desc, data)
+        };
+
         let view = texture.create_view(&Default::default());
+
         let sampler = device.create_sampler(&SamplerDescriptor {
             label: Some("Ily Image Sampler"),
             min_filter: FilterMode::Linear,
             mag_filter: FilterMode::Linear,
             ..Default::default()
         });
+
         let bind_group = device.create_bind_group(&BindGroupDescriptor {
             label: Some("Ily Bind Group"),
             layout,
@@ -178,7 +184,7 @@ impl WgpuRenderer {
 
     fn create_default_image(device: &Device, queue: &Queue, layout: &BindGroupLayout) -> WgpuImage {
         let data = vec![255, 255, 255, 255];
-        Self::create_image(device, queue, layout, 1, 1, &data)
+        Self::create_image(device, queue, layout, 1, 1, &data, TextureUsages::empty())
     }
 
     pub fn device(&self) -> &Device {
@@ -327,6 +333,7 @@ impl Renderer for WgpuRenderer {
             data.width(),
             data.height(),
             data.pixels(),
+            TextureUsages::empty(),
         );
 
         ImageHandle::new(image, data.width(), data.height())
