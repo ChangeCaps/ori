@@ -4,12 +4,12 @@ use glam::Vec2;
 use ori_reactive::Event;
 use ori_style::Style;
 
-use crate::{AnyView, AvailableSpace, DrawContext, EventContext, LayoutContext, View};
+use crate::{AnyElement, AvailableSpace, DrawContext, Element, EventContext, LayoutContext};
 
 /// A view that can be used as an element.
 ///
 /// This exists because specialization doesn't.
-pub trait ElementView: Send + Sync + 'static {
+pub trait NodeElement: Send + Sync + 'static {
     /// The state of the element.
     type State: Send + Sync + 'static;
 
@@ -34,7 +34,7 @@ pub trait ElementView: Send + Sync + 'static {
     fn draw(&self, state: &mut Self::State, cx: &mut DrawContext);
 }
 
-impl<T: View> ElementView for T {
+impl<T: Element> NodeElement for T {
     type State = T::State;
 
     fn build(&self) -> Self::State {
@@ -63,7 +63,7 @@ impl<T: View> ElementView for T {
     }
 }
 
-impl ElementView for Box<dyn AnyView> {
+impl NodeElement for Box<dyn AnyElement> {
     type State = Box<dyn Any + Send + Sync>;
 
     fn build(&self) -> Self::State {

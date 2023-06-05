@@ -5,10 +5,10 @@ use ori_reactive::{Emitter, Event, OwnedSignal, Signal};
 use ori_style::Style;
 
 use crate::{
-    AvailableSpace, Context, DrawContext, EventContext, LayoutContext, PointerEvent, View,
+    AvailableSpace, Context, DrawContext, Element, EventContext, LayoutContext, PointerEvent,
 };
 
-/// A checkbox view.
+/// A checkbox element.
 #[derive(Default, Build)]
 pub struct Checkbox {
     /// Whether the checkbox is checked.
@@ -41,7 +41,7 @@ impl Checkbox {
     }
 }
 
-impl View for Checkbox {
+impl Element for Checkbox {
     type State = ();
 
     fn build(&self) -> Self::State {}

@@ -7,8 +7,8 @@ use ori_reactive::Event;
 use smallvec::{smallvec, SmallVec};
 
 use crate::{
-    AlignItem, AnyView, AvailableSpace, Axis, Context, DrawContext, Element, ElementView,
-    EventContext, JustifyContent, LayoutContext, Node, Parent,
+    AlignItem, AnyElement, AvailableSpace, Axis, Context, DrawContext, EventContext,
+    JustifyContent, LayoutContext, Node, NodeElement, Parent, View,
 };
 
 /// A layout that lays out children in a flexbox-like manner.
@@ -89,36 +89,36 @@ impl FlexLayout {
     }
 }
 
-/// Children of a [`View`](crate::View).
+/// Children of an [`Element`](crate::Element).
 #[derive(Deref, DerefMut)]
-pub struct Children<T: ElementView = Box<dyn AnyView>> {
-    elements: SmallVec<[SmallVec<[Node<T>; 1]>; 1]>,
+pub struct Children<T: NodeElement = Box<dyn AnyElement>> {
+    elements: SmallVec<[SmallVec<[View<T>; 1]>; 1]>,
 }
 
-impl<T: ElementView> Default for Children<T> {
+impl<T: NodeElement> Default for Children<T> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T: ElementView> Parent for Children<T> {
+impl<T: NodeElement> Parent for Children<T> {
     type Child = T;
 
     fn clear_children(&mut self) {
         self.elements.clear();
     }
 
-    fn add_children(&mut self, children: impl Iterator<Item = Node<Self::Child>>) -> usize {
+    fn add_children(&mut self, children: impl Iterator<Item = View<Self::Child>>) -> usize {
         self.elements.push(children.collect());
         self.elements.len() - 1
     }
 
-    fn set_children(&mut self, slot: usize, children: impl Iterator<Item = Node<Self::Child>>) {
+    fn set_children(&mut self, slot: usize, children: impl Iterator<Item = View<Self::Child>>) {
         self.elements[slot] = children.collect();
     }
 }
 
-impl<T: ElementView> Children<T> {
+impl<T: NodeElement> Children<T> {
     /// Create a new children.
     pub const fn new() -> Self {
         Self {
@@ -128,7 +128,7 @@ impl<T: ElementView> Children<T> {
 
     /// Returns the amount of children.
     pub fn len(&self) -> usize {
-        self.iter().map(Node::len).sum()
+        self.iter().map(View::len).sum()
     }
 
     /// Returns `true` if there are no children.
@@ -137,7 +137,7 @@ impl<T: ElementView> Children<T> {
     }
 
     /// Returns an iterator over the children.
-    pub fn extend(&mut self, children: impl IntoIterator<Item = Node<T>>) {
+    pub fn extend(&mut self, children: impl IntoIterator<Item = View<T>>) {
         self.elements.push(children.into_iter().collect());
     }
 
@@ -397,17 +397,17 @@ impl<T: ElementView> Children<T> {
     }
 
     /// Returns the number of children in the flex container.
-    pub fn iter(&self) -> impl DoubleEndedIterator<Item = &Node<T>> {
+    pub fn iter(&self) -> impl DoubleEndedIterator<Item = &View<T>> {
         self.into_iter()
     }
 
-    pub fn elements(&self) -> impl DoubleEndedIterator<Item = Element<T>> + '_ {
+    pub fn elements(&self) -> impl DoubleEndedIterator<Item = Node<T>> + '_ {
         self.iter().flat_map(|child| child.flatten())
     }
 }
 
-impl<T: ElementView> IntoIterator for Children<T> {
-    type Item = Node<T>;
+impl<T: NodeElement> IntoIterator for Children<T> {
+    type Item = View<T>;
     type IntoIter = iter::Flatten<smallvec::IntoIter<[SmallVec<[Self::Item; 1]>; 1]>>;
 
     fn into_iter(self) -> Self::IntoIter {
@@ -415,9 +415,9 @@ impl<T: ElementView> IntoIterator for Children<T> {
     }
 }
 
-impl<'a, T: ElementView> IntoIterator for &'a Children<T> {
-    type Item = &'a Node<T>;
-    type IntoIter = iter::Flatten<slice::Iter<'a, SmallVec<[Node<T>; 1]>>>;
+impl<'a, T: NodeElement> IntoIterator for &'a Children<T> {
+    type Item = &'a View<T>;
+    type IntoIter = iter::Flatten<slice::Iter<'a, SmallVec<[View<T>; 1]>>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.elements.iter().flatten()

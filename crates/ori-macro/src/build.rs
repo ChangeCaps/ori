@@ -206,7 +206,7 @@ fn children(input: &DeriveInput) -> TokenStream {
 
                 fn add_children(
                     &mut self,
-                    child: impl ::std::iter::Iterator<Item = #ori_core::Node<Self::Child>>,
+                    child: impl ::std::iter::Iterator<Item = #ori_core::View<Self::Child>>,
                 ) -> ::std::primitive::usize {
                     self.#field_name.add_children(child)
                 }
@@ -214,7 +214,7 @@ fn children(input: &DeriveInput) -> TokenStream {
                 fn set_children(
                     &mut self,
                     slot: ::std::primitive::usize,
-                    child: impl ::std::iter::Iterator<Item = #ori_core::Node<Self::Child>>,
+                    child: impl ::std::iter::Iterator<Item = #ori_core::View<Self::Child>>,
                 ) {
                     self.#field_name.set_children(slot, child);
                 }

@@ -13,12 +13,12 @@ use ori_style::{
     Stylesheet,
 };
 
-use crate::{AvailableSpace, ElementState, Margin, Padding, RequestRedrawEvent, Window};
+use crate::{AvailableSpace, Margin, NodeState, Padding, RequestRedrawEvent, Window};
 
-/// A context for [`View::event`](crate::View::event).
+/// A context for [`Element::event`](crate::Element::event).
 #[allow(missing_docs)]
 pub struct EventContext<'a> {
-    pub state: &'a mut ElementState,
+    pub state: &'a mut NodeState,
     pub renderer: &'a dyn Renderer,
     pub window: &'a mut Window,
     pub fonts: &'a mut Fonts,
@@ -29,10 +29,10 @@ pub struct EventContext<'a> {
     pub image_cache: &'a mut ImageCache,
 }
 
-/// A context for [`View::layout`](crate::View::layout).
+/// A context for [`Element::layout`](crate::Element::layout).
 #[allow(missing_docs)]
 pub struct LayoutContext<'a> {
-    pub state: &'a mut ElementState,
+    pub state: &'a mut NodeState,
     pub renderer: &'a dyn Renderer,
     pub window: &'a mut Window,
     pub fonts: &'a mut Fonts,
@@ -124,10 +124,10 @@ impl<'a, 'b> DrawLayer<'a, 'b> {
     }
 }
 
-/// A context for [`View::draw`](crate::View::draw).
+/// A context for [`Element::draw`](crate::Element::draw).
 #[allow(missing_docs)]
 pub struct DrawContext<'a> {
-    pub state: &'a mut ElementState,
+    pub state: &'a mut NodeState,
     pub frame: &'a mut Frame,
     pub renderer: &'a dyn Renderer,
     pub window: &'a mut Window,
@@ -231,11 +231,11 @@ pub trait Context {
     /// Returns the [`StyleCache`] of the application.
     fn style_cache_mut(&mut self) -> &mut StyleCache;
 
-    /// Returns the [`ElementState`] of the current element.
-    fn state(&self) -> &ElementState;
+    /// Returns the [`NodeState`] of the current element.
+    fn state(&self) -> &NodeState;
 
-    /// Returns the [`ElementState`] of the current element.
-    fn state_mut(&mut self) -> &mut ElementState;
+    /// Returns the [`NodeState`] of the current element.
+    fn state_mut(&mut self) -> &mut NodeState;
 
     /// Returns the [`Renderer`] of the application.
     fn renderer(&self) -> &dyn Renderer;
@@ -594,11 +594,11 @@ macro_rules! context {
                 self.style_cache
             }
 
-            fn state(&self) -> &ElementState {
+            fn state(&self) -> &NodeState {
                 self.state
             }
 
-            fn state_mut(&mut self) -> &mut ElementState {
+            fn state_mut(&mut self) -> &mut NodeState {
                 self.state
             }
 

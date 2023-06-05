@@ -3,7 +3,7 @@ text {
 	font-family: sans-serif;
 	color: #444444;
 	line-height: 0.8;
-	text-wrap: true;
+	text-wrap: word;
 	text-align: start;
 	text-valign: start;
 }

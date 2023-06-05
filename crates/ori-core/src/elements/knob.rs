@@ -7,10 +7,10 @@ use ori_reactive::{Event, OwnedSignal};
 use ori_style::Style;
 
 use crate::{
-    AvailableSpace, Context, DrawContext, EventContext, LayoutContext, PointerEvent, View,
+    AvailableSpace, Context, DrawContext, Element, EventContext, LayoutContext, PointerEvent,
 };
 
-/// A knob.
+/// A knob element.
 #[derive(Clone, Debug, Build)]
 pub struct Knob {
     /// The value of the knob.
@@ -34,7 +34,7 @@ impl Default for Knob {
     }
 }
 
-impl View for Knob {
+impl Element for Knob {
     type State = Option<Vec2>;
 
     fn build(&self) -> Self::State {

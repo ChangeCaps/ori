@@ -6,19 +6,19 @@ mod scope;
 pub use backend::*;
 pub use descriptor::*;
 pub use id::*;
-use ori_macro::view;
-use ori_style::{StyleCache, StyleLoader};
 pub use scope::*;
 
 use glam::{UVec2, Vec2};
 use ori_graphics::{Fonts, Frame, ImageCache, RenderBackend, Renderer};
+use ori_macro::view;
 use ori_reactive::{Emitter, Event, EventSink, Scope, Task};
+use ori_style::{StyleCache, StyleLoader};
 
 use std::{collections::HashMap, fmt::Debug};
 
 use crate::{
-    Body, CloseWindow, Cursor, Element, Key, KeyboardEvent, Modifiers, Node, OpenWindow,
-    PointerButton, PointerEvent, RequestRedrawEvent, WindowClosedEvent, WindowResizedEvent,
+    Body, CloseWindow, Cursor, Key, KeyboardEvent, Modifiers, Node, OpenWindow, PointerButton,
+    PointerEvent, RequestRedrawEvent, View, WindowClosedEvent, WindowResizedEvent,
 };
 
 const TEXT_FONT: &[u8] = include_bytes!("../../fonts/NotoSans-Medium.ttf");
@@ -27,7 +27,7 @@ const ICON_FONT: &[u8] = include_bytes!("../../fonts/MaterialIcons-Regular.ttf")
 struct WindowUi<R: Renderer> {
     renderer: R,
     window: Window,
-    element: Element,
+    element: Node,
     scope: Scope,
     event_sink: EventSink,
     event_emitter: Emitter<Event>,
@@ -163,7 +163,7 @@ where
         &mut self,
         target: W::Target<'_>,
         window: &Window,
-        mut ui: impl FnMut(Scope) -> Node + Send + 'static,
+        mut ui: impl FnMut(Scope) -> View + Send + 'static,
     ) -> Result<(), WindowError<W, R>> {
         self.window_backend
             .create_window(target, window)
@@ -197,7 +197,7 @@ where
         let window_ui = WindowUi {
             renderer,
             window: window.clone(),
-            element: element.into_element().unwrap(),
+            element: element.into_node().unwrap(),
             scope,
             event_sink,
             event_emitter,

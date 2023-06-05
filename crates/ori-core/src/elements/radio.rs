@@ -5,10 +5,10 @@ use ori_reactive::{Emitter, Event};
 use ori_style::Style;
 
 use crate::{
-    AvailableSpace, Context, DrawContext, EventContext, LayoutContext, PointerEvent, View,
+    AvailableSpace, Context, DrawContext, Element, EventContext, LayoutContext, PointerEvent,
 };
 
-/// A radio button view.
+/// A radio button element.
 #[derive(Clone, Debug, Default, Build)]
 pub struct Radio {
     /// Whether the radio button is selected.
@@ -20,7 +20,7 @@ pub struct Radio {
 }
 
 impl Radio {
-    /// Creates a new radio button view.
+    /// Creates a new radio button element.
     pub fn new(selected: bool) -> Self {
         Self {
             selected,
@@ -29,7 +29,7 @@ impl Radio {
     }
 }
 
-impl View for Radio {
+impl Element for Radio {
     type State = ();
 
     fn build(&self) -> Self::State {}

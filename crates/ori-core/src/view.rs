@@ -1,157 +1,156 @@
-use std::any::{self, Any, TypeId};
+use std::sync::Arc;
 
-use glam::Vec2;
-use ori_reactive::Event;
-use ori_style::{Style, Styled};
+use ori_reactive::OwnedSignal;
 
-use crate::{AvailableSpace, DrawContext, EventContext, LayoutContext};
+use crate::{AnyElement, Element, Node, NodeElement};
 
-/// A [`View`] is a component that can be rendered to the screen.
-#[allow(unused_variables)]
-pub trait View: Send + Sync + 'static {
-    /// The state of the view.
-    type State: Send + Sync + 'static;
-
-    /// Builds the state of the view.
-    fn build(&self) -> Self::State;
-
-    /// Returns the style of the view.
-    fn style(&self) -> Style {
-        Style::default()
-    }
-
-    /// Handles an event.
-    fn event(&self, state: &mut Self::State, cx: &mut EventContext, event: &Event) {}
-
-    /// Handle layout and returns the size of the view.
-    ///
-    /// This method should return a size that fits the [`AvailableSpace`].
-    ///
-    /// The default implementation returns the minimum size.
-    fn layout(
-        &self,
-        state: &mut Self::State,
-        cx: &mut LayoutContext,
-        space: AvailableSpace,
-    ) -> Vec2 {
-        space.min
-    }
-
-    /// Draws the view.
-    fn draw(&self, state: &mut Self::State, cx: &mut DrawContext) {}
+enum ViewKind<V: NodeElement> {
+    Element(Node<V>),
+    Fragment(Arc<[View<V>]>),
+    Dynamic(OwnedSignal<View<V>>),
 }
 
-/// A type-erased [`View`].
-pub trait AnyView: Any + Send + Sync {
-    /// Builds the state of the view.
-    fn build(&self) -> Box<dyn Any + Send + Sync>;
-
-    /// Returns the style of the view.
-    fn style(&self) -> Style;
-
-    /// Handles an event.
-    fn event(&self, state: &mut dyn Any, cx: &mut EventContext, event: &Event);
-
-    /// Layout the view.
-    fn layout(&self, state: &mut dyn Any, cx: &mut LayoutContext, space: AvailableSpace) -> Vec2;
-
-    /// Draws the view.
-    fn draw(&self, state: &mut dyn Any, cx: &mut DrawContext);
-}
-
-impl<T: View> AnyView for T {
-    fn build(&self) -> Box<dyn Any + Send + Sync> {
-        Box::new(self.build())
-    }
-
-    fn style(&self) -> Style {
-        self.style()
-    }
-
-    fn event(&self, state: &mut dyn Any, cx: &mut EventContext, event: &Event) {
-        if let Some(state) = state.downcast_mut::<T::State>() {
-            self.event(state, cx, event);
-        } else {
-            tracing::warn!("invalid state type on {}", any::type_name::<T>());
-        }
-    }
-
-    fn layout(&self, state: &mut dyn Any, cx: &mut LayoutContext, space: AvailableSpace) -> Vec2 {
-        if let Some(state) = state.downcast_mut::<T::State>() {
-            self.layout(state, cx, space)
-        } else {
-            tracing::warn!("invalid state type on {}", any::type_name::<T>());
-            space.min
-        }
-    }
-
-    fn draw(&self, state: &mut dyn Any, cx: &mut DrawContext) {
-        if let Some(state) = state.downcast_mut::<T::State>() {
-            self.draw(state, cx);
-        } else {
-            tracing::warn!("invalid state type on {}", any::type_name::<T>());
+impl<V: NodeElement> Clone for ViewKind<V> {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Element(element) => Self::Element(element.clone()),
+            Self::Fragment(fragment) => Self::Fragment(fragment.clone()),
+            Self::Dynamic(signal) => Self::Dynamic(signal.clone()),
         }
     }
 }
 
-impl dyn AnyView {
-    pub fn downcast_ref<T: AnyView>(&self) -> Option<&T> {
-        if self.type_id() == TypeId::of::<T>() {
-            // SAFETY: `T` and `Self` are the same type
-            unsafe { Some(&*(self as *const dyn AnyView as *const T)) }
-        } else {
-            None
-        }
-    }
+/// A trait for types that can be converted into a [`View`].
+pub trait IntoView<V: NodeElement = Box<dyn AnyElement>> {
+    /// Converts `self` into a [`Node`].
+    fn into_view(self) -> View<V>;
+}
 
-    pub fn downcast_mut<T: AnyView>(&mut self) -> Option<&mut T> {
-        if <dyn AnyView>::type_id(self) == TypeId::of::<T>() {
-            // SAFETY: `T` and `Self` are the same type
-            unsafe { Some(&mut *(self as *mut dyn AnyView as *mut T)) }
-        } else {
-            None
+impl<V: Element> IntoView<V> for V {
+    fn into_view(self) -> View<V> {
+        View::node(Node::new(self))
+    }
+}
+
+impl<V: Element> IntoView for V {
+    fn into_view(self) -> View {
+        View::node(Node::new(Box::new(self)))
+    }
+}
+
+impl<V: NodeElement> IntoView<V> for View<V> {
+    fn into_view(self) -> View<V> {
+        self
+    }
+}
+
+impl<V: NodeElement> IntoView<V> for Node<V> {
+    fn into_view(self) -> View<V> {
+        View::node(self)
+    }
+}
+
+/// A view in the UI tree.
+///
+/// A view can be one of the following:
+/// - An [`Element`].
+/// - A fragment containing a list of [`View`]s.
+/// - A dynamic [`View`] that can change over time.
+pub struct View<V: NodeElement = Box<dyn AnyElement>> {
+    kind: ViewKind<V>,
+}
+
+impl<V: NodeElement> Clone for View<V> {
+    fn clone(&self) -> Self {
+        Self {
+            kind: self.kind.clone(),
         }
     }
 }
 
-impl<V: View> View for Styled<V> {
-    type State = V::State;
-
-    fn build(&self) -> Self::State {
-        self.value.build()
+impl<V: NodeElement> View<V> {
+    fn from_kind(kind: ViewKind<V>) -> Self {
+        Self { kind }
     }
 
-    fn style(&self) -> Style {
-        let mut style = self.value.style();
-        style.classes.extend(self.classes.clone());
-        style.attributes.extend(self.attributes.clone());
-        style
+    /// Creates a new [`Node`].
+    pub fn new(into_node: impl IntoView<V>) -> Self {
+        into_node.into_view()
     }
 
-    fn event(&self, state: &mut Self::State, cx: &mut EventContext, event: &Event) {
-        self.value.event(state, cx, event)
+    /// Creates a new [`View`] from an [`Node`].
+    pub fn node(element: Node<V>) -> Self {
+        Self::from_kind(ViewKind::Element(element))
     }
 
-    fn layout(
-        &self,
-        state: &mut Self::State,
-        cx: &mut LayoutContext,
-        space: AvailableSpace,
-    ) -> Vec2 {
-        self.value.layout(state, cx, space)
+    /// Creates a new [`View`] fragment from a list of [`View`]s.
+    pub fn fragment(fragment: impl Into<Arc<[View<V>]>>) -> Self {
+        Self::from_kind(ViewKind::Fragment(fragment.into()))
     }
 
-    fn draw(&self, state: &mut Self::State, cx: &mut DrawContext) {
-        self.value.draw(state, cx)
+    /// Creates a new dynamic [`View`] from an [`OwnedSignal`].
+    pub fn dynamic(signal: OwnedSignal<View<V>>) -> Self {
+        Self::from_kind(ViewKind::Dynamic(signal))
     }
-}
 
-/// A [`View`] that does nothing.
-#[derive(Clone, Copy, Debug, Default)]
-pub struct EmptyView;
+    /// Creates an empty [`View`].
+    pub fn empty() -> Self {
+        Self::fragment(Vec::new())
+    }
 
-impl View for EmptyView {
-    type State = ();
+    /// Returns the number of elements in the [`View`].
+    pub fn len(&self) -> usize {
+        match &self.kind {
+            ViewKind::Element(_) => 1,
+            ViewKind::Fragment(fragment) => fragment.iter().map(View::len).sum(),
+            ViewKind::Dynamic(signal) => signal.get().len(),
+        }
+    }
 
-    fn build(&self) -> Self::State {}
+    /// Returns `true` if the [`Node`] contains no elements.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// If `self` is a node, returns a reference to the [`Node`].
+    pub fn get_node(&self) -> Option<&Node<V>> {
+        match &self.kind {
+            ViewKind::Element(element) => Some(element),
+            _ => None,
+        }
+    }
+
+    /// Tries to convert the [`View`] into a [`Node`].
+    pub fn into_node(self) -> Option<Node<V>> {
+        match self.kind {
+            ViewKind::Element(element) => Some(element),
+            _ => None,
+        }
+    }
+
+    /// Tries to convert the [`View`] into a fragment.
+    pub fn into_fragment(self) -> Option<Arc<[View<V>]>> {
+        match self.kind {
+            ViewKind::Fragment(fragment) => Some(fragment),
+            _ => None,
+        }
+    }
+
+    /// Tries to convert the [`View`] into a dynamic [`View`].
+    pub fn into_dynamic(self) -> Option<OwnedSignal<View<V>>> {
+        match self.kind {
+            ViewKind::Dynamic(signal) => Some(signal),
+            _ => None,
+        }
+    }
+
+    /// Returns all elements in the [`View`], including nested elements, flattened into a single
+    /// [`Vec`]. Dynamic [`View`]s are fetched in a reactive manner.
+    pub fn flatten(&self) -> Vec<Node<V>> {
+        match &self.kind {
+            ViewKind::Element(element) => vec![element.clone()],
+            ViewKind::Fragment(fragment) => fragment.iter().flat_map(View::flatten).collect(),
+            ViewKind::Dynamic(signal) => signal.get().flatten(),
+        }
+    }
 }

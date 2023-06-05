@@ -5,11 +5,11 @@ use ori_reactive::Event;
 use ori_style::Style;
 
 use crate::{
-    AvailableSpace, Axis, Children, Context, DrawContext, EventContext, FlexLayout, LayoutContext,
-    PointerEvent, View,
+    AvailableSpace, Axis, Children, Context, DrawContext, Element, EventContext, FlexLayout,
+    LayoutContext, PointerEvent,
 };
 
-/// A scroll view.
+/// A scroll element.
 #[derive(Default, Build)]
 pub struct Scroll {
     /// The children of the scroll.
@@ -126,13 +126,13 @@ impl Scroll {
     }
 }
 
-/// The state of a scroll view.
+/// The state of a scroll element.
 #[derive(Default)]
 pub struct ScrollState {
     scroll: Vec2,
 }
 
-impl View for Scroll {
+impl Element for Scroll {
     type State = ScrollState;
 
     fn build(&self) -> Self::State {

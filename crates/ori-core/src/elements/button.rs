@@ -3,11 +3,11 @@ use ori_reactive::Event;
 use ori_style::Style;
 
 use crate::{
-    AvailableSpace, Div, DrawContext, EventContext, Events, IntoNode, LayoutContext, Node, Parent,
-    View,
+    AvailableSpace, Div, DrawContext, Element, EventContext, Events, IntoView, LayoutContext,
+    Parent, View,
 };
 
-/// A button view.
+/// A button element.
 #[derive(Default)]
 pub struct Button {
     /// The content of the button.
@@ -16,7 +16,7 @@ pub struct Button {
 
 impl Button {
     /// Create a new button.
-    pub fn new(child: impl IntoNode) -> Self {
+    pub fn new(child: impl IntoView) -> Self {
         Self {
             content: Div::new().with_child(child),
         }
@@ -38,17 +38,17 @@ impl Parent for Button {
         self.content.clear_children();
     }
 
-    fn add_children(&mut self, child: impl Iterator<Item = Node<Self::Child>>) -> usize {
+    fn add_children(&mut self, child: impl Iterator<Item = View<Self::Child>>) -> usize {
         self.content.add_children(child)
     }
 
-    fn set_children(&mut self, slot: usize, child: impl Iterator<Item = Node<Self::Child>>) {
+    fn set_children(&mut self, slot: usize, child: impl Iterator<Item = View<Self::Child>>) {
         self.content.set_children(slot, child)
     }
 }
 
-impl View for Button {
-    type State = <Div as View>::State;
+impl Element for Button {
+    type State = <Div as Element>::State;
 
     fn build(&self) -> Self::State {}
 

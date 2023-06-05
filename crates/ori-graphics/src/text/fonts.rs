@@ -189,7 +189,7 @@ impl Fonts {
         for line in layout.lines().into_iter().flatten() {
             let mut line_width = 0.0;
 
-            if line.glyph_end <= line.glyph_start {
+            if line.glyph_end < line.glyph_start {
                 continue;
             }
 
@@ -253,10 +253,14 @@ impl Fonts {
             0.0
         };
 
-        let y_offset = match text.v_align {
-            TextAlign::Top => 0.0,
-            TextAlign::Center => (text.rect.height() - layout_size.y) / 2.0,
-            TextAlign::Bottom => text.rect.height() - layout_size.y,
+        let y_offset = if text.wrap != TextWrap::None {
+            match text.v_align {
+                TextAlign::Top => 0.0,
+                TextAlign::Center => (text.rect.height() - layout_size.y) / 2.0,
+                TextAlign::Bottom => text.rect.height() - layout_size.y,
+            }
+        } else {
+            0.0
         };
 
         let offset = Vec2::new(x_offset, y_offset);

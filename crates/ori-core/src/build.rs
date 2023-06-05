@@ -1,6 +1,6 @@
 use ori_reactive::{Callback, Emitter, OwnedSignal, Scope, Signal};
 
-use crate::{ElementView, IntoNode, Node};
+use crate::{IntoView, NodeElement, View};
 
 /// A trait for setting properties on an element.
 pub trait Properties {
@@ -74,24 +74,24 @@ impl<'a, T: Send + Sync + Clone + 'static> Bindable<'a> for OwnedSignal<T> {
 /// A trait for setting children on an element.
 pub trait Parent {
     /// The child type.
-    type Child: ElementView;
+    type Child: NodeElement;
 
     /// Clears all children.
     fn clear_children(&mut self);
 
     /// Adds `children` to a new slot and returns the slot index.
-    fn add_children(&mut self, children: impl Iterator<Item = Node<Self::Child>>) -> usize;
+    fn add_children(&mut self, children: impl Iterator<Item = View<Self::Child>>) -> usize;
 
     /// Sets the children of `slot` to `children`.
-    fn set_children(&mut self, slot: usize, children: impl Iterator<Item = Node<Self::Child>>);
+    fn set_children(&mut self, slot: usize, children: impl Iterator<Item = View<Self::Child>>);
 
     /// Adds `child` to a new slot and returns the slot index.
-    fn add_child(&mut self, child: impl IntoNode<Self::Child>) -> usize {
-        self.add_children(std::iter::once(Node::new(child)))
+    fn add_child(&mut self, child: impl IntoView<Self::Child>) -> usize {
+        self.add_children(std::iter::once(View::new(child)))
     }
 
     /// Adds `children` to a new slot.
-    fn with_children(mut self, children: impl Iterator<Item = Node<Self::Child>>) -> Self
+    fn with_children(mut self, children: impl Iterator<Item = View<Self::Child>>) -> Self
     where
         Self: Sized,
     {
@@ -100,7 +100,7 @@ pub trait Parent {
     }
 
     /// Adds `child` to a new slot.
-    fn with_child(mut self, child: impl IntoNode<Self::Child>) -> Self
+    fn with_child(mut self, child: impl IntoView<Self::Child>) -> Self
     where
         Self: Sized,
     {

@@ -2,7 +2,7 @@
 
 use ori::prelude::*;
 
-fn ui(cx: Scope) -> Node {
+fn ui(cx: Scope) -> View {
     let counter = cx.signal(0);
 
     view! {

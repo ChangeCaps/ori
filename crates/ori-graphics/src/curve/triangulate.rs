@@ -66,7 +66,7 @@ impl<'a> Triangulation<'a> {
 
         loop {
             let Some(&ear) = this.ears.first() else {
-                panic!();
+                break indices;
             };
 
             let [prev, next] = this.relations[ear];

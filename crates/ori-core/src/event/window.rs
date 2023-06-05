@@ -3,7 +3,7 @@ use std::{mem, sync::Mutex};
 use glam::Vec2;
 use ori_reactive::Scope;
 
-use crate::{Node, Window, WindowId};
+use crate::{View, Window, WindowId};
 
 /// An event that requests a redraw.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
@@ -39,12 +39,12 @@ impl WindowClosedEvent {
 /// An event that opens a new window, when emitted.
 pub struct OpenWindow {
     window: Window,
-    ui: Mutex<Box<dyn FnMut(Scope) -> Node + Send + Sync>>,
+    ui: Mutex<Box<dyn FnMut(Scope) -> View + Send + Sync>>,
 }
 
 impl OpenWindow {
     /// Create a new open window event.
-    pub fn new(window: Window, ui: impl FnMut(Scope) -> Node + Send + Sync + 'static) -> Self {
+    pub fn new(window: Window, ui: impl FnMut(Scope) -> View + Send + Sync + 'static) -> Self {
         Self {
             window,
             ui: Mutex::new(Box::new(ui)),
@@ -57,8 +57,8 @@ impl OpenWindow {
     }
 
     /// Takes the ui function, replacing it with an empty one.
-    pub fn take_ui(&self) -> Box<dyn FnMut(Scope) -> Node + Send + Sync> {
-        mem::replace(&mut self.ui.lock().unwrap(), Box::new(|_| Node::empty()))
+    pub fn take_ui(&self) -> Box<dyn FnMut(Scope) -> View + Send + Sync> {
+        mem::replace(&mut self.ui.lock().unwrap(), Box::new(|_| View::empty()))
     }
 }
 

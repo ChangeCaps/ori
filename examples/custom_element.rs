@@ -3,19 +3,19 @@ use std::f32::consts::PI;
 use ori::prelude::*;
 
 #[derive(Default, Build)]
-struct CustomView {}
+struct CustomElement {}
 
-impl View for CustomView {
+impl Element for CustomElement {
     type State = ();
 
     fn build(&self) -> Self::State {}
 
-    // set the style of the view, with a custom element name "custom-view"
+    // set the style of the view, with a custom element name "custom-element"
     fn style(&self) -> Style {
-        Style::new("custom-view")
+        Style::new("custom-element")
     }
 
-    // layout the view
+    // layout the element
     fn layout(
         &self,
         _state: &mut Self::State,
@@ -27,27 +27,36 @@ impl View for CustomView {
     }
 
     fn draw(&self, _state: &mut Self::State, cx: &mut DrawContext) {
+        // use the "custom-radius" style property
+        // here we use a style_range, because the attribute is a Length,
+        // this means we can have percentage values and other units
+        let radius = cx.style_range("custom-radius", 5.0..100.0);
+
+        // create a parametric curve
         let curve = Curve::parametric(
             |t| {
                 let t = t * 2.0;
                 let x = t.sin();
                 let y = t.cos();
-                cx.rect().center() + Vec2::new(x, y) * 100.0
+                cx.rect().center() + Vec2::new(x, y) * radius
             },
             0.0,
             PI,
         );
 
+        // fill the curve with a blue color
         cx.draw(curve.fill(Color::BLUE));
     }
 }
 
-fn ui(_cx: Scope) -> Node {
+fn ui(_cx: Scope) -> View {
     view! {
-        <CustomView />
+        <CustomElement />
     }
 }
 
 fn main() {
-    App::new(ui).run();
+    App::new(ui)
+        .style("examples/style/custom-element.css")
+        .run();
 }

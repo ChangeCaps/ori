@@ -3,9 +3,9 @@ use ori_graphics::{ImageHandle, ImageSource, Mesh};
 use ori_macro::Build;
 use ori_style::Style;
 
-use crate::{AvailableSpace, Context, DrawContext, LayoutContext, View};
+use crate::{AvailableSpace, Context, DrawContext, Element, LayoutContext};
 
-/// A view that displays an image.
+/// A element that displays an image.
 #[derive(Clone, Default, Debug, Build)]
 pub struct Image {
     /// The source of the image.
@@ -14,13 +14,13 @@ pub struct Image {
 }
 
 impl Image {
-    /// Creates a new image view.
+    /// Creates a new image.
     pub fn new() -> Self {
         Self::default()
     }
 }
 
-/// The state of an image view.
+/// The state of an image element.
 #[derive(Clone, Debug, Default)]
 pub struct ImageState {
     src: ImageSource,
@@ -39,7 +39,7 @@ impl ImageState {
     }
 }
 
-impl View for Image {
+impl Element for Image {
     type State = ImageState;
 
     fn build(&self) -> Self::State {

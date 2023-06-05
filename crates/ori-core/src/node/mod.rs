@@ -1,35 +1,33 @@
 mod downcast;
-mod into;
+mod element;
 mod root;
 mod state;
-mod view;
 
 pub use downcast::*;
-pub use into::*;
-use ori_style::{FromStyleAttribute, StyleTags};
+pub use element::*;
 pub use state::*;
-pub use view::*;
 
 use std::{any::Any, fmt::Debug, sync::Arc};
 
 use glam::Vec2;
 use ori_graphics::Rect;
 use ori_reactive::Event;
+use ori_style::{FromStyleAttribute, StyleTags};
 use parking_lot::{Mutex, MutexGuard};
 use tracing::trace_span;
 
 use crate::{
-    AnyView, AvailableSpace, Context, DebugEvent, DrawContext, EmptyView, EventContext,
+    AnyElement, AvailableSpace, Context, DebugEvent, DrawContext, EmptyElement, EventContext,
     LayoutContext, Margin, Padding, PointerEvent,
 };
 
-struct ElementInner<T: ElementView> {
+struct NodeInner<T: NodeElement> {
     view_state: Mutex<T::State>,
-    element_state: Mutex<ElementState>,
-    view: Mutex<T>,
+    node_state: Mutex<NodeState>,
+    element: Mutex<T>,
 }
 
-impl<T: ElementView> Debug for ElementInner<T>
+impl<T: NodeElement> Debug for NodeInner<T>
 where
     T: Debug,
     T::State: Debug,
@@ -37,18 +35,18 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ElementInner")
             .field("view_state", &self.view_state)
-            .field("element_state", &self.element_state)
-            .field("view", &self.view.type_id())
+            .field("node_state", &self.node_state)
+            .field("view", &self.element.type_id())
             .finish()
     }
 }
 
-/// An element in the UI tree.
-pub struct Element<T: ElementView = Box<dyn AnyView>> {
-    inner: Arc<ElementInner<T>>,
+/// An node in the UI tree.
+pub struct Node<T: NodeElement = Box<dyn AnyElement>> {
+    inner: Arc<NodeInner<T>>,
 }
 
-impl<T: ElementView> Clone for Element<T> {
+impl<T: NodeElement> Clone for Node<T> {
     fn clone(&self) -> Self {
         Self {
             inner: self.inner.clone(),
@@ -56,7 +54,7 @@ impl<T: ElementView> Clone for Element<T> {
     }
 }
 
-impl<T: ElementView> Debug for Element<T>
+impl<T: NodeElement> Debug for Node<T>
 where
     T: Debug,
     T::State: Debug,
@@ -68,28 +66,23 @@ where
     }
 }
 
-impl Element {
-    /// Creates an empty [`Element`].
+impl Node {
+    /// Creates an empty [`Node`].
     pub fn empty() -> Self {
-        Self::new(EmptyView)
+        Self::new(Box::new(EmptyElement))
     }
 }
 
-impl<T: ElementView> Element<T> {
-    /// Create a new element with the given [`View`](crate::View).
-    pub fn new(view: impl IntoElement<T>) -> Self {
-        view.into_element()
-    }
+impl<T: NodeElement> Node<T> {
+    /// Create a new element with the given [`Element`](crate::Element).
+    pub fn new(element: T) -> Self {
+        let view_state = NodeElement::build(&element);
+        let element_state = NodeState::new(NodeElement::style(&element));
 
-    /// Create a new element with the given [`View`](crate::View).
-    pub fn from_view(view: T) -> Self {
-        let view_state = ElementView::build(&view);
-        let element_state = ElementState::new(ElementView::style(&view));
-
-        let inner = Arc::new(ElementInner {
+        let inner = Arc::new(NodeInner {
             view_state: Mutex::new(view_state),
-            element_state: Mutex::new(element_state),
-            view: Mutex::new(view),
+            node_state: Mutex::new(element_state),
+            element: Mutex::new(element),
         });
 
         Self { inner }
@@ -102,27 +95,27 @@ impl<T: ElementView> Element<T> {
         self.inner.as_ref().view_state.lock()
     }
 
-    /// Returns a [`MutexGuard`] to the [`ElementState`].
+    /// Returns a [`MutexGuard`] to the [`NodeState`].
     ///
     /// Be careful when using this, as it can cause deadlocks.
-    pub fn element_state(&self) -> MutexGuard<'_, ElementState> {
-        self.inner.as_ref().element_state.lock()
+    pub fn node_state(&self) -> MutexGuard<'_, NodeState> {
+        self.inner.as_ref().node_state.lock()
     }
 
     /// Returns a [`MutexGuard`] to the `T`.
-    pub fn view(&self) -> MutexGuard<'_, T> {
-        self.inner.as_ref().view.lock()
+    pub fn element(&self) -> MutexGuard<'_, T> {
+        self.inner.as_ref().element.lock()
     }
 
     /// Downcasts `T` to `U` and calls the given function with the `U`.
-    pub fn downcast<U: ElementView, V>(
+    pub fn downcast<U: NodeElement, V>(
         &self,
         f: impl FnOnce(&mut U) -> V,
     ) -> Result<V, ElementDowncastError>
     where
         T: DowncastElement<U>,
     {
-        let result = if let Some(view) = self.view().downcast_mut() {
+        let result = if let Some(view) = self.element().downcast_mut() {
             f(view)
         } else {
             return Err(ElementDowncastError);
@@ -135,7 +128,7 @@ impl<T: ElementView> Element<T> {
 
     /// Sets the offset of the element, relative to the parent.
     pub fn set_offset(&self, offset: Vec2) {
-        let mut element_state = self.element_state();
+        let mut element_state = self.node_state();
 
         let size = element_state.local_rect.size();
         let min = element_state.margin.top_left() + offset;
@@ -148,7 +141,7 @@ impl<T: ElementView> Element<T> {
         cx: &mut impl Context,
         key: &str,
     ) -> Option<S> {
-        self.element_state().get_style(cx, key)
+        self.node_state().get_style(cx, key)
     }
 
     /// Get the style of the element, for a given key. If the style is not found, `S::default()` is returned.
@@ -166,60 +159,60 @@ impl<T: ElementView> Element<T> {
         cx: &mut impl Context,
         key: &[&str],
     ) -> S {
-        self.element_state().style_group(cx, key)
+        self.node_state().style_group(cx, key)
     }
 
     /// Returns the [`StyleTags`].
     pub fn style_tags(&self) -> StyleTags {
-        self.element_state().style_tags()
+        self.node_state().style_tags()
     }
 
     /// Returns true if the element needs to be laid out.
     pub fn needs_layout(&self) -> bool {
-        self.element_state().needs_layout
+        self.node_state().needs_layout
     }
 
     /// Returns the available space for the element.
     pub fn available_space(&self) -> AvailableSpace {
-        self.element_state().available_space
+        self.node_state().available_space
     }
 
     /// Sets the available space for the element.
     pub fn set_available_space(&self, space: AvailableSpace) {
-        self.element_state().available_space = space;
+        self.node_state().available_space = space;
     }
 
     /// Returns true if the available space for the element has changed.
     pub fn space_changed(&self, space: AvailableSpace) -> bool {
-        self.element_state().space_changed(space)
+        self.node_state().space_changed(space)
     }
 
     /// Requests a layout.
     pub fn request_layout(&self) {
-        self.element_state().needs_layout = true;
+        self.node_state().needs_layout = true;
     }
 
     /// Gets the local [`Rect`] of the element.
     pub fn local_rect(&self) -> Rect {
-        self.element_state().local_rect
+        self.node_state().local_rect
     }
 
     /// Gets the global [`Rect`] of the element.
     pub fn global_rect(&self) -> Rect {
-        self.element_state().global_rect
+        self.node_state().global_rect
     }
 
     /// Gets the size of the element.
     pub fn size(&self) -> Vec2 {
-        let element_state = self.element_state();
+        let element_state = self.node_state();
         element_state.local_rect.size() + element_state.margin.size()
     }
 }
 
-impl<T: ElementView> Element<T> {
+impl<T: NodeElement> Node<T> {
     // returns true if the element should be redrawn.
     fn handle_pointer_event(
-        element_state: &mut ElementState,
+        element_state: &mut NodeState,
         event: &PointerEvent,
         is_handled: bool,
     ) -> bool {
@@ -247,10 +240,10 @@ impl<T: ElementView> Element<T> {
     fn with_inner<C: Context, O>(
         &self,
         cx: &mut C,
-        f: impl FnOnce(&mut ElementState, &mut C) -> O,
+        f: impl FnOnce(&mut NodeState, &mut C) -> O,
     ) -> O {
-        let element_state = &mut self.element_state();
-        element_state.style = self.view().style();
+        let element_state = &mut self.node_state();
+        element_state.style = self.element().style();
         element_state.propagate_up(cx.state_mut());
 
         let _span = trace_span!("element", selector = %element_state.selector()).entered();
@@ -270,7 +263,7 @@ impl<T: ElementView> Element<T> {
         res
     }
 
-    fn event_inner(&self, state: &mut ElementState, cx: &mut EventContext, event: &Event) {
+    fn event_inner(&self, state: &mut NodeState, cx: &mut EventContext, event: &Event) {
         if let Some(pointer_event) = event.get::<PointerEvent>() {
             if Self::handle_pointer_event(state, pointer_event, event.is_handled()) {
                 cx.request_redraw();
@@ -294,7 +287,7 @@ impl<T: ElementView> Element<T> {
             return;
         }
 
-        self.view().event(&mut self.view_state(), &mut cx, event);
+        self.element().event(&mut self.view_state(), &mut cx, event);
 
         Self::update_cursor(&mut cx);
     }
@@ -315,7 +308,7 @@ impl<T: ElementView> Element<T> {
 
     fn relayout_inner(
         &self,
-        state: &mut ElementState,
+        state: &mut NodeState,
         cx: &mut LayoutContext,
         space: AvailableSpace,
     ) -> Vec2 {
@@ -342,7 +335,9 @@ impl<T: ElementView> Element<T> {
         let space = cx.style_constraints(space);
         cx.space = space;
 
-        let size = self.view().layout(&mut self.view_state(), &mut cx, space);
+        let size = self
+            .element()
+            .layout(&mut self.view_state(), &mut cx, space);
 
         let local_offset = state.local_rect.min + state.margin.top_left();
         let global_offset = state.global_rect.min + state.margin.top_left();
@@ -364,7 +359,7 @@ impl<T: ElementView> Element<T> {
         })
     }
 
-    fn draw_inner(&self, state: &mut ElementState, cx: &mut DrawContext) {
+    fn draw_inner(&self, state: &mut NodeState, cx: &mut DrawContext) {
         let mut cx = DrawContext {
             state,
             frame: cx.frame,
@@ -378,7 +373,7 @@ impl<T: ElementView> Element<T> {
             image_cache: cx.image_cache,
         };
 
-        self.view().draw(&mut self.view_state(), &mut cx);
+        self.element().draw(&mut self.view_state(), &mut cx);
 
         if cx.state.update_transitions() {
             cx.request_redraw();

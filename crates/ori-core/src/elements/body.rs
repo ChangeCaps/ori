@@ -3,7 +3,9 @@ use ori_macro::Build;
 use ori_reactive::Event;
 use ori_style::Style;
 
-use crate::{AvailableSpace, Children, DrawContext, EventContext, FlexLayout, LayoutContext, View};
+use crate::{
+    AvailableSpace, Children, DrawContext, Element, EventContext, FlexLayout, LayoutContext,
+};
 
 /// The body of the ui.
 #[derive(Default, Build)]
@@ -20,7 +22,7 @@ impl Body {
     }
 }
 
-impl View for Body {
+impl Element for Body {
     type State = ();
 
     fn build(&self) -> Self::State {}

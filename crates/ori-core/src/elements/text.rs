@@ -3,33 +3,33 @@ use ori_graphics::{Rect, TextSection};
 use ori_macro::Build;
 use ori_style::Style;
 
-use crate::{AvailableSpace, Context, DrawContext, IntoNode, LayoutContext, Node, View};
+use crate::{AvailableSpace, Context, DrawContext, Element, IntoView, LayoutContext, View};
 
-impl IntoNode for String {
-    fn into_node(self) -> Node {
-        Node::new(Text::new(self))
+impl IntoView for String {
+    fn into_view(self) -> View {
+        View::new(Text::new(self))
     }
 }
 
-impl IntoNode<Text> for String {
-    fn into_node(self) -> Node<Text> {
-        Node::new(Text::new(self))
+impl IntoView<Text> for String {
+    fn into_view(self) -> View<Text> {
+        View::new(Text::new(self))
     }
 }
 
-impl IntoNode for &str {
-    fn into_node(self) -> Node {
-        Node::new(Text::new(self))
+impl IntoView for &str {
+    fn into_view(self) -> View {
+        View::new(Text::new(self))
     }
 }
 
-impl IntoNode<Text> for &str {
-    fn into_node(self) -> Node<Text> {
-        Node::new(Text::new(self))
+impl IntoView<Text> for &str {
+    fn into_view(self) -> View<Text> {
+        View::new(Text::new(self))
     }
 }
 
-/// A text view.
+/// A text element.
 #[derive(Clone, Debug, Default, Build)]
 pub struct Text {
     /// The text to display.
@@ -38,7 +38,7 @@ pub struct Text {
 }
 
 impl Text {
-    /// Create a new text view.
+    /// Create a new text element.
     pub fn new(text: impl Into<String>) -> Self {
         Self { text: text.into() }
     }
@@ -50,7 +50,7 @@ impl Text {
     }
 }
 
-impl View for Text {
+impl Element for Text {
     type State = Option<f32>;
 
     fn build(&self) -> Self::State {

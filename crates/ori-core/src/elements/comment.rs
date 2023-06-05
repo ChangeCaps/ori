@@ -1,8 +1,8 @@
 use ori_style::Style;
 
-use crate::View;
+use crate::Element;
 
-/// A comment view.
+/// A comment element.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Comment {
     /// The content of the comment.
@@ -16,7 +16,7 @@ impl Comment {
     }
 }
 
-impl View for Comment {
+impl Element for Comment {
     type State = ();
 
     fn build(&self) -> Self::State {}

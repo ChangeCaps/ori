@@ -4,11 +4,11 @@ use ori_reactive::{Emitter, Event, Scope};
 use ori_style::Style;
 
 use crate::{
-    AvailableSpace, BindCallback, Children, Context, DrawContext, EventContext, FlexLayout,
-    LayoutContext, PointerEvent, View,
+    AvailableSpace, BindCallback, Children, Context, DrawContext, Element, EventContext,
+    FlexLayout, LayoutContext, PointerEvent,
 };
 
-/// A div view.
+/// A div element.
 #[derive(Default, Build)]
 pub struct Div {
     /// On click callback.
@@ -73,7 +73,7 @@ impl Div {
     }
 }
 
-impl View for Div {
+impl Element for Div {
     type State = ();
 
     fn build(&self) -> Self::State {}

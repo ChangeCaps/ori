@@ -5,10 +5,10 @@ use ori_reactive::{Event, OwnedSignal};
 use ori_style::Style;
 
 use crate::{
-    AvailableSpace, Axis, Context, DrawContext, EventContext, LayoutContext, PointerEvent, View,
+    AvailableSpace, Axis, Context, DrawContext, Element, EventContext, LayoutContext, PointerEvent,
 };
 
-/// A slider view.
+/// A slider element.
 #[derive(Clone, Debug, Build)]
 pub struct Slider {
     /// The value of the slider.
@@ -91,7 +91,7 @@ impl Slider {
     }
 }
 
-impl View for Slider {
+impl Element for Slider {
     type State = ();
 
     fn build(&self) -> Self::State {}

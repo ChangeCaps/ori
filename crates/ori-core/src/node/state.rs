@@ -40,24 +40,38 @@ impl Default for ElementId {
 ///
 /// This should almost never be used directly, and instead should be used through
 /// the [`Element`](crate::Element) struct.
+#[non_exhaustive]
 #[derive(Clone, Debug)]
-pub struct ElementState {
+pub struct NodeState {
+    /// The identifier of the element.
     pub id: ElementId,
+    /// The margin of the element.
     pub margin: Margin,
+    /// The padding of the element.
     pub padding: Padding,
+    /// The local rect of the element, relative to the parent.
     pub local_rect: Rect,
+    /// The global rect of the element, relative to the window.
     pub global_rect: Rect,
+    /// Whether the element is active.
     pub active: bool,
+    /// Whether the element is focused.
     pub focused: bool,
+    /// Whether the element is hovered.
     pub hovered: bool,
+    /// The last time the element was drawn.
     pub last_draw: Instant,
+    /// The style of the element.
     pub style: Style,
+    /// Whether the element needs to be laid out.
     pub needs_layout: bool,
+    /// The available space for the element.
     pub available_space: AvailableSpace,
+    /// The style transition states of the element.
     pub transitions: StyleTransitionStates,
 }
 
-impl Default for ElementState {
+impl Default for NodeState {
     fn default() -> Self {
         Self {
             id: ElementId::new(),
@@ -77,8 +91,8 @@ impl Default for ElementState {
     }
 }
 
-impl ElementState {
-    /// Create a new [`ElementState`] with the given style.
+impl NodeState {
+    /// Create a new [`NodeState`] with the given style.
     pub fn new(style: Style) -> Self {
         Self {
             style,
@@ -86,17 +100,17 @@ impl ElementState {
         }
     }
 
-    /// Propagate the [`ElementState`] up to the parent.
+    /// Propagate the [`NodeState`] up to the parent.
     ///
     /// This is called before events are propagated.
-    pub fn propagate_up(&mut self, parent: &mut ElementState) {
+    pub fn propagate_up(&mut self, parent: &mut NodeState) {
         self.global_rect = self.local_rect.translate(parent.global_rect.min);
     }
 
-    /// Propagate the [`ElementState`] down to the child.
+    /// Propagate the [`NodeState`] down to the child.
     ///
     /// This is called after events are propagated.
-    pub fn propagate_down(&mut self, child: &mut ElementState) {
+    pub fn propagate_down(&mut self, child: &mut NodeState) {
         self.needs_layout |= child.needs_layout;
     }
 

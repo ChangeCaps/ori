@@ -1,6 +1,6 @@
 use ori::prelude::*;
 
-fn ui(_cx: Scope) -> Node {
+fn ui(_cx: Scope) -> View {
     let mut div = Div::new().class("row");
 
     for _ in 0..40 {
@@ -13,7 +13,7 @@ fn ui(_cx: Scope) -> Node {
         div.add_child(child);
     }
 
-    Node::new(div)
+    View::new(div)
 }
 
 fn main() {
