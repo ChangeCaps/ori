@@ -426,7 +426,7 @@ fn ui(cx: Scope) -> View {
 fn main() {
     App::new(ui)
         .title("Calculator (examples/calculator.rs)")
-        .style("examples/style/calculator.css")
+        .style(stylesheet!("examples/style/calculator.css"))
         .resizable(false)
         .transparent()
         .size(300, 400)

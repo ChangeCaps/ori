@@ -18,6 +18,6 @@ fn ui(_cx: Scope) -> View {
 
 fn main() {
     App::new(ui)
-        .style("examples/style/performance-test.css")
+        .style(stylesheet!("examples/style/performance-test.css"))
         .run();
 }

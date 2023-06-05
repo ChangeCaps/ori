@@ -57,6 +57,6 @@ fn ui(_cx: Scope) -> View {
 
 fn main() {
     App::new(ui)
-        .style("examples/style/custom-element.css")
+        .style(stylesheet!("examples/style/custom-element.css"))
         .run();
 }

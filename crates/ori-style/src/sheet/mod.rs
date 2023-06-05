@@ -38,10 +38,24 @@ impl Display for StyleLoadError {
 }
 
 /// Includes a style sheet from a file.
+///
+/// This macro will load the style sheet from the given path if it exists, otherwise it will
+/// include the style sheet as a string literal.
+///
+/// Returns a [`LoadedStyleKind`].
 #[macro_export]
-macro_rules! include_stylesheet {
-    ($($tt:tt)*) => {
-        <$crate::Stylesheet as ::std::str::FromStr>::from_str(include_str!($($tt)*)).unwrap()
+macro_rules! stylesheet {
+    ($path:literal) => {
+        if ::std::path::Path::new($path).exists() {
+            let sheet = $crate::LoadedStyle::load($path).unwrap();
+            $crate::LoadedStyleKind::Loaded(sheet)
+        } else {
+            let sheet = <$crate::Stylesheet as ::std::str::FromStr>::from_str(include_str!(
+                concat!(env!("CARGO_MANIFEST_DIR"), "/", $path)
+            ))
+            .unwrap();
+            $crate::LoadedStyleKind::Inline(sheet)
+        }
     };
 }
 

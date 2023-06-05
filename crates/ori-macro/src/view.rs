@@ -233,7 +233,7 @@ fn view_node(context: &Expr, node: &Node) -> Expr {
 
             let children = children(context, parse_quote!(#name), element.children.iter());
 
-            parse_quote_spanned! {element.name.span() => {
+            parse_quote_spanned! {element.name.span() => #[allow(clippy::let_and_return)] {
                 let __view = <#name as #ori_core::Build>::build();
 
                 #(#children)*

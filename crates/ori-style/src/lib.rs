@@ -28,5 +28,5 @@ pub mod prelude {
     pub use crate::style::Style;
     pub use crate::styled::{Stylable, Styled};
 
-    pub use crate::include_stylesheet;
+    pub use crate::stylesheet;
 }
