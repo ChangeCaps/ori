@@ -3,10 +3,10 @@ use std::sync::Arc;
 use ori_core::{
     prelude::Build, AvailableSpace, Context, DrawContext, Element, EventContext, LayoutContext,
 };
-use ori_graphics::{prelude::Vec2, ImageHandle, Mesh, Rect};
+use ori_graphics::{prelude::Vec2, ImageFilter, ImageHandle, Mesh, Rect};
 use ori_reactive::{Emitter, Event};
 use ori_style::Style;
-use wgpu::{Device, Queue, TextureUsages};
+use wgpu::{Device, FilterMode, Queue, TextureUsages};
 
 use crate::{WgpuImage, WgpuRenderer};
 
@@ -32,6 +32,7 @@ impl WgpuSurface {
             width,
             height,
             &[],
+            FilterMode::Linear,
             TextureUsages::RENDER_ATTACHMENT | usages,
         );
 
@@ -113,7 +114,8 @@ impl Element for WgpuCanvas {
         surface.rect = rect;
         self.on_render.emit(surface);
 
-        let image = ImageHandle::from_arc(surface.image.clone(), width, height);
+        let image = surface.image.clone();
+        let image = ImageHandle::from_arc(image, width, height, ImageFilter::Linear);
         cx.draw(Mesh::image(rect, image));
     }
 }

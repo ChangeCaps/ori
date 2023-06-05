@@ -2,6 +2,8 @@ use std::{fmt::Debug, sync::Arc};
 
 use glam::Vec2;
 
+use crate::ImageFilter;
+
 /// Includes [`ImageData`] from a file.
 #[macro_export]
 macro_rules! include_image {
@@ -15,6 +17,7 @@ macro_rules! include_image {
 pub struct ImageData {
     width: u32,
     height: u32,
+    filter: ImageFilter,
     pixels: Arc<[u8]>,
 }
 
@@ -35,6 +38,7 @@ impl ImageData {
         Self {
             width,
             height,
+            filter: ImageFilter::Linear,
             pixels,
         }
     }
@@ -52,6 +56,7 @@ impl ImageData {
         Ok(Self {
             width,
             height,
+            filter: ImageFilter::Linear,
             pixels: pixels.into(),
         })
     }
@@ -86,6 +91,7 @@ impl ImageData {
         Ok(Self {
             width,
             height,
+            filter: ImageFilter::Linear,
             pixels: pixels.into(),
         })
     }
@@ -105,6 +111,22 @@ impl ImageData {
                 Self::default()
             }
         }
+    }
+
+    /// Get the filter of the image.
+    pub fn filter(&self) -> ImageFilter {
+        self.filter
+    }
+
+    /// Set the filter of the image.
+    pub fn set_filter(&mut self, filter: ImageFilter) {
+        self.filter = filter;
+    }
+
+    /// Set the filter of the image.
+    pub fn with_filter(mut self, filter: ImageFilter) -> Self {
+        self.set_filter(filter);
+        self
     }
 
     /// Returns the width of the image.
@@ -133,6 +155,7 @@ impl Default for ImageData {
         Self {
             width: 1,
             height: 1,
+            filter: ImageFilter::Linear,
             pixels: vec![0, 0, 0, 0].into(),
         }
     }

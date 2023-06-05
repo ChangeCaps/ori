@@ -5,29 +5,44 @@ use std::{
 
 use glam::Vec2;
 
+use crate::ImageFilter;
+
 /// A handle to a loaded image.
 #[derive(Clone, Debug)]
 pub struct ImageHandle {
     width: u32,
     height: u32,
+    filter: ImageFilter,
     handle: Arc<dyn Any + Send + Sync>,
 }
 
 impl ImageHandle {
     /// Creates a new image handle. This is called by [`Renderer::create_image`](crate::Renderer::create_image)
     /// and should usually not be called manually.
-    pub fn new<T: Any + Send + Sync>(handle: T, width: u32, height: u32) -> Self {
+    pub fn new<T: Any + Send + Sync>(
+        handle: T,
+        width: u32,
+        height: u32,
+        filter: ImageFilter,
+    ) -> Self {
         Self {
             width,
             height,
+            filter,
             handle: Arc::new(handle),
         }
     }
 
-    pub fn from_arc<T: Any + Send + Sync>(handle: Arc<T>, width: u32, height: u32) -> Self {
+    pub fn from_arc<T: Any + Send + Sync>(
+        handle: Arc<T>,
+        width: u32,
+        height: u32,
+        filter: ImageFilter,
+    ) -> Self {
         Self {
             width,
             height,
+            filter,
             handle,
         }
     }
@@ -37,6 +52,7 @@ impl ImageHandle {
         WeakImageHandle {
             width: self.width,
             height: self.height,
+            filter: self.filter,
             handle: Arc::downgrade(&self.handle),
         }
     }
@@ -61,6 +77,11 @@ impl ImageHandle {
         self.height
     }
 
+    /// Returns the filter of the image.
+    pub fn filter(&self) -> ImageFilter {
+        self.filter
+    }
+
     /// Returns the size of the image.
     pub fn size(&self) -> Vec2 {
         Vec2::new(self.width as f32, self.height as f32)
@@ -72,6 +93,7 @@ impl ImageHandle {
 pub struct WeakImageHandle {
     width: u32,
     height: u32,
+    filter: ImageFilter,
     handle: Weak<dyn Any + Send + Sync>,
 }
 
@@ -81,6 +103,7 @@ impl WeakImageHandle {
         Some(ImageHandle {
             width: self.width,
             height: self.height,
+            filter: self.filter,
             handle: self.handle.upgrade()?,
         })
     }
@@ -88,6 +111,11 @@ impl WeakImageHandle {
     /// Returns true if the image is still alive, and can be upgraded.
     pub fn is_alive(&self) -> bool {
         self.handle.strong_count() > 0
+    }
+
+    /// Returns the filter of the image.
+    pub fn filter(&self) -> ImageFilter {
+        self.filter
     }
 
     /// Returns the width of the image.

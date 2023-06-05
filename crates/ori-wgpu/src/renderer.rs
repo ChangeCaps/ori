@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
 use ori_graphics::{
-    prelude::UVec2, Color, Frame, ImageData, ImageHandle, Primitive, PrimitiveKind, Renderer,
+    prelude::UVec2, Color, Frame, ImageData, ImageFilter, ImageHandle, Primitive, PrimitiveKind,
+    Renderer,
 };
 use wgpu::{
     util::{DeviceExt, StagingBelt},
@@ -120,6 +121,7 @@ impl WgpuRenderer {
         })
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn create_image(
         device: &Device,
         queue: &Queue,
@@ -127,6 +129,7 @@ impl WgpuRenderer {
         width: u32,
         height: u32,
         data: &[u8],
+        filter: FilterMode,
         usages: TextureUsages,
     ) -> WgpuImage {
         let desc = TextureDescriptor {
@@ -154,8 +157,8 @@ impl WgpuRenderer {
 
         let sampler = device.create_sampler(&SamplerDescriptor {
             label: Some("Ily Image Sampler"),
-            min_filter: FilterMode::Linear,
-            mag_filter: FilterMode::Linear,
+            min_filter: filter,
+            mag_filter: filter,
             ..Default::default()
         });
 
@@ -184,7 +187,16 @@ impl WgpuRenderer {
 
     fn create_default_image(device: &Device, queue: &Queue, layout: &BindGroupLayout) -> WgpuImage {
         let data = vec![255, 255, 255, 255];
-        Self::create_image(device, queue, layout, 1, 1, &data, TextureUsages::empty())
+        Self::create_image(
+            device,
+            queue,
+            layout,
+            1,
+            1,
+            &data,
+            FilterMode::Nearest,
+            TextureUsages::empty(),
+        )
     }
 
     pub fn device(&self) -> &Device {
@@ -326,6 +338,11 @@ impl Renderer for WgpuRenderer {
     }
 
     fn create_image(&self, data: &ImageData) -> ImageHandle {
+        let filter = match data.filter() {
+            ImageFilter::Linear => FilterMode::Linear,
+            ImageFilter::Nearest => FilterMode::Nearest,
+        };
+
         let image = Self::create_image(
             &self.device,
             &self.queue,
@@ -333,10 +350,11 @@ impl Renderer for WgpuRenderer {
             data.width(),
             data.height(),
             data.pixels(),
+            filter,
             TextureUsages::empty(),
         );
 
-        ImageHandle::new(image, data.width(), data.height())
+        ImageHandle::new(image, data.width(), data.height(), data.filter())
     }
 
     fn write_image(&self, handle: &ImageHandle, offset: UVec2, data: &ImageData) {
