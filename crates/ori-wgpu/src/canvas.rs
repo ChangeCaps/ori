@@ -3,7 +3,7 @@ use std::sync::Arc;
 use ori_core::{
     prelude::Build, AvailableSpace, Context, DrawContext, Element, EventContext, LayoutContext,
 };
-use ori_graphics::{prelude::Vec2, ImageHandle, Mesh};
+use ori_graphics::{prelude::Vec2, ImageHandle, Mesh, Rect};
 use ori_reactive::{Emitter, Event};
 use ori_style::Style;
 use wgpu::{Device, Queue, TextureUsages};
@@ -19,6 +19,8 @@ pub struct WgpuSurface {
     pub queue: Arc<Queue>,
     /// The image for the surface.
     pub image: Arc<WgpuImage>,
+    /// The rect of the surface.
+    pub rect: Rect,
 }
 
 impl WgpuSurface {
@@ -37,6 +39,8 @@ impl WgpuSurface {
             device: renderer.device_arc(),
             queue: renderer.queue_arc(),
             image: Arc::new(image),
+            // this will be updated in the draw function
+            rect: Rect::ZERO,
         }
     }
 }
@@ -46,11 +50,12 @@ impl WgpuSurface {
 /// Use [`WgpuCanvas::on_render`] to render to the image.
 #[derive(Clone, Debug, Build)]
 pub struct WgpuCanvas {
+    /// The texture usages for the canvas.
     #[prop]
     pub texture_usages: TextureUsages,
     /// A event that is emitted when a event is received.
     #[event]
-    pub on_event: Emitter<Event>,
+    pub on_event: Emitter<(Rect, Event)>,
     /// A event that is emitted when the canvas needs to be rendered.
     #[event]
     pub on_render: Emitter<WgpuSurface>,
@@ -77,8 +82,8 @@ impl Element for WgpuCanvas {
         Style::new("canvas")
     }
 
-    fn event(&self, _state: &mut Self::State, _cx: &mut EventContext, event: &Event) {
-        self.on_event.emit(event);
+    fn event(&self, _state: &mut Self::State, cx: &mut EventContext, event: &Event) {
+        self.on_event.emit(&(cx.rect(), event.clone()));
     }
 
     fn layout(
@@ -105,6 +110,7 @@ impl Element for WgpuCanvas {
             surface
         });
 
+        surface.rect = rect;
         self.on_render.emit(surface);
 
         let image = ImageHandle::from_arc(surface.image.clone(), width, height);
