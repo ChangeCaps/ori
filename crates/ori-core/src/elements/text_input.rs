@@ -325,7 +325,7 @@ impl Element for TextInput {
 
         let mut text_size = cx.measure_text(&section).size() + cx.padding().size();
         text_size.y = f32::max(text_size.y, state.font_size + cx.padding().size().y);
-        text_size
+        text_size.max(space.min)
     }
 
     fn draw(&self, state: &mut Self::State, cx: &mut DrawContext) {

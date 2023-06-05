@@ -184,7 +184,6 @@ impl Children {
 
         // NOTE: using a SmallVec here is a bit faster than using a Vec, but it's not a huge
         // difference
-        let mut any_changed = false;
         let mut child_majors: SmallVec<[f32; 4]> = smallvec![0.0; self.len()];
         let mut child_flexes: SmallVec<[_; 4]> = smallvec![(None, None); self.len()];
 
@@ -218,12 +217,7 @@ impl Children {
             // layout the child
             let space_changed = child.space_changed(loosend_space);
             let size = if needs_layout || space_changed {
-                let old_size = child.size();
-
-                let size = child.layout(cx, loosend_space);
-
-                any_changed |= size != old_size;
-                size
+                child.layout(cx, loosend_space)
             } else {
                 child.size()
             };
@@ -296,15 +290,16 @@ impl Children {
 
             // calculate the constraints for the child
             let child_major = child_majors[i];
+            let child_size = axis.pack(child_major, minor);
             let child_space = AvailableSpace {
-                min: axis.pack(child_major, minor),
-                max: axis.pack(child_major, minor),
+                min: child_size,
+                max: child_size,
             };
 
             // FIXME: calling layout again is not ideal, but it's the only way to get the
             // correct size for the child, since we don't know the minor size until we've
             // measured all the children
-            let size = if any_changed {
+            let size = if child_size != child.size() {
                 child.relayout(cx, child_space)
             } else {
                 child.size()
@@ -335,7 +330,7 @@ impl Children {
         }
 
         // return the size of the flex container
-        axis.pack(major, minor)
+        axis.pack(major, minor).max(space.min)
     }
 
     pub fn needs_layout(&self) -> bool {
