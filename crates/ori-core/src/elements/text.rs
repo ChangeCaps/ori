@@ -74,7 +74,7 @@ impl Element for Text {
         };
 
         let text_rect = cx.measure_text(&section);
-        space.constrain(text_rect.size())
+        text_rect.size()
     }
 
     fn draw(&self, state: &mut Self::State, cx: &mut DrawContext) {

@@ -9,6 +9,7 @@ use crate::{
     PointerEvent,
 };
 
+/// A text input element.
 #[derive(Clone, Debug, Build)]
 pub struct TextInput {
     /// The text of the input.
@@ -275,6 +276,7 @@ impl TextInput {
     }
 }
 
+#[doc(hidden)]
 #[derive(Clone, Debug, Default)]
 pub struct TextInputState {
     pub cursor_blink: f32,
@@ -323,7 +325,7 @@ impl Element for TextInput {
 
         let mut text_size = cx.measure_text(&section).size() + cx.padding().size();
         text_size.y = f32::max(text_size.y, state.font_size + cx.padding().size().y);
-        space.constrain(text_size)
+        text_size
     }
 
     fn draw(&self, state: &mut Self::State, cx: &mut DrawContext) {
@@ -340,8 +342,12 @@ impl Element for TextInput {
             return;
         }
 
+        let inner_rect = cx.padding().apply(cx.rect());
+
         let glyphs = cx.fonts_mut().text_glyphs(&section).unwrap_or_default();
-        let Some(cursor_center) = self.cursor_position(state, &glyphs) else { return; };
+        let cursor_center = self
+            .cursor_position(state, &glyphs)
+            .unwrap_or(inner_rect.left_center());
 
         let cursor_size = Vec2::new(1.0, state.font_size);
         let cursor_rect = Rect::center_size(cursor_center, cursor_size);

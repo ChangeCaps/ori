@@ -94,7 +94,7 @@ impl Element for Div {
 
     fn layout(&self, _: &mut Self::State, cx: &mut LayoutContext, space: AvailableSpace) -> Vec2 {
         let flex = FlexLayout::from_style(cx);
-        space.constrain(self.children.flex_layout(cx, space, flex))
+        self.children.flex_layout(cx, space, flex)
     }
 
     fn draw(&self, _: &mut Self::State, cx: &mut DrawContext) {
