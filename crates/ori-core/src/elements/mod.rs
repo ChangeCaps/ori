@@ -9,6 +9,7 @@ mod radio;
 mod scroll;
 mod slider;
 mod text;
+mod text_input;
 
 pub use body::*;
 pub use button::*;
@@ -21,3 +22,4 @@ pub use radio::*;
 pub use scroll::*;
 pub use slider::*;
 pub use text::*;
+pub use text_input::*;

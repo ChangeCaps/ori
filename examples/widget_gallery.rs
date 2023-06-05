@@ -70,13 +70,13 @@ fn ui(cx: Scope) -> View {
 
                 <Image src="examples/images/image.jpg" />
 
-                <Text text=text.get() />
+                <TextInput bind:text=text on:input=|text| info!("Input '{}'", text) />
 
                 { format!("Input: {}", text.get()) }
             </Div>
             <Scroll style:max-height=Em(14.0)>
                 <Div style:max-width=Em(8.0)>
-                    <Text class="long-text" text=long_text.get() />
+                    <TextInput class="long-text" bind:text=long_text multiline=true />
                 </Div>
             </Scroll>
             <Div class="column">

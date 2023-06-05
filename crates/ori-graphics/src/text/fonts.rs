@@ -2,11 +2,13 @@ use std::{collections::HashMap, io, path::Path, sync::Arc};
 
 use fontdue::{
     layout::{CoordinateSystem, Layout, LayoutSettings, TextStyle},
-    Font, FontSettings,
+    Font, FontSettings, Metrics,
 };
 use glam::Vec2;
 
-use crate::{FontAtlas, FontQuery, Mesh, Rect, Renderer, TextAlign, TextSection, TextWrap, Vertex};
+use crate::{
+    FontAtlas, FontQuery, Glyph, Mesh, Rect, Renderer, TextAlign, TextSection, TextWrap, Vertex,
+};
 
 /// An error that occurred while loading fonts.
 #[derive(Debug)]
@@ -179,6 +181,57 @@ impl Fonts {
         self.text_layout_inner(&font, text)
     }
 
+    /// Creates a text layout for `text` and returns the glyphs.
+    pub fn text_glyphs(&mut self, text: &TextSection<'_>) -> Option<Vec<Glyph>> {
+        let id = self.query_id(&text.font_query())?;
+        let font = self.get_font(id)?;
+
+        let layout = self.text_layout_inner(&font, text)?;
+
+        self.layout_glyphs(&font, &layout)
+    }
+
+    fn layout_glyphs(&self, font: &Font, layout: &Layout) -> Option<Vec<Glyph>> {
+        if layout.glyphs().is_empty() {
+            return None;
+        }
+
+        let mut glyphs = Vec::new();
+
+        for (line_index, line) in layout.lines().into_iter().flatten().enumerate() {
+            if line.glyph_end < line.glyph_start {
+                continue;
+            }
+
+            for glyph in &layout.glyphs()[line.glyph_start..=line.glyph_end] {
+                let metrics = if !glyph.char_data.is_control() {
+                    font.metrics(glyph.parent, glyph.key.px)
+                } else {
+                    Metrics::default()
+                };
+                let advance = metrics.advance_width.ceil();
+
+                let min = Vec2::new(glyph.x, glyph.y);
+                let size = Vec2::new(metrics.width as f32, metrics.height as f32);
+
+                let glyph = Glyph {
+                    code: glyph.parent,
+                    rect: Rect::min_size(min, size),
+                    byte_offset: glyph.byte_offset,
+                    line: line_index,
+                    baseline: line.baseline_y,
+                    line_descent: line.min_descent,
+                    line_ascent: line.max_ascent,
+                    advance,
+                };
+
+                glyphs.push(glyph);
+            }
+        }
+
+        Some(glyphs)
+    }
+
     fn measure_layout(&self, font: &Font, layout: &Layout) -> Option<Vec2> {
         if layout.glyphs().is_empty() {
             return None;
@@ -197,7 +250,7 @@ impl Fonts {
                 let metrics = if !glyph.char_data.is_control() {
                     font.metrics(glyph.parent, glyph.key.px)
                 } else {
-                    continue;
+                    Metrics::default()
                 };
                 let advance = metrics.advance_width.ceil();
 

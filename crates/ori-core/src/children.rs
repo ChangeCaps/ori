@@ -188,6 +188,8 @@ impl Children {
         let mut child_majors: SmallVec<[f32; 4]> = smallvec![0.0; self.len()];
         let mut child_flexes: SmallVec<[_; 4]> = smallvec![(None, None); self.len()];
 
+        let needs_layout = self.needs_layout();
+
         // first we need to measure the fixed-sized children to determine their size
         for (i, child) in self.elements().enumerate() {
             // get the flex grow and shrink factors
@@ -214,9 +216,8 @@ impl Children {
             child_flexes[i] = (flex_grow, flex_shrink);
 
             // layout the child
-            let needs_layout = child.needs_layout();
             let space_changed = child.space_changed(loosend_space);
-            let size = if needs_layout || space_changed || any_changed {
+            let size = if needs_layout || space_changed {
                 let old_size = child.size();
 
                 let size = child.layout(cx, loosend_space);
@@ -335,6 +336,10 @@ impl Children {
 
         // return the size of the flex container
         axis.pack(major, minor)
+    }
+
+    pub fn needs_layout(&self) -> bool {
+        self.elements().any(|child| child.needs_layout())
     }
 
     /// Returns the local rect of the flex container.
