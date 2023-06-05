@@ -91,7 +91,7 @@ impl<T: NodeElement> Node<T> {
     /// Returns a [`MutexGuard`] to the state of the `T`.
     ///
     /// Be careful when using this, as it can cause deadlocks.
-    pub fn view_state(&self) -> MutexGuard<'_, T::State> {
+    pub fn element_state(&self) -> MutexGuard<'_, T::State> {
         self.inner.as_ref().view_state.lock()
     }
 
@@ -287,7 +287,8 @@ impl<T: NodeElement> Node<T> {
             return;
         }
 
-        self.element().event(&mut self.view_state(), &mut cx, event);
+        self.element()
+            .event(&mut self.element_state(), &mut cx, event);
 
         Self::update_cursor(&mut cx);
     }
@@ -337,7 +338,7 @@ impl<T: NodeElement> Node<T> {
 
         let size = self
             .element()
-            .layout(&mut self.view_state(), &mut cx, space);
+            .layout(&mut self.element_state(), &mut cx, space);
 
         let local_offset = state.local_rect.min + state.margin.top_left();
         let global_offset = state.global_rect.min + state.margin.top_left();
@@ -373,7 +374,7 @@ impl<T: NodeElement> Node<T> {
             image_cache: cx.image_cache,
         };
 
-        self.element().draw(&mut self.view_state(), &mut cx);
+        self.element().draw(&mut self.element_state(), &mut cx);
 
         if cx.state.update_transitions() {
             cx.request_redraw();

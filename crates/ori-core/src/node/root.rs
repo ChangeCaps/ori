@@ -51,7 +51,8 @@ impl<T: NodeElement> Node<T> {
             event.set_element(&mut cx, self);
         }
 
-        self.element().event(&mut self.view_state(), &mut cx, event);
+        self.element()
+            .event(&mut self.element_state(), &mut cx, event);
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -94,7 +95,7 @@ impl<T: NodeElement> Node<T> {
 
         let size = self
             .element()
-            .layout(&mut self.view_state(), &mut cx, space);
+            .layout(&mut self.element_state(), &mut cx, space);
 
         element_state.available_space = space;
         element_state.local_rect = Rect::min_size(element_state.local_rect.min, size);
@@ -132,7 +133,7 @@ impl<T: NodeElement> Node<T> {
             image_cache,
         };
 
-        self.element().draw(&mut self.view_state(), &mut cx);
+        self.element().draw(&mut self.element_state(), &mut cx);
 
         cx.state.draw();
     }

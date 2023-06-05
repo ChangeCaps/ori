@@ -64,7 +64,7 @@ impl DebugEvent {
         let event = Event::new(DebugEvent::new(debug_element));
         element
             .element()
-            .event(&mut element.view_state(), cx, &event);
+            .event(&mut element.element_state(), cx, &event);
 
         let child = event.get::<DebugEvent>().unwrap().take();
         self.add_child(child);
