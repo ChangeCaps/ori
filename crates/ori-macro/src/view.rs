@@ -100,10 +100,11 @@ fn parse_context(input: TokenStream) -> (Expr, TokenStream) {
 
 /// Creates an element node.
 fn create_node<'a>(context: &Expr, nodes: impl Iterator<Item = &'a Node>) -> TokenStream {
+    let ori_core = find_crate("core");
     let nodes = nodes.map(|node| view_node(context, node));
 
     quote! {
-        #(#nodes)*
+        #(#ori_core::View::new(#nodes))*
     }
 }
 
