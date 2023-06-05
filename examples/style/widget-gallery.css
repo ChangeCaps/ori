@@ -30,7 +30,7 @@ div.column {
 }
 
 text-input.long-text {
-	font-size: 1em;
+	font-size: 0.8em;
 	text-wrap: word;
 	text-align: start;
 	text-valign: start;

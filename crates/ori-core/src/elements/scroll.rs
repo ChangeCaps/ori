@@ -154,10 +154,8 @@ impl Element for Scroll {
     }
 
     fn layout(&self, _: &mut Self::State, cx: &mut LayoutContext, space: AvailableSpace) -> Vec2 {
-        let axis = cx.style::<Axis>("direction");
-
         let flex = FlexLayout {
-            axis,
+            axis: cx.style::<Axis>("direction"),
             justify_content: cx.style("justify-content"),
             align_items: cx.style("align-items"),
             gap: cx.style_range("gap", 0.0..space.max.min_element() / 2.0),

@@ -74,8 +74,8 @@ fn ui(cx: Scope) -> View {
 
                 { format!("Input: {}", text.get()) }
             </Div>
-            <Scroll style:max-height=Em(14.0)>
-                <Div style:max-width=Em(8.0)>
+            <Scroll style:max-height=Em(18.0)>
+                <Div style:max-width=Em(15.0)>
                     <TextInput class="long-text" bind:text=long_text multiline=true />
                 </Div>
             </Scroll>
