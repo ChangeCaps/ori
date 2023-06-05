@@ -1,54 +1,56 @@
 use glam::Vec2;
-use ori_reactive::Event;
+use ori_macro::Build;
+use ori_reactive::{Emitter, Event};
 use ori_style::Style;
 
 use crate::{
-    AvailableSpace, Div, DrawContext, Element, EventContext, Events, IntoView, LayoutContext,
-    Parent, View,
+    AvailableSpace, Children, Context, DrawContext, Element, EventContext, FlexLayout, IntoView,
+    LayoutContext, Parent, PointerEvent,
 };
 
 /// A button element.
-#[derive(Default)]
+#[derive(Default, Build)]
 pub struct Button {
+    /// On click callback.
+    #[event]
+    pub on_click: Emitter<PointerEvent>,
     /// The content of the button.
-    pub content: Div,
+    #[children]
+    pub children: Children,
 }
 
 impl Button {
     /// Create a new button.
     pub fn new(child: impl IntoView) -> Self {
         Self {
-            content: Div::new().with_child(child),
+            on_click: Emitter::new(),
+            children: Children::new().with_child(child),
         }
     }
-}
 
-impl Events for Button {
-    type Setter<'a> = <Div as Events>::Setter<'a>;
+    fn handle_pointer_event(
+        &self,
+        cx: &mut EventContext,
+        event: &PointerEvent,
+        handled: bool,
+    ) -> bool {
+        if event.is_press() && cx.hovered() && !handled {
+            if !self.on_click.is_empty() {
+                cx.activate();
+                self.on_click.emit(event);
+            }
+        } else if event.is_release() && cx.state.active {
+            cx.deactivate();
+        } else {
+            return false;
+        }
 
-    fn setter(&mut self) -> Self::Setter<'_> {
-        Events::setter(&mut self.content)
-    }
-}
-
-impl Parent for Button {
-    type Child = <Div as Parent>::Child;
-
-    fn clear_children(&mut self) {
-        self.content.clear_children();
-    }
-
-    fn add_children(&mut self, child: impl Iterator<Item = View<Self::Child>>) -> usize {
-        self.content.add_children(child)
-    }
-
-    fn set_children(&mut self, slot: usize, child: impl Iterator<Item = View<Self::Child>>) {
-        self.content.set_children(slot, child)
+        true
     }
 }
 
 impl Element for Button {
-    type State = <Div as Element>::State;
+    type State = ();
 
     fn build(&self) -> Self::State {}
 
@@ -56,20 +58,23 @@ impl Element for Button {
         Style::new("button")
     }
 
-    fn event(&self, state: &mut Self::State, cx: &mut EventContext, event: &Event) {
-        self.content.event(state, cx, event);
+    fn event(&self, _: &mut Self::State, cx: &mut EventContext, event: &Event) {
+        self.children.event(cx, event);
+
+        if let Some(pointer_event) = event.get::<PointerEvent>() {
+            if self.handle_pointer_event(cx, pointer_event, event.is_handled()) {
+                event.handle();
+            }
+        }
     }
 
-    fn layout(
-        &self,
-        state: &mut Self::State,
-        cx: &mut LayoutContext,
-        space: AvailableSpace,
-    ) -> Vec2 {
-        self.content.layout(state, cx, space)
+    fn layout(&self, _: &mut Self::State, cx: &mut LayoutContext, space: AvailableSpace) -> Vec2 {
+        let flex = FlexLayout::from_style(cx);
+        self.children.flex_layout(cx, space, flex)
     }
 
-    fn draw(&self, state: &mut Self::State, cx: &mut DrawContext) {
-        self.content.draw(state, cx);
+    fn draw(&self, _: &mut Self::State, cx: &mut DrawContext) {
+        cx.draw_quad();
+        self.children.draw(cx);
     }
 }

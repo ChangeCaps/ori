@@ -47,15 +47,11 @@ impl Attrs {
 pub fn derive_build(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
-    let properties = properties(&input);
-    let events = events(&input);
-    let bindings = bindings(&input);
+    let build = build(&input);
     let children = children(&input);
 
     let expanded = quote! {
-        #properties
-        #events
-        #bindings
+        #build
         #children
     };
 
@@ -82,100 +78,82 @@ fn setter_generics(input: &DeriveInput) -> Generics {
     generics
 }
 
-fn properties(input: &DeriveInput) -> TokenStream {
+fn build(input: &DeriveInput) -> TokenStream {
     let name = &input.ident;
-    let setter = prop_setter(input);
 
     let ori_core = find_crate("core");
+
+    let property_setter = prop_setter(input);
+    let event_setter = event_setter(input);
+    let binding_setter = binding_setter(input);
 
     let setter_generics = setter_generics(input);
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let (setter_impl_generics, setter_ty_generics, setter_where_clause) =
         setter_generics.split_for_impl();
 
-    quote! {
-        const _: () = {
-            pub struct Setter #setter_impl_generics #setter_where_clause {
-                this: &'__setter mut #name #ty_generics,
+    quote! { const _: () = {
+        pub struct PropertiesSetter #setter_impl_generics #where_clause {
+            this: &'__setter mut #name #ty_generics,
+        }
+
+        impl #setter_impl_generics PropertiesSetter #setter_ty_generics #setter_where_clause {
+            #property_setter
+        }
+
+        pub struct EventsSetter #setter_impl_generics #where_clause {
+            this: &'__setter mut #name #ty_generics,
+        }
+
+        impl #setter_impl_generics EventsSetter #setter_ty_generics #setter_where_clause {
+            #event_setter
+        }
+
+        pub struct BindingsSetter #setter_impl_generics #where_clause {
+            this: &'__setter mut #name #ty_generics,
+        }
+
+        impl #setter_impl_generics BindingsSetter #setter_ty_generics #setter_where_clause {
+            #binding_setter
+        }
+
+        impl #impl_generics #ori_core::Build for #name #ty_generics #where_clause {
+            type Properties<'__setter> = PropertiesSetter #setter_ty_generics;
+            type Events<'__setter> = EventsSetter #setter_ty_generics;
+            type Bindings<'__setter> = BindingsSetter #setter_ty_generics;
+
+            fn build() -> #ori_core::View {
+                #ori_core::View::new(Self::default())
             }
 
-            impl #setter_impl_generics Setter #setter_ty_generics #setter_where_clause {
-                #setter
+            fn properties(view: &#ori_core::View, f: impl ::std::ops::FnOnce(Self::Properties<'_>)) {
+                let closure = |this: &mut Self| {
+                    let setter = PropertiesSetter { this };
+                    f(setter);
+                };
+                let node = view.get_node().expect("node not found");
+                node.downcast::<Self, ()>(closure).expect("downcast failed");
             }
 
-            impl #impl_generics #ori_core::Properties for #name #ty_generics #where_clause {
-                type Setter<'__setter> = Setter #setter_ty_generics;
-
-                fn setter(&mut self) -> Self::Setter<'_> {
-                    Setter { this: self }
-                }
-            }
-        };
-    }
-}
-
-fn events(input: &DeriveInput) -> TokenStream {
-    let name = &input.ident;
-    let setter = event_setter(input);
-
-    let ori_core = find_crate("core");
-
-    let setter_generics = setter_generics(input);
-    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
-    let (setter_impl_generics, setter_ty_generics, setter_where_clause) =
-        setter_generics.split_for_impl();
-
-    quote! {
-        const _: () = {
-            pub struct Setter #setter_impl_generics #setter_where_clause {
-                this: &'__setter mut #name #ty_generics,
+            fn events(view: &#ori_core::View, f: impl ::std::ops::FnOnce(Self::Events<'_>)) {
+                let closure = |this: &mut Self| {
+                    let setter = EventsSetter { this };
+                    f(setter);
+                };
+                let node = view.get_node().expect("node not found");
+                node.downcast::<Self, ()>(closure).expect("downcast failed");
             }
 
-            impl #setter_impl_generics Setter #setter_ty_generics #setter_where_clause {
-                #setter
+            fn bindings(view: &#ori_core::View, f: impl ::std::ops::FnOnce(Self::Bindings<'_>)) {
+                let closure = |this: &mut Self| {
+                    let setter = BindingsSetter { this };
+                    f(setter);
+                };
+                let node = view.get_node().expect("node not found");
+                node.downcast::<Self, ()>(closure).expect("downcast failed");
             }
-
-            impl #impl_generics #ori_core::Events for #name #ty_generics #where_clause {
-                type Setter<'__setter> = Setter #setter_ty_generics;
-
-                fn setter(&mut self) -> Self::Setter<'_> {
-                    Setter { this: self }
-                }
-            }
-        };
-    }
-}
-
-fn bindings(input: &DeriveInput) -> TokenStream {
-    let name = &input.ident;
-    let setter = binding_setter(input);
-
-    let ori_core = find_crate("core");
-
-    let setter_generics = setter_generics(input);
-    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
-    let (setter_impl_generics, setter_ty_generics, setter_where_clause) =
-        setter_generics.split_for_impl();
-
-    quote! {
-        const _: () = {
-            pub struct Setter #setter_impl_generics #setter_where_clause {
-                this: &'__setter mut #name #ty_generics,
-            }
-
-            impl #setter_impl_generics Setter #setter_ty_generics #setter_where_clause {
-                #setter
-            }
-
-            impl #impl_generics #ori_core::Bindings for #name #ty_generics #where_clause {
-                type Setter<'__setter> = Setter #setter_ty_generics;
-
-                fn setter(&mut self) -> Self::Setter<'_> {
-                    Setter { this: self }
-                }
-            }
-        };
-    }
+        }
+    };}
 }
 
 fn children(input: &DeriveInput) -> TokenStream {

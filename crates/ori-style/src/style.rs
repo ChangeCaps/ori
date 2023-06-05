@@ -22,6 +22,24 @@ impl Style {
     }
 
     /// Sets the element name.
+    pub fn set_element(&mut self, element: &'static str) {
+        self.element = Some(element);
+    }
+
+    /// Sets the classes.
+    pub fn set_class(&mut self, class: &str) {
+        let classes = class.split_whitespace().map(StyleClass::from);
+        self.classes.clear();
+        self.classes.extend(classes);
+    }
+
+    /// Sets the classes.
+    pub fn set_attr(&mut self, key: &str, builder: impl StyleAttributeBuilder) {
+        let attr = builder.attribute(key);
+        self.attributes.set(attr);
+    }
+
+    /// Sets the element name.
     pub fn with_element(mut self, element: &'static str) -> Self {
         self.element = Some(element);
         self

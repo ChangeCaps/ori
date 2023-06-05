@@ -153,28 +153,29 @@ fn create_fragment<'a>(context: &Expr, nodes: impl Iterator<Item = &'a Node>) ->
 /// Adds a child to an `__node` dynamically.
 fn dynamic_child(context: &Expr, name: &Path, child: &Expr) -> TokenStream {
     let ori_core = find_crate("core");
-    let ori_style = find_crate("style");
 
     let set_child = quote! {
-        let _ = __node.downcast::<#ori_style::Styled<#name>, ()>(|__view| {
-            if let Some(__child_index) = __child_index {
-                <#name as #ori_core::Parent>::set_children(
-                    __view,
-                    __child_index,
-                    #child,
-                );
-            } else {
-                __child_index = Some(<#name as #ori_core::Parent>::add_children(
-                    __view,
-                    #child,
-                ));
-            }
+        #ori_core::View::<_>::visit(&__view, |__node| {
+            let _ = __node.downcast::<#name, ()>(|__view| {
+                if let Some(__child_index) = __child_index {
+                    <#name as #ori_core::Parent>::set_children(
+                        __view,
+                        __child_index,
+                        #child,
+                    );
+                } else {
+                    __child_index = Some(<#name as #ori_core::Parent>::add_children(
+                        __view,
+                        #child,
+                    ));
+                }
+            });
         });
     };
 
     quote_spanned! {child.span() =>
         #context.effect_scoped({
-            let __node = __node.clone();
+            let __view = __view.clone();
             let mut __child_index = None;
             move |#context| { #set_child }
         });
@@ -184,11 +185,12 @@ fn dynamic_child(context: &Expr, name: &Path, child: &Expr) -> TokenStream {
 /// Adds a child to an `__node` statically.
 fn static_child(name: &Path, child: &Expr) -> TokenStream {
     let ori_core = find_crate("core");
-    let ori_style = find_crate("style");
 
     quote_spanned! {child.span() =>
-        let _ = __node.downcast::<#ori_style::Styled<#name>, ()>(|__view| {
-            <#name as #ori_core::Parent>::add_children(__view, ::std::iter::once(#child));
+        #ori_core::View::<_>::visit(&__view, |__node| {
+            let _ = __node.downcast::<#name, ()>(|__view| {
+                <#name as #ori_core::Parent>::add_children(__view, ::std::iter::once(#child));
+            });
         });
     }
 }
@@ -214,7 +216,6 @@ fn children<'a>(
 /// Returns an expression that evaluates to a `Node`.
 fn view_node(context: &Expr, node: &Node) -> Expr {
     let ori_core = find_crate("core");
-    let ori_style = find_crate("style");
 
     match node {
         Node::Element(element) => {
@@ -232,11 +233,7 @@ fn view_node(context: &Expr, node: &Node) -> Expr {
             let children = children(context, parse_quote!(#name), element.children.iter());
 
             parse_quote_spanned! {element.name.span() => {
-                let mut __element = <#name as #ori_style::Stylable<_>>::styled(
-                    <#name as ::std::default::Default>::default()
-                );
-                let __view = #ori_core::View::new(__element);
-                let __node = __view.get_node().unwrap().clone();
+                let __view = <#name as #ori_core::Build<_>>::build();
 
                 #(#children)*
                 #(#properties)*
@@ -413,19 +410,20 @@ fn node_is_dynamic(node: &Node) -> bool {
 fn wrap_dynamic(context: &Expr, value: TokenStream) -> TokenStream {
     quote! {
         #context.effect_scoped({
-            let __node = __node.clone();
+            let __view = __view.clone();
             move |#context| { #value }
         });
     }
 }
 
 /// Sets the class of the given `__node`.
-fn class(context: &Expr, name: &Ident, value: &Expr) -> TokenStream {
-    let ori_style = find_crate("style");
+fn class(context: &Expr, _name: &Ident, value: &Expr) -> TokenStream {
+    let ori_core = find_crate("core");
 
     let set_scope = quote_spanned! {value.span() =>
-        let _ = __node.downcast::<#ori_style::Styled<#name>, ()>(|__view| {
-            #ori_style::Styled::<#name>::set_class(__view, #value);
+        #ori_core::View::<_>::visit(&__view, |__node| {
+            __node.node_state().style.set_class(#value);
+            __node.request_layout();
         });
     };
 
@@ -437,12 +435,13 @@ fn class(context: &Expr, name: &Ident, value: &Expr) -> TokenStream {
 }
 
 /// Sets a style attribute of the given `__node`.
-fn style(context: &Expr, name: &Ident, key: &str, value: &Expr) -> TokenStream {
-    let ori_style = find_crate("style");
+fn style(context: &Expr, _name: &Ident, key: &str, value: &Expr) -> TokenStream {
+    let ori_core = find_crate("core");
 
     let set_style = quote_spanned! {value.span() =>
-        let _ = __node.downcast::<#ori_style::Styled<#name>, ()>(|__view| {
-            #ori_style::Styled::<#name>::set_attr(__view, #key, #value);
+        #ori_core::View::<_>::visit(&__view, |__node| {
+            __node.node_state().style.set_attr(#key, #value);
+            __node.request_layout();
         });
     };
 
@@ -456,15 +455,14 @@ fn style(context: &Expr, name: &Ident, key: &str, value: &Expr) -> TokenStream {
 /// Sets a property of the given `__node`.
 fn property(context: &Expr, name: &Ident, key: &ExprPath, value: &Expr) -> TokenStream {
     let ori_core = find_crate("core");
-    let ori_style = find_crate("style");
 
     let key = quote_spanned! {key.path.span() =>
         #key
     };
 
     let set_property = quote_spanned! {value.span() =>
-        let _ = __node.downcast::<#ori_style::Styled<#name>, ()>(|__view| {
-            <#name as #ori_core::Properties>::setter(__view).#key(#value);
+        <#name as #ori_core::Build<_>>::properties(&__view, |mut __properties| {
+            __properties.#key(#value);
         });
     };
 
@@ -478,11 +476,10 @@ fn property(context: &Expr, name: &Ident, key: &ExprPath, value: &Expr) -> Token
 /// Sets an event handler of the given `__node`.
 fn event(context: &Expr, name: &Ident, key: &Ident, value: &Expr) -> TokenStream {
     let ori_core = find_crate("core");
-    let ori_style = find_crate("style");
 
     let set_event = quote_spanned! {value.span() =>
-        let _ = __node.downcast::<#ori_style::Styled<#name>, ()>(|__view| {
-            <#name as #ori_core::Events>::setter(__view).#key(#context, #value);
+        <#name as #ori_core::Build<_>>::events(&__view, |mut __events| {
+            __events.#key(#context, #value);
         });
     };
 
@@ -496,11 +493,10 @@ fn event(context: &Expr, name: &Ident, key: &Ident, value: &Expr) -> TokenStream
 /// Sets a binding of the given `__node`.
 fn binding(context: &Expr, name: &Ident, key: &Ident, value: &Expr) -> TokenStream {
     let ori_core = find_crate("core");
-    let ori_style = find_crate("style");
 
     let set_binding = quote_spanned! {value.span() =>
-        let _ = __node.downcast::<#ori_style::Styled<#name>, ()>(|__view| {
-            <#name as #ori_core::Bindings>::setter(__view).#key(#context, #value);
+        <#name as #ori_core::Build<_>>::bindings(&__view, |mut __bindings| {
+            __bindings.#key(#context, #value);
         });
     };
 

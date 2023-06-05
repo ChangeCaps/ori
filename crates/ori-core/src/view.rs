@@ -153,4 +153,20 @@ impl<V: NodeElement> View<V> {
             ViewKind::Dynamic(signal) => signal.get().flatten(),
         }
     }
+
+    /// Calls the given closure on all elements in the [`View`], including nested elements.
+    /// Dynamic [`View`]s are fetched in a reactive manner.
+    pub fn visit(&self, mut visitor: impl FnMut(&Node<V>)) {
+        self.visit_inner(&mut visitor);
+    }
+
+    fn visit_inner(&self, visitor: &mut impl FnMut(&Node<V>)) {
+        match &self.kind {
+            ViewKind::Element(element) => visitor(element),
+            ViewKind::Fragment(fragment) => {
+                fragment.iter().for_each(|view| view.visit_inner(visitor))
+            }
+            ViewKind::Dynamic(signal) => signal.get().visit_inner(visitor),
+        }
+    }
 }

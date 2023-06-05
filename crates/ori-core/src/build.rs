@@ -1,27 +1,17 @@
 use ori_reactive::{Callback, Emitter, OwnedSignal, Scope, Signal};
 
-use crate::{IntoView, NodeElement, View};
+use crate::{AnyElement, IntoView, NodeElement, View};
 
-/// A trait for setting properties on an element.
-pub trait Properties {
-    /// The setter type.
-    type Setter<'a>
-    where
-        Self: 'a;
+pub trait Build<V: NodeElement = Box<dyn AnyElement>> {
+    type Properties<'a>;
+    type Events<'a>;
+    type Bindings<'a>;
 
-    /// Returns [`Self::Setter`].
-    fn setter(&mut self) -> Self::Setter<'_>;
-}
+    fn build() -> View<V>;
 
-/// A trait for setting events on an element.
-pub trait Events {
-    /// The setter type.
-    type Setter<'a>
-    where
-        Self: 'a;
-
-    /// Returns [`Self::Setter`].
-    fn setter(&mut self) -> Self::Setter<'_>;
+    fn properties(view: &View<V>, f: impl FnOnce(Self::Properties<'_>));
+    fn events(view: &View<V>, f: impl FnOnce(Self::Events<'_>));
+    fn bindings(view: &View<V>, f: impl FnOnce(Self::Bindings<'_>));
 }
 
 /// A trait that is implemented for every type a callback can be subscribed to.
@@ -41,17 +31,6 @@ impl<T> BindCallback for Emitter<T> {
         self.subscribe(&callback);
         cx.manage_callback(callback);
     }
-}
-
-/// A trait for setting bindings on an element.
-pub trait Bindings {
-    /// The setter type.
-    type Setter<'a>
-    where
-        Self: 'a;
-
-    /// Returns [`Self::Setter`].
-    fn setter(&mut self) -> Self::Setter<'_>;
 }
 
 /// A trait implemented for every type that can be bound to a signal.

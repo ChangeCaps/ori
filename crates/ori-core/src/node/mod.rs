@@ -243,7 +243,6 @@ impl<T: NodeElement> Node<T> {
         f: impl FnOnce(&mut NodeState, &mut C) -> O,
     ) -> O {
         let element_state = &mut self.node_state();
-        element_state.style = self.element().style();
         element_state.propagate_up(cx.state_mut());
 
         let _span = trace_span!("element", selector = %element_state.selector()).entered();
