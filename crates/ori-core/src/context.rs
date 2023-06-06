@@ -194,7 +194,7 @@ impl<'a> DrawContext<'a> {
 
         let quad = Quad {
             rect: self.rect(),
-            background: self.style("background-color"),
+            background: self.style_group(&["background-color", "background"]),
             border_radius: [tl, tr, br, bl],
             border_width: self.style_range("border-width", range),
             border_color: self.style("border-color"),

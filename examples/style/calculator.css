@@ -3,7 +3,7 @@ body {
 }
 
 div.result-bar {
-	background-color: #0000;
+	background: #0000;
 	height: 20vh;
 	width: 100%;
 

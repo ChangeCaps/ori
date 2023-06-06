@@ -85,7 +85,7 @@ impl Element for Knob {
 
         let center = Quad {
             rect: Rect::center_size(cx.rect().center(), Vec2::splat(diameter)),
-            background: cx.style("background-color"),
+            background: cx.style_group(&["background-color", "background"]),
             border_radius: [diameter * 0.5; 4],
             border_width: cx.style_range("border-width", 0.0..diameter * 0.5),
             border_color: cx.style("border-color"),

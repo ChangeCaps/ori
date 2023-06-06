@@ -161,7 +161,7 @@ impl Element for Slider {
 
         let track_quad = Quad {
             rect: Self::track_rect(cx),
-            background: cx.style("background-color"),
+            background: cx.style_group(&["background-color", "background"]),
             border_radius: [tl, tr, br, bl],
             border_width: cx.style_range("border-width", range.clone()),
             border_color: cx.style("border-color"),
