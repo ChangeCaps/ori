@@ -1,3 +1,7 @@
+body {
+	background: #00000000;
+}
+
 div.result-bar {
 	background-color: #0000;
 	height: 20vh;
