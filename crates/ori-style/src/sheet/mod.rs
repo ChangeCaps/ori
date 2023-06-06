@@ -44,7 +44,7 @@ impl Display for StyleLoadError {
 ///
 /// Returns a [`LoadedStyleKind`].
 #[macro_export]
-macro_rules! stylesheet {
+macro_rules! style {
     ($path:literal) => {
         if ::std::path::Path::new($path).exists() {
             let sheet = $crate::LoadedStyle::load($path).unwrap();
