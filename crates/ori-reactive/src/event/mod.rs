@@ -58,6 +58,11 @@ impl Event {
 
     /// Tries to downcast the event to type `T`.
     pub fn get<T: Any>(&self) -> Option<&T> {
+        if TypeId::of::<T>() == TypeId::of::<Self>() {
+            // SAFETY: `T` is `Self`.
+            return Some(unsafe { &*(self as *const Self as *const T) });
+        }
+
         self.inner.downcast_ref()
     }
 }
