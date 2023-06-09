@@ -108,39 +108,15 @@ fn create_node<'a>(context: &Expr, nodes: impl Iterator<Item = &'a Node>) -> Tok
     }
 }
 
-/// Pushes a dynamic node to the `__views` vector.
-fn push_dynamic(context: &Expr, node: Expr) -> TokenStream {
-    let ori_core = find_crate("core");
-
-    quote! {
-        let __dynamic = #context.owned_memo_scoped(move |#context| {
-            let nodes = ::std::iter::Iterator::collect::<::std::vec::Vec<_>>(#node);
-            #ori_core::View::fragment(nodes)
-        });
-
-        __views.push(#ori_core::View::dynamic(__dynamic));
-    }
-}
-
-/// Pushes a static node to the `__views` vector.
-pub fn push_static(node: Expr) -> TokenStream {
-    quote! {
-        __views.push(#node);
-    }
-}
-
 /// Creates a fragment node.
 fn create_fragment<'a>(context: &Expr, nodes: impl Iterator<Item = &'a Node>) -> TokenStream {
     let ori_core = find_crate("core");
 
     let elements = nodes.map(|node| {
-        let is_dynamic = matches!(node, Node::Block(_));
         let node = view_node(context, node);
 
-        if is_dynamic {
-            push_dynamic(context, node)
-        } else {
-            push_static(node)
+        quote! {
+            __views.push(#node);
         }
     });
 
