@@ -18,9 +18,9 @@ combobox {
 }
 
 combobox:hover {
-	background-color: #f0f0f0 0.05s;
+	title-background-color: #f0f0f0 0.05s;
 }
 
 combobox:active {
-	background-color: #f0f0f0 0.05s;
+	title-background-color: #f0f0f0 0.05s;
 }
