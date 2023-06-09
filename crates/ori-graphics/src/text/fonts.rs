@@ -254,16 +254,13 @@ impl Fonts {
                 };
                 let advance = metrics.advance_width.ceil();
 
-                line_width += advance;
+                line_width += advance + font_size * 0.02;
             }
 
             width = f32::max(width, line_width);
         }
 
-        Some(Vec2::new(
-            width + f32::round(font_size * 0.6),
-            layout.height(),
-        ))
+        Some(Vec2::new(width.ceil(), layout.height()))
     }
 
     /// Measures the size of `text`, and returns the smallest [`Rect`] that can contains it.
