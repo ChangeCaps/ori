@@ -232,15 +232,26 @@ where
         match self.style_loader.reload() {
             Ok(true) => {
                 self.style_cache.clear();
-
-                for &ui in self.window_ui.keys() {
-                    self.window_backend.request_redraw(ui);
-                }
+                self.force_layout();
             }
             Err(err) => {
                 eprintln!("Failed to reload styles: {}", err);
             }
             _ => {}
+        }
+    }
+
+    pub fn force_layout(&mut self) {
+        let windows = self
+            .window_ui
+            .iter()
+            .map(|(&id, ui)| (id, ui.window.size))
+            .collect::<Vec<_>>();
+
+        for (id, size) in windows {
+            let event = WindowResizedEvent::new(size.as_vec2());
+            self.event_inner(id, &Event::new(event));
+            self.window_backend.request_redraw(id);
         }
     }
 
