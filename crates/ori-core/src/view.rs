@@ -59,7 +59,7 @@ impl View {
         Self::from_kind(ViewKind::Dynamic(signal))
     }
 
-    /// Creates an empty [`View`].
+    /// Creates an empty fragment.
     pub fn empty() -> Self {
         Self::fragment(Vec::new())
     }
@@ -133,6 +133,39 @@ impl View {
                 fragment.iter().for_each(|view| view.visit_inner(visitor))
             }
             ViewKind::Dynamic(signal) => signal.get().visit_inner(visitor),
+        }
+    }
+}
+
+impl<T: Into<View>> From<Vec<T>> for View {
+    fn from(views: Vec<T>) -> Self {
+        Self::fragment(views.into_iter().map(Into::into).collect::<Vec<_>>())
+    }
+}
+
+impl<T: Clone + Into<View>> From<&[T]> for View {
+    fn from(views: &[T]) -> Self {
+        Self::fragment(views.iter().cloned().map(Into::into).collect::<Vec<_>>())
+    }
+}
+
+impl From<Arc<[View]>> for View {
+    fn from(views: Arc<[View]>) -> Self {
+        Self::fragment(views)
+    }
+}
+
+impl From<OwnedSignal<View>> for View {
+    fn from(dynamic: OwnedSignal<View>) -> Self {
+        Self::from_kind(ViewKind::Dynamic(dynamic))
+    }
+}
+
+impl<T: Into<View>> From<Option<T>> for View {
+    fn from(value: Option<T>) -> Self {
+        match value {
+            Some(value) => value.into(),
+            None => Self::empty(),
         }
     }
 }

@@ -5,17 +5,22 @@ use ori_style::Style;
 
 use crate::{AvailableSpace, Context, DrawContext, Element, LayoutContext, View};
 
-impl From<String> for View {
-    fn from(value: String) -> Self {
-        Self::new(Text::new(value))
-    }
+macro_rules! impl_from {
+    ($($ty:ty),*) => {
+        $(
+            impl From<$ty> for View {
+                fn from(value: $ty) -> Self {
+                    Self::new(Text::new(value))
+                }
+            }
+        )*
+    };
 }
 
-impl From<&str> for View {
-    fn from(value: &str) -> Self {
-        Self::new(Text::new(value))
-    }
-}
+impl_from!(
+    String, &str, char, bool, i8, i16, i32, i64, i128, isize, u8, u16, u32, u64, u128, usize, f32,
+    f64
+);
 
 /// A text element.
 #[derive(Clone, Debug, Default, Build)]
@@ -27,13 +32,15 @@ pub struct Text {
 
 impl Text {
     /// Create a new text element.
-    pub fn new(text: impl Into<String>) -> Self {
-        Self { text: text.into() }
+    pub fn new(text: impl ToString) -> Self {
+        Self {
+            text: text.to_string(),
+        }
     }
 
     /// Set the text to display.
-    pub fn text(mut self, text: impl Into<String>) -> Self {
-        self.text = text.into();
+    pub fn text(mut self, text: impl ToString) -> Self {
+        self.text = text.to_string();
         self
     }
 }
