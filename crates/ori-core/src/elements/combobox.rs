@@ -80,7 +80,7 @@ impl Element for ComboBox {
         if cx.active() {
             let content_space = AvailableSpace {
                 min: Vec2::new(title_size.x, 0.0),
-                max: Vec2::new(title_size.x, cx.window.size.y as f32),
+                max: cx.window.size.as_vec2(),
             };
 
             let flex = FlexLayout {
