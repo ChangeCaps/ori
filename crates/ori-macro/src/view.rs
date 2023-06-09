@@ -450,7 +450,7 @@ fn property(context: &Expr, name: &Ident, key: &ExprPath, value: &Expr) -> Token
     };
 
     let set_property = quote_spanned! {value.span() =>
-        <#name as #ori_core::Build>::properties(&__view, move |mut __properties| {
+        <#name as #ori_core::Build>::properties(&__view, |mut __properties| {
             __properties.#key(#value);
         });
     };
@@ -467,7 +467,7 @@ fn event(context: &Expr, name: &Ident, key: &Ident, value: &Expr) -> TokenStream
     let ori_core = find_crate("core");
 
     let set_event = quote_spanned! {value.span() =>
-        <#name as #ori_core::Build>::events(&__view, move |mut __events| {
+        <#name as #ori_core::Build>::events(&__view, |mut __events| {
             __events.#key(#context, #value);
         });
     };
@@ -484,7 +484,7 @@ fn binding(context: &Expr, name: &Ident, key: &Ident, value: &Expr) -> TokenStre
     let ori_core = find_crate("core");
 
     let set_binding = quote_spanned! {value.span() =>
-        <#name as #ori_core::Build>::bindings(&__view, move |mut __bindings| {
+        <#name as #ori_core::Build>::bindings(&__view, |mut __bindings| {
             __bindings.#key(#context, #value);
         });
     };
