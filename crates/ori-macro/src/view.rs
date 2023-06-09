@@ -151,47 +151,14 @@ fn create_fragment<'a>(context: &Expr, nodes: impl Iterator<Item = &'a Node>) ->
     }}
 }
 
-/// Adds a child to an `__node` dynamically.
-fn dynamic_child(context: &Expr, name: &Path, child: &Expr) -> TokenStream {
-    let ori_core = find_crate("core");
-
-    let set_child = quote! {
-        #ori_core::View::visit(&__view, |__node| {
-            let _ = __node.downcast::<#name, ()>(|__view| {
-                if let Some(__child_index) = __child_index {
-                    <#name as #ori_core::Parent>::set_child(
-                        __view,
-                        __child_index,
-                        #child,
-                    );
-                } else {
-                    __child_index = Some(<#name as #ori_core::Parent>::add_child(
-                        __view,
-                        #child,
-                    ));
-                }
-            });
-        });
-    };
-
-    quote_spanned! {child.span() =>
-        #context.effect_scoped({
-            let __view = __view.clone();
-            let mut __child_index = None;
-            move |#context| { #set_child }
-        });
-    }
-}
-
 /// Adds a child to an `__node` statically.
 fn static_child(name: &Path, child: &Expr) -> TokenStream {
     let ori_core = find_crate("core");
 
     quote_spanned! {child.span() =>
-        #ori_core::View::visit(&__view, |__node| {
-            let _ = __node.downcast::<#name, ()>(|__view| {
-                <#name as #ori_core::Parent>::add_child(__view, #child);
-            });
+        let __node = __view.get_node().unwrap();
+        let _ = __node.downcast::<#name, ()>(move |__view| {
+            <#name as #ori_core::Parent>::add_child(__view, #child);
         });
     }
 }
@@ -204,13 +171,8 @@ fn children<'a>(
 ) -> impl Iterator<Item = TokenStream> + 'a {
     children.map(move |node| {
         let child = view_node(context, node);
-        let is_dynamic = node_is_dynamic(node);
 
-        if is_dynamic {
-            dynamic_child(context, &name, &child)
-        } else {
-            static_child(&name, &child)
-        }
+        static_child(&name, &child)
     })
 }
 
@@ -245,10 +207,22 @@ fn view_node(context: &Expr, node: &Node) -> Expr {
         }
         Node::Block(block) => {
             let expr = block.value.as_ref();
-            parse_quote_spanned!(expr.span() =>
+            let dynamic = expr_is_dynamic(expr);
+
+            let fragment = parse_quote_spanned!(expr.span() =>
                 #[allow(unused_braces)]
                 #ori_core::View::fragment(::std::iter::Iterator::collect::<::std::vec::Vec<_>>(#expr))
-            )
+            );
+
+            if dynamic {
+                parse_quote_spanned! {expr.span() =>
+                    #context.owned_memo_scoped(move |#context| {
+                        #fragment
+                    })
+                }
+            } else {
+                fragment
+            }
         }
         Node::Comment(comment) => {
             let comment = comment.value.as_ref();
@@ -401,17 +375,6 @@ fn expr_is_dynamic(value: &Expr) -> bool {
     }
 }
 
-/// Checks if the given node is dynamic, which means that it can change reactively.
-fn node_is_dynamic(node: &Node) -> bool {
-    match node {
-        Node::Block(block) => {
-            let expr = block.value.as_ref();
-            expr_is_dynamic(expr)
-        }
-        _ => false,
-    }
-}
-
 /// Wraps the given block in an effect scope.
 fn wrap_dynamic(context: &Expr, value: TokenStream) -> TokenStream {
     quote! {
@@ -427,7 +390,7 @@ fn class(context: &Expr, _name: &Ident, value: &Expr) -> TokenStream {
     let ori_core = find_crate("core");
 
     let set_scope = quote_spanned! {value.span() =>
-        #ori_core::View::visit(&__view, |__node| {
+        #ori_core::View::visit(&__view, move |__node| {
             __node.node_state().style.set_class(#value);
             __node.request_layout();
         });
@@ -445,9 +408,8 @@ fn node_ref(context: &Expr, _name: &Ident, value: &Expr) -> TokenStream {
     let ori_core = find_crate("core");
 
     let set_node_ref = quote_spanned! {value.span() =>
-        #ori_core::View::visit(&__view, |__node| {
-            #ori_core::NodeRef::set(&#value, __node.clone());
-        });
+        let __node = __view.get_node().unwrap();
+        #ori_core::NodeRef::set(&#value, __node.clone());
     };
 
     if expr_is_dynamic(value) {
@@ -459,13 +421,10 @@ fn node_ref(context: &Expr, _name: &Ident, value: &Expr) -> TokenStream {
 
 /// Sets a style attribute of the given `__node`.
 fn style(context: &Expr, _name: &Ident, key: &str, value: &Expr) -> TokenStream {
-    let ori_core = find_crate("core");
-
     let set_style = quote_spanned! {value.span() =>
-        #ori_core::View::visit(&__view, |__node| {
-            __node.node_state().style.set_attr(#key, #value);
-            __node.request_layout();
-        });
+        let __node = __view.get_node().unwrap();
+        __node.node_state().style.set_attr(#key, #value);
+        __node.request_layout();
     };
 
     if expr_is_dynamic(value) {
@@ -484,7 +443,7 @@ fn property(context: &Expr, name: &Ident, key: &ExprPath, value: &Expr) -> Token
     };
 
     let set_property = quote_spanned! {value.span() =>
-        <#name as #ori_core::Build>::properties(&__view, |mut __properties| {
+        <#name as #ori_core::Build>::properties(&__view, move |mut __properties| {
             __properties.#key(#value);
         });
     };
@@ -501,7 +460,7 @@ fn event(context: &Expr, name: &Ident, key: &Ident, value: &Expr) -> TokenStream
     let ori_core = find_crate("core");
 
     let set_event = quote_spanned! {value.span() =>
-        <#name as #ori_core::Build>::events(&__view, |mut __events| {
+        <#name as #ori_core::Build>::events(&__view, move |mut __events| {
             __events.#key(#context, #value);
         });
     };
@@ -518,7 +477,7 @@ fn binding(context: &Expr, name: &Ident, key: &Ident, value: &Expr) -> TokenStre
     let ori_core = find_crate("core");
 
     let set_binding = quote_spanned! {value.span() =>
-        <#name as #ori_core::Build>::bindings(&__view, |mut __bindings| {
+        <#name as #ori_core::Build>::bindings(&__view, move |mut __bindings| {
             __bindings.#key(#context, #value);
         });
     };
