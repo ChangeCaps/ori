@@ -20,27 +20,9 @@ impl Clone for ViewKind {
     }
 }
 
-/// A trait for types that can be converted into a [`View`].
-pub trait IntoView {
-    /// Converts `self` into a [`Node`].
-    fn into_view(self) -> View;
-}
-
-impl<V: Element> IntoView for V {
-    fn into_view(self) -> View {
-        View::node(Node::new(self))
-    }
-}
-
-impl IntoView for View {
-    fn into_view(self) -> View {
-        self
-    }
-}
-
-impl IntoView for Node {
-    fn into_view(self) -> View {
-        View::node(self)
+impl<T: Element> From<T> for View {
+    fn from(element: T) -> Self {
+        Self::node(Node::new(element))
     }
 }
 
@@ -68,8 +50,8 @@ impl View {
     }
 
     /// Creates a new [`Node`].
-    pub fn new(into_node: impl IntoView) -> Self {
-        into_node.into_view()
+    pub fn new(into_node: impl Into<View>) -> Self {
+        into_node.into()
     }
 
     /// Creates a new [`View`] from an [`Node`].
@@ -148,7 +130,7 @@ impl View {
         }
     }
 
-    /// Calls the given closure on all elements in the [`View`], including nested elements.
+    /// Calls the given `visitor` on all elements in the [`View`], including nested elements.
     /// Dynamic [`View`]s are fetched in a reactive manner.
     pub fn visit(&self, mut visitor: impl FnMut(&Node)) {
         self.visit_inner(&mut visitor);

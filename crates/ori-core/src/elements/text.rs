@@ -3,17 +3,17 @@ use ori_graphics::{Rect, TextSection};
 use ori_macro::Build;
 use ori_style::Style;
 
-use crate::{AvailableSpace, Context, DrawContext, Element, IntoView, LayoutContext, View};
+use crate::{AvailableSpace, Context, DrawContext, Element, LayoutContext, View};
 
-impl IntoView for String {
-    fn into_view(self) -> View {
-        View::new(Text::new(self))
+impl From<String> for View {
+    fn from(value: String) -> Self {
+        Self::new(Text::new(value))
     }
 }
 
-impl IntoView for &str {
-    fn into_view(self) -> View {
-        View::new(Text::new(self))
+impl From<&str> for View {
+    fn from(value: &str) -> Self {
+        Self::new(Text::new(value))
     }
 }
 
