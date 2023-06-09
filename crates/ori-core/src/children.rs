@@ -355,8 +355,8 @@ impl Children {
         let mut rect = None;
 
         for child in self.nodes() {
-            let rect = rect.get_or_insert_with(|| child.global_rect());
-            *rect = rect.union(child.global_rect());
+            let rect = rect.get_or_insert_with(|| child.rect());
+            *rect = rect.union(child.rect());
         }
 
         rect.unwrap_or_default()

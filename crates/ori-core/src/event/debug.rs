@@ -43,7 +43,7 @@ impl DebugEvent {
         let debug_element = DebugElement {
             selector: cx.style_tree.element.clone(),
             local_rect: element.local_rect(),
-            global_rect: element.global_rect(),
+            global_rect: element.rect(),
             children: Vec::new(),
         };
 
@@ -57,7 +57,7 @@ impl DebugEvent {
         let debug_element = DebugElement {
             selector: cx.style_tree.element.clone(),
             local_rect: element.local_rect(),
-            global_rect: element.global_rect(),
+            global_rect: element.rect(),
             children: Vec::new(),
         };
 

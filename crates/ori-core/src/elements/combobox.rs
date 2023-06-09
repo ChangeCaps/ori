@@ -1,7 +1,7 @@
 use glam::Vec2;
 use ori_graphics::{Quad, Rect};
 use ori_macro::Build;
-use ori_reactive::Event;
+use ori_reactive::{Emitter, Event, OwnedSignal};
 use ori_style::Style;
 
 use crate::{
@@ -15,6 +15,13 @@ pub struct ComboBox {
     /// The title of the combo box.
     #[prop]
     pub title: Children,
+    /// Whether the combo box is open.
+    #[prop]
+    #[bind]
+    pub open: OwnedSignal<bool>,
+    /// On click callback.
+    #[event]
+    pub on_click: Emitter<PointerEvent>,
     /// The children of the combo box.
     #[children]
     pub children: Children,
@@ -38,6 +45,8 @@ impl Element for ComboBox {
     }
 
     fn event(&self, _state: &mut Self::State, cx: &mut EventContext, event: &Event) {
+        cx.state.active = self.open.get();
+
         self.title.event(cx, event);
 
         if cx.active() {
@@ -49,15 +58,19 @@ impl Element for ComboBox {
         }
 
         if let Some(pointer_event) = event.get::<PointerEvent>() {
-            if pointer_event.is_press() && cx.hovered() && !cx.active() {
-                cx.activate();
-            } else if pointer_event.is_press() && cx.active() {
-                cx.deactivate();
-            } else {
-                return;
+            if pointer_event.is_press() && cx.hovered() {
+                self.on_click.emit(pointer_event);
             }
 
-            event.handle();
+            if pointer_event.is_press() && cx.hovered() && !cx.active() {
+                self.open.set(true);
+                cx.request_redraw();
+                event.handle();
+            } else if pointer_event.is_press() && cx.active() {
+                self.open.set(false);
+                cx.request_redraw();
+                event.handle();
+            }
         }
     }
 

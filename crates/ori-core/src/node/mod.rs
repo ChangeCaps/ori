@@ -1,6 +1,8 @@
+mod r#ref;
 mod root;
 mod state;
 
+pub use r#ref::*;
 pub use state::*;
 
 use std::{any::Any, fmt::Debug, sync::Arc};
@@ -178,7 +180,7 @@ impl Node {
     }
 
     /// Gets the global [`Rect`] of the element.
-    pub fn global_rect(&self) -> Rect {
+    pub fn rect(&self) -> Rect {
         self.node_state().global_rect
     }
 

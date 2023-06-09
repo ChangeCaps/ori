@@ -39,7 +39,7 @@ pub mod prelude {
         PointerEvent, RequestRedrawEvent, WindowClosedEvent, WindowResizedEvent,
     };
     pub use crate::layout::{AlignItem, AvailableSpace, Axis, JustifyContent, Margin, Padding};
-    pub use crate::node::Node;
+    pub use crate::node::{Node, NodeRef, ScopeNodeRefExt};
     pub use crate::view::View;
     pub use crate::window::{ScopeWindowExt, Window, WindowId};
 

@@ -291,6 +291,11 @@ fn attribute(
             return;
         }
 
+        if path.path.get_ident().map_or(false, |ident| ident == "ref") {
+            attributes.push(node_ref(context, name, value));
+            return;
+        }
+
         properties.push(property(context, name, path, value));
         return;
     }
@@ -432,6 +437,23 @@ fn class(context: &Expr, _name: &Ident, value: &Expr) -> TokenStream {
         wrap_dynamic(context, set_scope)
     } else {
         set_scope
+    }
+}
+
+/// Sets the given NodeRef to `__node`.
+fn node_ref(context: &Expr, _name: &Ident, value: &Expr) -> TokenStream {
+    let ori_core = find_crate("core");
+
+    let set_node_ref = quote_spanned! {value.span() =>
+        #ori_core::View::visit(&__view, |__node| {
+            #ori_core::NodeRef::set(&#value, __node.clone());
+        });
+    };
+
+    if expr_is_dynamic(value) {
+        wrap_dynamic(context, set_node_ref)
+    } else {
+        set_node_ref
     }
 }
 
