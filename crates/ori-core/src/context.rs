@@ -112,6 +112,7 @@ impl<'a, 'b> DrawLayer<'a, 'b> {
                 renderer: self.draw_context.renderer,
                 window: self.draw_context.window,
                 fonts: self.draw_context.fonts,
+                parent_size: self.draw_context.parent_size,
                 stylesheet: self.draw_context.stylesheet,
                 style_tree: self.draw_context.style_tree,
                 style_cache: self.draw_context.style_cache,
@@ -132,6 +133,7 @@ pub struct DrawContext<'a> {
     pub renderer: &'a dyn Renderer,
     pub window: &'a mut Window,
     pub fonts: &'a mut Fonts,
+    pub parent_size: Vec2,
     pub stylesheet: &'a Stylesheet,
     pub style_tree: &'a mut StyleTree,
     pub style_cache: &'a mut StyleCache,
@@ -168,6 +170,33 @@ impl<'a> DrawContext<'a> {
         }
     }
 
+    /// Gets the border radius for the given element.
+    ///
+    /// # Arguments
+    /// - `name`: The name of the border, e.g. `border` or `content-border`.
+    /// - `parent_size`: The size of the parent element.
+    pub fn style_border_radius(&mut self, name: &str, parent_size: Vec2) -> [f32; 4] {
+        let tl = format!("{}-top-left-radius", name);
+        let tr = format!("{}-top-right-radius", name);
+        let bl = format!("{}-bottom-left-radius", name);
+        let br = format!("{}-bottom-right-radius", name);
+
+        let border_radius = format!("{}-radius", name);
+
+        let tl: &[&str] = &[&tl, &border_radius];
+        let tr: &[&str] = &[&tr, &border_radius];
+        let bl: &[&str] = &[&bl, &border_radius];
+        let br: &[&str] = &[&br, &border_radius];
+
+        let range = 0.0..parent_size.min_element();
+        let tl = self.style_range_group(tl, range.clone());
+        let tr = self.style_range_group(tr, range.clone());
+        let bl = self.style_range_group(bl, range.clone());
+        let br = self.style_range_group(br, range);
+
+        [tl, tr, br, bl]
+    }
+
     /// Draws the quad at the current layout rect.
     ///
     /// This will use the following style attributes:
@@ -182,20 +211,10 @@ impl<'a> DrawContext<'a> {
     pub fn draw_quad(&mut self) {
         let range = 0.0..self.rect().size().min_element();
 
-        let tl = "border-top-left-radius";
-        let tr = "border-top-right-radius";
-        let br = "border-bottom-right-radius";
-        let bl = "border-bottom-left-radius";
-
-        let tl = self.style_range_group(&[tl, "border-radius"], range.clone());
-        let tr = self.style_range_group(&[tr, "border-radius"], range.clone());
-        let br = self.style_range_group(&[br, "border-radius"], range.clone());
-        let bl = self.style_range_group(&[bl, "border-radius"], range.clone());
-
         let quad = Quad {
             rect: self.rect(),
             background: self.style_group(&["background-color", "background"]),
-            border_radius: [tl, tr, br, bl],
+            border_radius: self.style_border_radius("border", self.parent_size),
             border_width: self.style_range("border-width", range),
             border_color: self.style("border-color"),
         };

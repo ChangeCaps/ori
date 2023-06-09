@@ -116,6 +116,7 @@ impl Node {
         let element_state = &mut self.node_state();
         element_state.style = self.element().style();
 
+        let parent_size = window.size.as_vec2();
         let mut style_tree = StyleTree::new(element_state.selector());
         let mut cx = DrawContext {
             state: element_state,
@@ -123,6 +124,7 @@ impl Node {
             renderer,
             window,
             fonts,
+            parent_size,
             stylesheet,
             style_tree: &mut style_tree,
             event_sink,

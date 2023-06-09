@@ -66,14 +66,12 @@ fn ui(cx: Scope) -> View {
                 </Div>
 
                 <ComboBox title=combovalue.get()>
-                    <Div style:padding=Em(0.5) style:gap=Em(0.5)>
-                        <Select selected=combovalue.get() == "Item 1" on:click=move |_| combovalue.set("Item 1")>
-                            "Item 1"
-                        </Select>
-                        <Select selected=combovalue.get() == "Item 2" on:click=move |_| combovalue.set("Item 2")>
-                            "Item 2"
-                        </Select>
-                    </Div>
+                    <Select selected=combovalue.get() == "Item 1" on:click=move |_| combovalue.set("Item 1")>
+                        "Item 1"
+                    </Select>
+                    <Select selected=combovalue.get() == "Item 2" on:click=move |_| combovalue.set("Item 2")>
+                        "Item 2"
+                    </Select>
                 </ComboBox>
 
                 <Button on:click=on_click>
@@ -133,7 +131,6 @@ fn ui(cx: Scope) -> View {
 fn main() {
     App::new(ui) // create a new app with the ui function
         .title("Widget Gallery (examples/widget_gallery.rs)") // set the window title
-        .night_theme()
         .style(style!("examples/style/widget-gallery.css")) // load a custom stylesheet
         .run(); // run the app
 }

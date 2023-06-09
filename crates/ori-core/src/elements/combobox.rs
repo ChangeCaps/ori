@@ -6,7 +6,7 @@ use ori_style::Style;
 
 use crate::{
     AvailableSpace, Children, Context, DrawContext, Element, EventContext, FlexLayout,
-    LayoutContext, PointerEvent,
+    LayoutContext, Padding, PointerEvent,
 };
 
 /// A combo box element.
@@ -67,18 +67,30 @@ impl Element for ComboBox {
         cx: &mut LayoutContext,
         space: AvailableSpace,
     ) -> Vec2 {
-        let flex = FlexLayout::from_style(cx);
+        let flex = FlexLayout {
+            padding: Padding::from_style_named(cx, space, "title-padding"),
+            axis: cx.style("title-direction"),
+            justify_content: cx.style("title-justify-content"),
+            align_items: cx.style("title-align-items"),
+            gap: cx.style("title-gap"),
+        };
+
         let title_size = self.title.flex_layout(cx, space, flex);
 
         if cx.active() {
             let content_space = AvailableSpace {
-                min: Vec2::new(space.min.x, 0.0),
-                max: Vec2::new(space.max.x, cx.window.size.y as f32),
+                min: Vec2::new(title_size.x, 0.0),
+                max: Vec2::new(title_size.x, cx.window.size.y as f32),
             };
 
-            let flex = FlexLayout::default();
+            let flex = FlexLayout {
+                padding: Padding::from_style(cx, content_space),
+                ..FlexLayout::from_style(cx)
+            };
+
             *state = self.children.flex_layout(cx, content_space, flex);
-            self.children.set_offset(Vec2::new(0.0, title_size.y));
+            let offset = Vec2::new(0.0, title_size.y) + flex.padding.offset();
+            self.children.set_offset(offset);
         }
 
         title_size
@@ -86,7 +98,15 @@ impl Element for ComboBox {
 
     fn draw(&self, state: &mut Self::State, cx: &mut DrawContext) {
         // draw the quad for the title
-        cx.draw_quad();
+        let title_quad = Quad {
+            rect: cx.rect(),
+            background: cx.style_group(&["title-background-color", "title-background"]),
+            border_radius: cx.style_border_radius("title-border", cx.parent_size),
+            border_width: cx.style_range("title-border-width", 0.0..cx.parent_size.min_element()),
+            border_color: cx.style("title-border-color"),
+        };
+
+        cx.draw(title_quad);
 
         // draw the title
         cx.draw_layer(|cx| {
@@ -99,10 +119,10 @@ impl Element for ComboBox {
 
             let content_quad = Quad {
                 rect: content_rect,
-                background: cx.style_group(&["content-background-color", "content-background"]),
-                border_radius: [cx.style_range("content-border-radius", range.clone()); 4],
-                border_width: cx.style_range("content-border-width", range),
-                border_color: cx.style("content-border-color"),
+                background: cx.style_group(&["background-color", "background"]),
+                border_radius: cx.style_border_radius("border", content_rect.size()),
+                border_width: cx.style_range("border-width", range),
+                border_color: cx.style("border-color"),
             };
 
             cx.layer().z_index(1000.0).draw(|cx| {

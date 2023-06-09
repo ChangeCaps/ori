@@ -2,17 +2,19 @@ combobox {
 	border-width: 1.5px;
 	border-radius: 5px;
 	border-color: #b0b0b0;
-	background-color: #f8f8f8;
+	background-color: #f9fbff;
 
-	content-border-width: 1.5px;
-	content-border-radius: 5px;
-	content-border-color: #b0b0b0;
-	content-background-color: #f9fbff;
+	padding: 0.5em;
+	gap: 0.5em;
 
-	padding: 6px;
+	align-items: stretch;
 
-	justify-content: center;
-	align-items: center;
+	title-border-width: 1.5px;
+	title-border-radius: 5px;
+	title-border-color: #b0b0b0;
+	title-background-color: #f8f8f8;
+
+	title-padding: 0.5em;
 }
 
 combobox:hover {
@@ -21,10 +23,4 @@ combobox:hover {
 
 combobox:active {
 	background-color: #f0f0f0 0.05s;
-}
-
-combobox text {
-	font-size: 1.5em;
-	text-align: center;
-	text-valign: center;
 }

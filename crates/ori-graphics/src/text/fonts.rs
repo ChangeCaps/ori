@@ -232,7 +232,7 @@ impl Fonts {
         Some(glyphs)
     }
 
-    fn measure_layout(&self, font: &Font, layout: &Layout) -> Option<Vec2> {
+    fn measure_layout(&self, font: &Font, layout: &Layout, font_size: f32) -> Option<Vec2> {
         if layout.glyphs().is_empty() {
             return None;
         }
@@ -260,14 +260,17 @@ impl Fonts {
             width = f32::max(width, line_width);
         }
 
-        Some(Vec2::new(width, layout.height()))
+        Some(Vec2::new(
+            width + f32::round(font_size * 0.6),
+            layout.height(),
+        ))
     }
 
     /// Measures the size of `text`, and returns the smallest [`Rect`] that can contains it.
     pub fn measure_text(&mut self, text: &TextSection<'_>) -> Option<Rect> {
         let font = self.query(&text.font_query())?;
         let layout = self.text_layout_inner(&font, text)?;
-        let size = self.measure_layout(&font, &layout)?;
+        let size = self.measure_layout(&font, &layout, text.font_size)?;
         let rect = Rect::min_size(text.rect.min, size);
         Some(rect)
     }
@@ -277,7 +280,7 @@ impl Fonts {
         let id = self.query_id(&text.font_query())?;
         let font = self.get_font(id)?;
         let layout = self.text_layout_inner(&font, text)?;
-        let layout_size = self.measure_layout(&font, &layout)?;
+        let layout_size = self.measure_layout(&font, &layout, text.font_size)?;
         let atlas = self.get_atlas(id);
 
         let mut glyphs = Vec::<Rect>::new();

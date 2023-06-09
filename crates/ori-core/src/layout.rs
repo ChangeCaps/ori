@@ -124,12 +124,16 @@ impl Padding {
         }
     }
 
-    /// Create a new [`Padding`] from the style of the element.
-    pub fn from_style(context: &mut impl Context, space: AvailableSpace) -> Self {
-        let left = context.style_range_group(&["padding-left", "padding"], 0.0..space.max.x);
-        let right = context.style_range_group(&["padding-right", "padding"], 0.0..space.max.x);
-        let top = context.style_range_group(&["padding-top", "padding"], 0.0..space.max.y);
-        let bottom = context.style_range_group(&["padding-bottom", "padding"], 0.0..space.max.y);
+    pub fn from_style_named(context: &mut impl Context, space: AvailableSpace, name: &str) -> Self {
+        let left = &[&format!("{}-left", name), name];
+        let right = &[&format!("{}-right", name), name];
+        let top = &[&format!("{}-top", name), name];
+        let bottom = &[&format!("{}-bottom", name), name];
+
+        let left = context.style_range_group(left, 0.0..space.max.x);
+        let right = context.style_range_group(right, 0.0..space.max.x);
+        let top = context.style_range_group(top, 0.0..space.max.y);
+        let bottom = context.style_range_group(bottom, 0.0..space.max.y);
 
         Self {
             left,
@@ -137,6 +141,11 @@ impl Padding {
             top,
             bottom,
         }
+    }
+
+    /// Create a new [`Padding`] from the style of the element.
+    pub fn from_style(context: &mut impl Context, space: AvailableSpace) -> Self {
+        Self::from_style_named(context, space, "padding")
     }
 
     /// Returns the top left offset of the padding.

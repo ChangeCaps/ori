@@ -6,6 +6,11 @@ button {
 
 	justify-content: center;
 	align-items: center;
+
+	font-size: 1.5em;
+	color: #444444;
+	text-align: center;
+	text-valign: center;
 }
 
 button:hover {
@@ -14,11 +19,4 @@ button:hover {
 
 button:active {
 	background-color: #e89aa8 0.02s;
-}
-
-button text {
-	font-size: 1.5em;
-	color: #444444;
-	text-align: center;
-	text-valign: center;
 }

@@ -1,6 +1,13 @@
 body {
 	size: 100%;
 
-	color: #d8d8d8;
 	background-color: #212121;
+
+	color: #d8d8d8;
+	font-size: 1em;
+	font-family: sans-serif;
+	line-height: 0.8;
+	text-wrap: word;
+	text-align: start;
+	text-valign: start;
 }

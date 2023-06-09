@@ -337,12 +337,14 @@ impl Node {
     }
 
     fn draw_inner(&self, state: &mut NodeState, cx: &mut DrawContext) {
+        let parent_size = cx.size();
         let mut cx = DrawContext {
             state,
             frame: cx.frame,
             renderer: cx.renderer,
             window: cx.window,
             fonts: cx.fonts,
+            parent_size,
             stylesheet: cx.stylesheet,
             style_tree: cx.style_tree,
             style_cache: cx.style_cache,
