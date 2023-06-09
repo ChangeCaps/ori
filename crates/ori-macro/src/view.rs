@@ -198,11 +198,12 @@ fn view_node(context: &Expr, node: &Node) -> Expr {
             );
 
             if dynamic {
-                parse_quote_spanned! {expr.span() =>
-                    #context.owned_memo_scoped(move |#context| {
+                parse_quote_spanned! {expr.span() => {
+                    let __view = #context.owned_memo_scoped(move |#context| {
                         #fragment
-                    })
-                }
+                    });
+                    #ori_core::View::dynamic(__view)
+                }}
             } else {
                 fragment
             }
