@@ -16,7 +16,7 @@ use tracing::trace_span;
 
 use crate::{
     AnyElement, AvailableSpace, Context, DebugEvent, DrawContext, Element, EmptyElement,
-    EventContext, LayoutContext, Margin, Padding, PointerEvent,
+    EventContext, ForceLayoutEvent, LayoutContext, Margin, Padding, PointerEvent,
 };
 
 struct NodeInner {
@@ -264,6 +264,10 @@ impl Node {
             if Self::handle_pointer_event(state, pointer_event, event.is_handled()) {
                 cx.request_redraw();
             }
+        }
+
+        if event.is::<ForceLayoutEvent>() {
+            state.needs_layout = true;
         }
 
         let mut cx = EventContext {

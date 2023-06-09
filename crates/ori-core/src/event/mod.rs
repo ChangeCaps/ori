@@ -1,12 +1,14 @@
 mod cursor;
 mod debug;
 mod keyboard;
+mod layout;
 mod pointer;
 mod window;
 
 pub use cursor::*;
 pub use debug::*;
 pub use keyboard::*;
+pub use layout::*;
 pub use pointer::*;
 pub use window::*;
 

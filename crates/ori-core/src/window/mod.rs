@@ -17,8 +17,8 @@ use ori_style::{StyleCache, StyleLoader};
 use std::{collections::HashMap, fmt::Debug};
 
 use crate::{
-    Body, CloseWindow, Cursor, Key, KeyboardEvent, Modifiers, Node, OpenWindow, PointerButton,
-    PointerEvent, RequestRedrawEvent, View, WindowClosedEvent, WindowResizedEvent,
+    Body, CloseWindow, Cursor, ForceLayoutEvent, Key, KeyboardEvent, Modifiers, Node, OpenWindow,
+    PointerButton, PointerEvent, RequestRedrawEvent, View, WindowClosedEvent, WindowResizedEvent,
 };
 
 const TEXT_FONT: &[u8] = include_bytes!("../../fonts/NotoSans-Medium.ttf");
@@ -241,16 +241,10 @@ where
         }
     }
 
+    /// Forces all elements to be relaid out.
     pub fn force_layout(&mut self) {
-        let windows = self
-            .window_ui
-            .iter()
-            .map(|(&id, ui)| (id, ui.window.size))
-            .collect::<Vec<_>>();
-
-        for (id, size) in windows {
-            let event = WindowResizedEvent::new(size.as_vec2());
-            self.event_inner(id, &Event::new(event));
+        for id in self.window_ids() {
+            self.event_inner(id, &Event::new(ForceLayoutEvent));
             self.window_backend.request_redraw(id);
         }
     }
