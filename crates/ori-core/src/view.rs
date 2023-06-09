@@ -4,25 +4,22 @@ use ori_reactive::OwnedSignal;
 
 use crate::{Element, Node};
 
+#[derive(Clone, Debug)]
 enum ViewKind {
     Element(Node),
     Fragment(Arc<[View]>),
     Dynamic(OwnedSignal<View>),
 }
 
-impl Clone for ViewKind {
-    fn clone(&self) -> Self {
-        match self {
-            Self::Element(element) => Self::Element(element.clone()),
-            Self::Fragment(fragment) => Self::Fragment(fragment.clone()),
-            Self::Dynamic(signal) => Self::Dynamic(signal.clone()),
-        }
-    }
-}
-
 impl<T: Element> From<T> for View {
     fn from(element: T) -> Self {
         Self::node(Node::new(element))
+    }
+}
+
+impl Default for ViewKind {
+    fn default() -> Self {
+        Self::Fragment(Arc::new([]))
     }
 }
 
@@ -32,16 +29,9 @@ impl<T: Element> From<T> for View {
 /// - An [`Element`].
 /// - A fragment containing a list of [`View`]s.
 /// - A dynamic [`View`] that can change over time.
+#[derive(Clone, Debug, Default)]
 pub struct View {
     kind: ViewKind,
-}
-
-impl Clone for View {
-    fn clone(&self) -> Self {
-        Self {
-            kind: self.kind.clone(),
-        }
-    }
 }
 
 impl View {

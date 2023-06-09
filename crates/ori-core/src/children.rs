@@ -8,16 +8,14 @@ use smallvec::{smallvec, SmallVec};
 
 use crate::{
     AlignItem, AvailableSpace, Axis, Context, DrawContext, EventContext, JustifyContent,
-    LayoutContext, Node, Parent, View,
+    LayoutContext, Node, Padding, Parent, View,
 };
 
 /// A layout that lays out children in a flexbox-like manner.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct FlexLayout {
-    /// The offset to apply to the children.
-    ///
-    /// This is useful for scrolling or padding.
-    pub offset: Vec2,
+    /// Padding around the children.
+    pub padding: Padding,
     /// The axis to use for laying out the children.
     pub axis: Axis,
     /// The justification of the children.
@@ -31,7 +29,7 @@ pub struct FlexLayout {
 impl Default for FlexLayout {
     fn default() -> Self {
         Self {
-            offset: Vec2::ZERO,
+            padding: Padding::default(),
             axis: Axis::Vertical,
             justify_content: JustifyContent::Start,
             align_items: AlignItem::Start,
@@ -74,30 +72,33 @@ impl FlexLayout {
 
     /// Gets the flex layout from the style of an element.
     pub fn from_style(cx: &mut LayoutContext) -> Self {
+        let padding = cx.state.padding;
         let axis = cx.style::<Axis>("direction");
         let justify_content = cx.style("justify-content");
         let align_items = cx.style("align-items");
         let gap = cx.style_range("gap", 0.0..axis.major(cx.parent_space.max));
 
         Self {
+            padding,
             axis,
             justify_content,
             align_items,
             gap,
-            ..Self::default()
         }
     }
 }
 
 /// Children of an [`Element`](crate::Element).
-#[derive(Deref, DerefMut)]
+#[derive(Clone, Debug, Default, Deref, DerefMut)]
 pub struct Children {
     elements: SmallVec<[View; 1]>,
 }
 
-impl Default for Children {
-    fn default() -> Self {
-        Self::new()
+impl<T: Into<View>> From<T> for Children {
+    fn from(value: T) -> Self {
+        Self {
+            elements: smallvec![value.into()],
+        }
     }
 }
 
@@ -146,14 +147,12 @@ impl Children {
         &self,
         cx: &mut LayoutContext,
         space: AvailableSpace,
-        mut flex: FlexLayout,
+        flex: FlexLayout,
     ) -> Vec2 {
-        let padding = cx.state.padding;
-        let padded_space = space.shrink(padding.size());
-        flex.offset += padding.top_left();
+        let padded_space = space.shrink(flex.padding.size());
 
         cx.with_space(padded_space, |cx| {
-            self.flex_layout_padded(cx, padded_space, flex) + padding.size()
+            self.flex_layout_padded(cx, padded_space, flex) + flex.padding.size()
         })
     }
 
@@ -165,7 +164,7 @@ impl Children {
         flex: FlexLayout,
     ) -> Vec2 {
         let FlexLayout {
-            offset,
+            padding,
             axis,
             justify_content,
             align_items,
@@ -328,7 +327,7 @@ impl Children {
 
             // set the offset for the child
             let child_offset = axis.pack(align_major, align_minor);
-            child.set_offset(offset + child_offset);
+            child.set_offset(padding.top_left() + child_offset);
         }
 
         // return the size of the flex container
@@ -378,7 +377,7 @@ impl Children {
 
         for child in self.nodes() {
             let child_offset = child.local_rect().min - min;
-            child.set_offset(offset + child_offset);
+            child.set_offset(child_offset + offset);
         }
     }
 

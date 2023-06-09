@@ -21,6 +21,7 @@ fn popup_ui(cx: Scope) -> View {
 fn ui(cx: Scope) -> View {
     let counter = cx.signal(1);
     let checked = cx.signal(false);
+    let combovalue = cx.signal("Item 1");
     let knob_value = cx.signal(0.0);
     let long_text = cx.signal(String::from(LONG_TEXT));
     let text = cx.signal(String::new());
@@ -63,6 +64,17 @@ fn ui(cx: Scope) -> View {
                     "Popup"
                     <Checkbox checked=popup_window.get().is_some() on:click=toggle_popup />
                 </Div>
+
+                <ComboBox title=combovalue.get()>
+                    <Div style:padding=Em(0.5) style:gap=Em(0.5)>
+                        <Select selected=combovalue.get() == "Item 1" on:click=move |_| combovalue.set("Item 1")>
+                            "Item 1"
+                        </Select>
+                        <Select selected=combovalue.get() == "Item 2" on:click=move |_| combovalue.set("Item 2")>
+                            "Item 2"
+                        </Select>
+                    </Div>
+                </ComboBox>
 
                 <Button on:click=on_click>
                     { format!("Counter: {}", counter.get()) }

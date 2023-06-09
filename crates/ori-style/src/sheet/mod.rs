@@ -5,7 +5,7 @@ pub use rule::*;
 
 use std::{fmt::Display, fs, io, path::Path, str::FromStr};
 
-use crate::{StyleAttribute, StyleSpec, StyleTree, StyleheetParseError};
+use crate::{StyleAttribute, StyleAttributeValue, StyleSpec, StyleTree, StyleheetParseError};
 
 /// An error that can occur when loading a style sheet.
 #[derive(Debug)]
@@ -100,6 +100,19 @@ impl Stylesheet {
 
     /// Get and attribute and its specificity from the style sheet.
     pub fn get_attribute_specificity(
+        &self,
+        tree: &StyleTree,
+        name: &str,
+    ) -> Option<(StyleAttribute, StyleSpec)> {
+        let (attribute, specificity) = self.get_attribute_specificity_inner(tree, name)?;
+
+        match attribute.value() {
+            StyleAttributeValue::Inherit => self.get_attribute_specificity(&tree.parent()?, name),
+            _ => Some((attribute, specificity)),
+        }
+    }
+
+    fn get_attribute_specificity_inner(
         &self,
         tree: &StyleTree,
         name: &str,

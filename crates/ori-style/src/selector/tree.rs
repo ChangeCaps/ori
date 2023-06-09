@@ -33,6 +33,13 @@ impl StyleTree {
         let ancestor = self.ancestors.pop()?;
         Some(mem::replace(&mut self.element, ancestor))
     }
+
+    /// Returns the parent tree.
+    pub fn parent(&self) -> Option<StyleTree> {
+        let mut tree = self.clone();
+        tree.pop()?;
+        Some(tree)
+    }
 }
 
 impl Display for StyleTree {

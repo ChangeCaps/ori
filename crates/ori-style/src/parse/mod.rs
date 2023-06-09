@@ -81,6 +81,7 @@ fn parse_value(pair: Pair<'_, Rule>) -> (StyleAttributeValue, Option<StyleTransi
             let value = &value.as_str()[1..value.as_str().len() - 1];
             StyleAttributeValue::String(value.to_string())
         }
+        Rule::Inherit => StyleAttributeValue::Inherit,
         Rule::Enum => StyleAttributeValue::Enum(value.as_str().to_string()),
         Rule::Length => StyleAttributeValue::Length(parse_length(value)),
         Rule::Color => StyleAttributeValue::Color(parse_color(value)),

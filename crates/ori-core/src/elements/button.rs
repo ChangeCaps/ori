@@ -4,8 +4,8 @@ use ori_reactive::{Emitter, Event};
 use ori_style::Style;
 
 use crate::{
-    AvailableSpace, Children, Context, DrawContext, Element, EventContext, FlexLayout, IntoView,
-    LayoutContext, Parent, PointerEvent,
+    AvailableSpace, Children, Context, DrawContext, Element, EventContext, FlexLayout,
+    LayoutContext, Parent, PointerEvent, View,
 };
 
 /// A button element.
@@ -21,7 +21,7 @@ pub struct Button {
 
 impl Button {
     /// Create a new button.
-    pub fn new(child: impl IntoView) -> Self {
+    pub fn new(child: impl Into<View>) -> Self {
         Self {
             on_click: Emitter::new(),
             children: Children::new().with_child(child),

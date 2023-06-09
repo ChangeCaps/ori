@@ -14,6 +14,7 @@ Pc = { "pc" | "%" }
 Vw = { "vw" }
 Vh = { "vh" }
 Em = { "em" }
+Inherit = { "inherit" }
 Length = { Number ~ (Px | Pt | Pc | Vw | Vh | Em)? }
 HexColor = @{ "#" ~ (ASCII_HEX_DIGIT{8} | ASCII_HEX_DIGIT{6} | ASCII_HEX_DIGIT{3, 4}) }
 RgbColor = { "rgb(" ~ Number ~ "," ~ Number ~ "," ~ Number ~ ")" }
@@ -27,7 +28,7 @@ Transition = _{ Number ~ "s" }
 
 // attribute
 Transitionable = _{ Length | Color }
-AttributeValue = { Transitionable ~ Transition? | Enum | String }
+AttributeValue = { Transitionable ~ Transition? | Inherit | Enum | String }
 Attribute = { Identifier ~ ":" ~ AttributeValue ~ ";" }
 
 // element selector

@@ -144,6 +144,11 @@ impl Padding {
         Vec2::new(self.left, self.top)
     }
 
+    /// Returns the offset of the padding.
+    pub fn offset(self) -> Vec2 {
+        self.top_left()
+    }
+
     /// Returns the size of the padding.
     pub fn size(self) -> Vec2 {
         Vec2::new(self.left + self.right, self.top + self.bottom)
@@ -203,6 +208,11 @@ impl Margin {
     /// Returns the top left offset of the margin.
     pub fn top_left(self) -> Vec2 {
         Vec2::new(self.left, self.top)
+    }
+
+    /// Returns the offset of the margin.
+    pub fn offset(self) -> Vec2 {
+        self.top_left()
     }
 
     /// Returns the size of the margin.

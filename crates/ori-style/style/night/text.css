@@ -1,7 +1,7 @@
 text {
 	font-size: 1em;
 	font-family: sans-serif;
-	color: #d8d8d8;
+	color: inherit;
 	line-height: 0.8;
 	text-wrap: word;
 	text-align: start;

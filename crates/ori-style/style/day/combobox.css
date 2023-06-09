@@ -1,0 +1,30 @@
+combobox {
+	border-width: 1.5px;
+	border-radius: 5px;
+	border-color: #b0b0b0;
+	background-color: #f8f8f8;
+
+	content-border-width: 1.5px;
+	content-border-radius: 5px;
+	content-border-color: #b0b0b0;
+	content-background-color: #f9fbff;
+
+	padding: 6px;
+
+	justify-content: center;
+	align-items: center;
+}
+
+combobox:hover {
+	background-color: #f0f0f0 0.05s;
+}
+
+combobox:active {
+	background-color: #f0f0f0 0.05s;
+}
+
+combobox text {
+	font-size: 1.5em;
+	text-align: center;
+	text-valign: center;
+}

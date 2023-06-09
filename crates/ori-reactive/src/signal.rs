@@ -320,6 +320,13 @@ impl<T: Send + Sync> From<T> for OwnedSignal<T> {
     }
 }
 
+impl<T: Send + Sync> From<Signal<T>> for OwnedSignal<T> {
+    fn from(signal: Signal<T>) -> Self {
+        signal.reference();
+        Self { signal }
+    }
+}
+
 impl<T> Drop for OwnedSignal<T> {
     #[track_caller]
     fn drop(&mut self) {

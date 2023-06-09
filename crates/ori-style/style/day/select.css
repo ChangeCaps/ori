@@ -1,0 +1,11 @@
+select {
+	color: #808080;
+}
+
+select:hover {
+	color: #606060 0.05s;
+}
+
+select:active {
+	color: #444444;
+}
