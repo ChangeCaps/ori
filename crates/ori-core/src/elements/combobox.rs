@@ -80,7 +80,8 @@ impl Element for ComboBox {
         cx: &mut LayoutContext,
         space: AvailableSpace,
     ) -> Vec2 {
-        let flex = FlexLayout {
+        // get the flex layout for the title
+        let title_flex = FlexLayout {
             padding: Padding::from_style_named(cx, space, "title-padding"),
             axis: cx.style("title-direction"),
             justify_content: cx.style("title-justify-content"),
@@ -88,22 +89,34 @@ impl Element for ComboBox {
             gap: cx.style("title-gap"),
         };
 
-        let title_size = self.title.flex_layout(cx, space, flex);
+        // layout the title
+        let mut title_size = self.title.flex_layout(cx, space, title_flex);
 
-        if cx.active() {
-            let content_space = AvailableSpace {
-                min: Vec2::new(title_size.x, 0.0),
-                max: cx.window.size.as_vec2(),
+        // calculate the space for the content
+        let content_space = AvailableSpace {
+            min: Vec2::new(title_size.x, 0.0),
+            max: cx.window.size.as_vec2(),
+        };
+
+        // get the flex layout for the content
+        let content_flex = FlexLayout {
+            padding: Padding::from_style(cx, content_space),
+            ..FlexLayout::from_style(cx)
+        };
+
+        // layout the content
+        *state = self.children.flex_layout(cx, content_space, content_flex);
+        let offset = Vec2::new(0.0, title_size.y) + title_flex.padding.offset();
+        self.children.set_offset(offset);
+
+        // if the title is smaller than the content, make it the same size
+        if title_size.x < state.x {
+            let space = AvailableSpace {
+                min: Vec2::new(state.x, space.min.y),
+                max: space.max,
             };
 
-            let flex = FlexLayout {
-                padding: Padding::from_style(cx, content_space),
-                ..FlexLayout::from_style(cx)
-            };
-
-            *state = self.children.flex_layout(cx, content_space, flex);
-            let offset = Vec2::new(0.0, title_size.y) + flex.padding.offset();
-            self.children.set_offset(offset);
+            title_size = self.title.flex_layout(cx, space, title_flex);
         }
 
         title_size
