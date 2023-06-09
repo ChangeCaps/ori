@@ -207,7 +207,14 @@ fn view_node(context: &Expr, node: &Node) -> Expr {
         }
         Node::Block(block) => {
             let expr = block.value.as_ref();
-            let dynamic = expr_is_dynamic(expr);
+            let inner_expr = match expr {
+                Expr::Block(block) => match block.block.stmts.first().unwrap() {
+                    Stmt::Expr(Expr::Call(expr)) => expr.args.first().unwrap(),
+                    _ => unreachable!(),
+                },
+                _ => unreachable!(),
+            };
+            let dynamic = expr_is_dynamic(inner_expr);
 
             let fragment = parse_quote_spanned!(expr.span() =>
                 #[allow(unused_braces)]
