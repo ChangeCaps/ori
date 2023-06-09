@@ -78,6 +78,11 @@ pub trait Parent {
         self.add_children(std::iter::once(View::new(child)))
     }
 
+    /// Sets the children of `slot` to `child`.
+    fn set_child(&mut self, slot: usize, child: impl Into<View>) {
+        self.set_children(slot, std::iter::once(View::new(child)))
+    }
+
     /// Adds `children` to a new slot.
     fn with_children(mut self, children: impl Iterator<Item = View>) -> Self
     where

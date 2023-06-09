@@ -216,9 +216,11 @@ impl Children {
             child_flexes[i] = (flex_grow, flex_shrink);
 
             // layout the child
-            let space_changed = child.space_changed(loosend_space);
+            let space_changed = child.space_changed(space);
             let size = if needs_layout || space_changed {
-                child.layout(cx, loosend_space)
+                let size = child.layout(cx, loosend_space);
+                child.set_available_space(space);
+                size
             } else {
                 child.size()
             };

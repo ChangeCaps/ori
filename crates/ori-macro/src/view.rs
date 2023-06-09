@@ -159,13 +159,13 @@ fn dynamic_child(context: &Expr, name: &Path, child: &Expr) -> TokenStream {
         #ori_core::View::visit(&__view, |__node| {
             let _ = __node.downcast::<#name, ()>(|__view| {
                 if let Some(__child_index) = __child_index {
-                    <#name as #ori_core::Parent>::set_children(
+                    <#name as #ori_core::Parent>::set_child(
                         __view,
                         __child_index,
                         #child,
                     );
                 } else {
-                    __child_index = Some(<#name as #ori_core::Parent>::add_children(
+                    __child_index = Some(<#name as #ori_core::Parent>::add_child(
                         __view,
                         #child,
                     ));
@@ -190,7 +190,7 @@ fn static_child(name: &Path, child: &Expr) -> TokenStream {
     quote_spanned! {child.span() =>
         #ori_core::View::visit(&__view, |__node| {
             let _ = __node.downcast::<#name, ()>(|__view| {
-                <#name as #ori_core::Parent>::add_children(__view, ::std::iter::once(#child));
+                <#name as #ori_core::Parent>::add_child(__view, #child);
             });
         });
     }
@@ -247,7 +247,7 @@ fn view_node(context: &Expr, node: &Node) -> Expr {
             let expr = block.value.as_ref();
             parse_quote_spanned!(expr.span() =>
                 #[allow(unused_braces)]
-                #expr
+                #ori_core::View::fragment(::std::iter::Iterator::collect::<::std::vec::Vec<_>>(#expr))
             )
         }
         Node::Comment(comment) => {

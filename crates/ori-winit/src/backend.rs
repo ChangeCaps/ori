@@ -101,7 +101,9 @@ impl WindowBackend for WinitBackend {
     }
 
     fn request_redraw(&mut self, id: WindowId) {
-        self.windows[&id].request_redraw();
+        if let Some(window) = self.windows.get(&id) {
+            window.request_redraw();
+        }
     }
 
     fn close_window(&mut self, id: WindowId) {
