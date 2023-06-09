@@ -184,6 +184,21 @@ impl Node {
         self.node_state().global_rect
     }
 
+    /// Whether the element is hovered.
+    pub fn hovered(&self) -> bool {
+        self.node_state().hovered
+    }
+
+    /// Whether the element is focused.
+    pub fn focused(&self) -> bool {
+        self.node_state().focused
+    }
+
+    /// Whether the element is active.
+    pub fn active(&self) -> bool {
+        self.node_state().active
+    }
+
     /// Gets the size of the element.
     pub fn size(&self) -> Vec2 {
         let element_state = self.node_state();
