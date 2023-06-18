@@ -1,6 +1,8 @@
-use std::ops::{Deref, DerefMut};
+use std::{
+    ops::{Deref, DerefMut},
+    sync::OnceLock,
+};
 
-use once_cell::sync::OnceCell;
 use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use crate::Emitter;
@@ -40,7 +42,7 @@ impl<T: 'static> AtomRefInner<T> {
 /// assert_eq!(*COUNTER.read(), 1);
 /// ```
 pub struct AtomRef<T: 'static> {
-    inner: OnceCell<AtomRefInner<T>>,
+    inner: OnceLock<AtomRefInner<T>>,
     init: fn() -> T,
 }
 
@@ -50,7 +52,7 @@ impl<T> AtomRef<T> {
     /// See [`atom!`](crate::atom!) for more information.
     pub const fn new(init: fn() -> T) -> Self {
         Self {
-            inner: OnceCell::new(),
+            inner: OnceLock::new(),
             init,
         }
     }

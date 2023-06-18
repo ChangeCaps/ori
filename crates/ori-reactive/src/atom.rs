@@ -1,6 +1,4 @@
-use std::ops::Deref;
-
-use once_cell::sync::OnceCell;
+use std::{ops::Deref, sync::OnceLock};
 
 use crate::{OwnedSignal, Signal};
 
@@ -29,7 +27,7 @@ use crate::{OwnedSignal, Signal};
 /// assert_eq!(COUNTER.get(), 1);
 /// ```
 pub struct Atom<T: 'static> {
-    signal: OnceCell<OwnedSignal<T>>,
+    signal: OnceLock<OwnedSignal<T>>,
     init: fn() -> T,
 }
 
@@ -39,7 +37,7 @@ impl<T> Atom<T> {
     /// See [`atom!`](crate::atom!) for more information.
     pub const fn new(init: fn() -> T) -> Self {
         Self {
-            signal: OnceCell::new(),
+            signal: OnceLock::new(),
             init,
         }
     }
