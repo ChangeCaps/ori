@@ -27,18 +27,17 @@ impl Task {
             event_sink,
         });
 
-        Self::poll_inner(task_inner);
+        Self::poll_inner(&task_inner);
     }
 
     /// Polls the task.
     pub fn poll(&self) {
         tracing::trace!("polling task");
 
-        Self::poll_inner(self.0.clone());
+        Self::poll_inner(&self.0);
     }
 
-    fn poll_inner(inner: Arc<TaskInner>) {
-        // SAFETY: This is safe because only one thread can poll a task at a time.
+    fn poll_inner(inner: &Arc<TaskInner>) {
         let future_slot = &mut *inner.future.lock();
         if let Some(mut future) = future_slot.take() {
             let waker = Waker::from(inner.clone());

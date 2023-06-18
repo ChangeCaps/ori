@@ -15,5 +15,5 @@ lazy_static = "1.4"
 once_cell = "1"
 # deliberately not using the latest version of parking_lot because sharded uses an older version
 parking_lot = "0.11"
-sharded = { version = "0.2", features = ["parking_lot"] }
+sharded = { version = "0.2", features = ["parking_lot", "seahash"] }
 tracing = { version = "0.1", default-features = false }

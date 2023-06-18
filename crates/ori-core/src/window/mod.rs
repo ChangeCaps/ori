@@ -424,6 +424,8 @@ where
     }
 
     fn event_inner(&mut self, id: WindowId, event: &Event) {
+        tracing::trace!("event for window {:?}: {:?}", id, event);
+
         if let Some(ui) = self.window_ui.get_mut(&id) {
             ui.event_emitter.emit(event);
 
@@ -449,6 +451,8 @@ where
 
     /// Layout a window.
     pub fn layout(&mut self, id: WindowId) {
+        tracing::trace!("layout window {:?}", id);
+
         self.event_inner(id, &Event::new(()));
 
         if let Some(ui) = self.window_ui.get_mut(&id) {
@@ -472,6 +476,8 @@ where
 
     /// Draw a window.
     pub fn draw(&mut self, id: WindowId) {
+        tracing::trace!("drawing window {:?}", id);
+
         self.layout(id);
 
         if let Some(ui) = self.window_ui.get_mut(&id) {

@@ -17,7 +17,8 @@ struct RuntimeScope {
 
 struct RuntimeResource {
     #[allow(dead_code)]
-    creator: &'static Location<'static>,
+    location: &'static Location<'static>,
+    type_name: &'static str,
     references: u32,
     data: Box<dyn Any + Send + Sync>,
 }
@@ -25,7 +26,8 @@ struct RuntimeResource {
 impl Debug for RuntimeResource {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("RuntimeResource")
-            .field("creator", &self.creator)
+            .field("creator", &self.location)
+            .field("type_name", &self.type_name)
             .field("references", &self.references)
             .finish()
     }
@@ -62,7 +64,11 @@ impl Runtime {
     }
 
     /// Creates a new scope.
+    #[track_caller]
+    #[tracing::instrument(skip(self))]
     pub fn create_scope(&self, parent: Option<ScopeId>) -> ScopeId {
+        tracing::trace!("creating scope with parent {:?}", parent);
+
         let id = ScopeId::new();
 
         self.scopes.insert(
@@ -86,6 +92,8 @@ impl Runtime {
     }
 
     /// Returns the parent of the scope at `scope`.
+    #[track_caller]
+    #[tracing::instrument(skip(self))]
     pub fn scope_parent(&self, scope: ScopeId) -> Option<ScopeId> {
         let (key, shard) = self.scopes.read(&scope);
         shard.get(key)?.parent
@@ -93,6 +101,7 @@ impl Runtime {
 
     /// Manages the resource at `resource` in the scope at `scope`.
     #[track_caller]
+    #[tracing::instrument(skip(self))]
     pub fn manage_resource(&self, scope: ScopeId, resource: ResourceId) {
         tracing::trace!("managing resource {:?} in scope {:?}", resource, scope);
 
@@ -104,6 +113,7 @@ impl Runtime {
 
     /// Disposes the scope at `scope`.
     #[track_caller]
+    #[tracing::instrument(skip(self))]
     pub fn dispose_scope(&self, scope: ScopeId) {
         let scope = {
             match self.scopes.remove(scope) {
@@ -127,13 +137,15 @@ impl Runtime {
     ///
     /// Resources are reference counted, and are disposed when their reference count reaches zero.
     #[track_caller]
+    #[tracing::instrument(skip(self, value))]
     pub fn create_resource<T: Send + Sync + 'static>(&self, value: T) -> ResourceId {
         let id = ResourceId::new();
 
         tracing::trace!("creating resource {:?} at {}", id, Location::caller());
 
         let resource = RuntimeResource {
-            creator: Location::caller(),
+            location: Location::caller(),
+            type_name: std::any::type_name::<T>(),
             data: Box::new(value),
             references: 0,
         };
@@ -145,6 +157,7 @@ impl Runtime {
 
     /// Adds a reference to the resource at `id`.
     #[track_caller]
+    #[tracing::instrument(skip(self))]
     pub fn reference_resource(&self, id: ResourceId) {
         tracing::trace!("referencing resource {:?}", id);
 
@@ -156,6 +169,7 @@ impl Runtime {
 
     /// Gets the reference count of the resource at `id`.
     #[track_caller]
+    #[tracing::instrument(skip(self))]
     pub fn get_reference_count(&self, id: ResourceId) -> Option<u32> {
         let (key, shard) = self.resources.read(&id);
         shard.get(key).map(|r| r.references + 1)
@@ -168,6 +182,7 @@ impl Runtime {
     /// # Safety
     /// - The caller must ensure that the resource stored at `id` is of type `T`.
     #[track_caller]
+    #[tracing::instrument(skip(self))]
     pub unsafe fn get_resource<T: Clone + 'static>(&self, id: ResourceId) -> Option<T> {
         self.with_resource(id, T::clone)
     }
@@ -180,6 +195,7 @@ impl Runtime {
     /// # Safety
     /// - The caller must ensure that the resource stored at `id` is of type `T`.
     #[track_caller]
+    #[tracing::instrument(skip(self, f))]
     pub unsafe fn with_resource<T: 'static, U>(
         &self,
         id: ResourceId,
@@ -202,6 +218,7 @@ impl Runtime {
     /// # Safety
     /// - The caller must ensure that the resource stored at `id` is of type `T`.
     #[track_caller]
+    #[tracing::instrument(skip(self, f))]
     pub unsafe fn with_resource_mut<T: 'static, U>(
         &self,
         id: ResourceId,
@@ -221,19 +238,20 @@ impl Runtime {
     /// # Safety
     /// - The caller must ensure that the resource stored at `id` is of type `T`.
     #[track_caller]
+    #[tracing::instrument(skip(self, value))]
     pub unsafe fn set_resource<T: Send + Sync + 'static>(
         &self,
         id: ResourceId,
         value: T,
     ) -> Result<(), T> {
-        tracing::trace!("setting resource {:?} at {}", id, Location::caller());
-
         let (key, mut shard) = self.resources.write(id);
         let old = match shard.get_mut(key) {
             Some(resource) => mem::replace(&mut resource.data, Box::new(value)),
             None => return Err(value),
         };
 
+        // we need to drop the shard before dropping the old resource, otherwise we'll deadlock
+        drop(shard);
         drop(old);
 
         Ok(())
@@ -246,9 +264,8 @@ impl Runtime {
     /// # Safety
     /// - The caller must ensure that the resource stored at `id` is of type `T`.
     #[track_caller]
+    #[tracing::instrument(skip(self))]
     pub unsafe fn remove_resource<T: 'static>(&self, id: ResourceId) -> Option<T> {
-        tracing::trace!("removing resource {:?}, at {}", id, Location::caller());
-
         let resource = self.resources.remove(id)?;
 
         let ptr = Box::into_raw(resource.data) as *mut T;
@@ -258,22 +275,26 @@ impl Runtime {
     /// Disposes a resource, decrementing its reference count.
     /// If the reference count reaches zero, the resource is removed from the runtime.
     #[track_caller]
+    #[tracing::instrument(skip(self))]
     pub fn dispose_resource(&self, id: ResourceId) {
-        tracing::trace!("disposing resource {:?} at {}", id, Location::caller());
+        let (key, mut shard) = self.resources.write(id);
 
-        let resource = {
-            let (key, mut shard) = self.resources.write(id);
-            let Some(resource) = shard.get_mut(key) else { return };
+        let Some(resource) = shard.get_mut(key) else { return };
 
-            if resource.references > 0 {
-                resource.references -= 1;
-                return;
-            }
+        if resource.references > 0 {
+            resource.references -= 1;
+            return;
+        }
 
-            drop(shard);
+        drop(shard);
 
-            self.resources.remove(id)
-        };
+        let resource = self.resources.remove(id).unwrap();
+
+        tracing::trace!(
+            "dropping resource {}, created at {}",
+            resource.type_name,
+            resource.location
+        );
 
         drop(resource);
     }
