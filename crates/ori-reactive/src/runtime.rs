@@ -3,7 +3,10 @@ use std::{
     fmt::Debug,
     mem,
     panic::Location,
-    sync::atomic::{AtomicUsize, Ordering},
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        OnceLock,
+    },
 };
 
 use sharded::Map;
@@ -56,11 +59,9 @@ impl Runtime {
 
     /// Returns a reference to the global runtime.
     pub fn global() -> &'static Self {
-        lazy_static::lazy_static! {
-            static ref RUNTIME: Runtime = Runtime::new_global();
-        }
+        static RUNTIME: OnceLock<Runtime> = OnceLock::new();
 
-        &RUNTIME
+        RUNTIME.get_or_init(Self::new_global)
     }
 
     /// Creates a new scope.
