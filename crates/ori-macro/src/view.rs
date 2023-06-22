@@ -342,7 +342,6 @@ fn expr_is_dynamic(value: &Expr) -> bool {
         Expr::Closure(_) => false,
         Expr::Field(expr) => expr_is_dynamic(&expr.base),
         Expr::Group(expr) => expr_is_dynamic(&expr.expr),
-        Expr::Index(expr) => expr_is_dynamic(&expr.expr) || expr_is_dynamic(&expr.index),
         Expr::Lit(_) => false,
         Expr::Paren(expr) => expr_is_dynamic(&expr.expr),
         Expr::Path(_) => false,
@@ -361,10 +360,15 @@ fn expr_is_dynamic(value: &Expr) -> bool {
 
 /// Wraps the given block in an effect scope.
 fn wrap_dynamic(context: &Expr, value: TokenStream) -> TokenStream {
+    let ori_core = find_crate("core");
+
     quote! {
         #context.effect_scoped({
             let __view = __view.clone();
-            move |#context| { #value }
+            move |#context| {
+                #value
+                #context.emit(#ori_core::RequestRedrawEvent);
+            }
         });
     }
 }
