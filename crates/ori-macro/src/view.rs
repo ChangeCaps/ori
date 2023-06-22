@@ -200,6 +200,7 @@ fn view_node(context: &Expr, node: &Node) -> Expr {
             if dynamic {
                 parse_quote_spanned! {expr.span() => {
                     let __view = #context.owned_memo_scoped(move |#context| {
+                        #context.emit(#ori_core::RequestRedrawEvent);
                         #fragment
                     });
                     #ori_core::View::dynamic(__view)
