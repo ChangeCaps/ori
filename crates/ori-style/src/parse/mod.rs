@@ -102,12 +102,16 @@ fn parse_tag(pair: Pair<'_, Rule>) -> String {
 fn parse_element_selector(pair: Pair<'_, Rule>) -> StyleElementSelector {
     let mut pairs = pair.into_inner();
 
-    let mut element_pairs = pairs.next().unwrap().into_inner();
-    let element_pair = element_pairs.next().unwrap();
-    let element = match element_pair.as_rule() {
-        Rule::Identifier => Some(StyleElement::new(element_pair.as_str())),
-        Rule::Wildcard => None,
-        _ => unreachable!(),
+    let element = match pairs.peek().unwrap().as_rule() {
+        Rule::Element => {
+            let element = pairs.next().unwrap().into_inner().next().unwrap();
+            match element.as_rule() {
+                Rule::Identifier => Some(StyleElement::new(element.as_str())),
+                Rule::Wildcard => None,
+                _ => unreachable!(),
+            }
+        }
+        _ => None,
     };
 
     let mut selector = StyleElementSelector {
