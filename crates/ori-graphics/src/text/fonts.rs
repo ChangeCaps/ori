@@ -137,6 +137,9 @@ impl Fonts {
     }
 
     fn text_layout_inner(&mut self, font: &Font, text: &TextSection<'_>) -> Option<Layout> {
+        let mut text = text.clone();
+        text.rect.max.x += text.font_size * 0.7;
+
         let max_width = match text.wrap {
             TextWrap::None => None,
             _ => Some(text.rect.width()),
@@ -232,7 +235,12 @@ impl Fonts {
         Some(glyphs)
     }
 
-    fn measure_layout(&self, font: &Font, layout: &Layout, font_size: f32) -> Option<Vec2> {
+    fn measure_layout(
+        &self,
+        font: &Font,
+        layout: &Layout,
+        _text: &TextSection<'_>,
+    ) -> Option<Vec2> {
         if layout.glyphs().is_empty() {
             return None;
         }
@@ -254,7 +262,7 @@ impl Fonts {
                 };
                 let advance = metrics.advance_width.ceil();
 
-                line_width += advance + font_size * 0.02;
+                line_width += advance;
             }
 
             width = f32::max(width, line_width);
@@ -267,7 +275,7 @@ impl Fonts {
     pub fn measure_text(&mut self, text: &TextSection<'_>) -> Option<Rect> {
         let font = self.query(&text.font_query())?;
         let layout = self.text_layout_inner(&font, text)?;
-        let size = self.measure_layout(&font, &layout, text.font_size)?;
+        let size = self.measure_layout(&font, &layout, text)?;
         let rect = Rect::min_size(text.rect.min, size);
         Some(rect)
     }
@@ -277,7 +285,7 @@ impl Fonts {
         let id = self.query_id(&text.font_query())?;
         let font = self.get_font(id)?;
         let layout = self.text_layout_inner(&font, text)?;
-        let layout_size = self.measure_layout(&font, &layout, text.font_size)?;
+        let layout_size = self.measure_layout(&font, &layout, text)?;
         let atlas = self.get_atlas(id);
 
         let mut glyphs = Vec::<Rect>::new();

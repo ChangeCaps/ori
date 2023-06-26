@@ -31,7 +31,7 @@ impl Default for TextInput {
     fn default() -> Self {
         Self {
             text: OwnedSignal::new(String::new()),
-            placeholder: String::from("Type..."),
+            placeholder: String::from("Type here..."),
             on_input: Emitter::new(),
             multiline: false,
         }
