@@ -31,7 +31,7 @@ impl Default for TextInput {
     fn default() -> Self {
         Self {
             text: OwnedSignal::new(String::new()),
-            placeholder: String::from("Type here..."),
+            placeholder: String::from("Type..."),
             on_input: Emitter::new(),
             multiline: false,
         }
@@ -44,13 +44,16 @@ impl TextInput {
     }
 
     fn text(&self) -> String {
-        let text = self.text.get();
+        let mut text = self.text.get();
 
         if text.is_empty() {
-            self.placeholder.clone()
-        } else {
-            text
+            text = self.placeholder.clone();
         }
+
+        // Add a space to the end of the text to make sure the cursor is always visible, and to
+        // always display the last whitespace correctly.
+        text.push(' ');
+        text
     }
 
     fn section(&self, state: &TextInputState, cx: &mut impl Context) -> TextSection {
