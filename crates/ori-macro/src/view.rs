@@ -1,13 +1,13 @@
+use manyhow::bail;
 use proc_macro2::{Ident, TokenStream};
-use proc_macro_error::{abort, ResultExt};
 use quote::{quote, quote_spanned};
+use rstml::node::{KeyedAttribute, Node, NodeAttribute, NodeName};
 use syn::{
     parse::{discouraged::Speculative, Parse, ParseStream, Parser},
     parse_quote, parse_quote_spanned,
     spanned::Spanned,
     Expr, ExprPath, Path, Stmt, Token,
 };
-use syn_rsx::{Node, NodeAttribute, NodeName};
 
 use crate::krate::find_crate;
 
@@ -57,24 +57,25 @@ fn transform_block(parser: ParseStream) -> Result<Option<TokenStream>, syn::Erro
     Ok(Some(tokens))
 }
 
-pub fn view(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let (context, rest) = parse_context(input.into());
+pub fn view(input: proc_macro::TokenStream) -> manyhow::Result<proc_macro::TokenStream> {
+    let (context, rest) = parse_context(input.into())?;
 
-    let config = syn_rsx::ParserConfig::new().transform_block(transform_block);
-    let nodes = syn_rsx::parse2_with_config(rest, config).unwrap_or_abort();
+    let config = rstml::ParserConfig::new().transform_block(transform_block);
+    let parser = rstml::Parser::new(config);
+    let nodes = parser.parse_simple(rest)?;
 
     let expanded = if nodes.len() == 1 {
-        create_node(&context, nodes.iter())
+        create_node(&context, nodes.iter())?
     } else {
-        create_fragment(&context, nodes.iter())
+        create_fragment(&context, nodes.iter())?
     };
 
-    expanded.into()
+    Ok(expanded.into())
 }
 
 // parses
 // $expr , $rest | $rest
-fn parse_context(input: TokenStream) -> (Expr, TokenStream) {
+fn parse_context(input: TokenStream) -> manyhow::Result<(Expr, TokenStream)> {
     let parser = |parser: ParseStream| {
         if parser.is_empty() {
             return Ok((parse_quote!(cx), TokenStream::new()));
@@ -95,36 +96,48 @@ fn parse_context(input: TokenStream) -> (Expr, TokenStream) {
         Ok((expr, parser.parse()?))
     };
 
-    Parser::parse2(parser, input).unwrap_or_abort()
+    Ok(Parser::parse2(parser, input)?)
 }
 
 /// Creates an element node.
-fn create_node<'a>(context: &Expr, nodes: impl Iterator<Item = &'a Node>) -> TokenStream {
+fn create_node<'a>(
+    context: &Expr,
+    nodes: impl Iterator<Item = &'a Node>,
+) -> manyhow::Result<TokenStream> {
     let ori_core = find_crate("core");
-    let nodes = nodes.map(|node| view_node(context, node));
 
-    quote! {
-        #(#ori_core::View::new(#nodes))*
+    let mut elements = Vec::new();
+
+    for node in nodes {
+        elements.push(view_node(context, node)?);
     }
+
+    Ok(quote! {
+        #(#ori_core::View::new(#elements))*
+    })
 }
 
 /// Creates a fragment node.
-fn create_fragment<'a>(context: &Expr, nodes: impl Iterator<Item = &'a Node>) -> TokenStream {
+fn create_fragment<'a>(
+    context: &Expr,
+    nodes: impl Iterator<Item = &'a Node>,
+) -> manyhow::Result<TokenStream> {
     let ori_core = find_crate("core");
 
-    let elements = nodes.map(|node| {
-        let node = view_node(context, node);
+    let mut elements = Vec::new();
 
-        quote! {
+    for node in nodes {
+        let node = view_node(context, node)?;
+        elements.push(quote! {
             __views.push(#node);
-        }
-    });
+        });
+    }
 
-    quote! {{
+    Ok(quote! {{
         let mut __views = ::std::vec::Vec::new();
         #(#elements)*
         #ori_core::View::fragment(__views)
-    }}
+    }})
 }
 
 /// Adds a child to an `__node` statically.
@@ -144,154 +157,158 @@ fn children<'a>(
     context: &'a Expr,
     name: Path,
     children: impl Iterator<Item = &'a Node> + 'a,
-) -> impl Iterator<Item = TokenStream> + 'a {
-    children.map(move |node| {
-        let child = view_node(context, node);
+) -> manyhow::Result<Vec<TokenStream>> {
+    let mut vec = Vec::new();
 
-        static_child(&name, &child)
-    })
+    for node in children {
+        let child = view_node(context, node)?;
+        vec.push(static_child(&name, &child));
+    }
+
+    Ok(vec)
 }
 
 /// Returns an expression that evaluates to a `Node`.
-fn view_node(context: &Expr, node: &Node) -> Expr {
+fn view_node(context: &Expr, node: &Node) -> manyhow::Result<Expr> {
     let ori_core = find_crate("core");
 
     match node {
         Node::Element(element) => {
-            let node_name = &element.name;
+            let node_name = &element.name();
             let name = parse_quote!(#node_name);
 
             let mut attributes = Vec::new();
             let mut properties = Vec::new();
 
-            for node in &element.attributes {
-                let attr = get_attribute(node);
-                attribute(context, &name, attr, &mut attributes, &mut properties);
+            for node in element.attributes() {
+                let attr = get_keyed(node);
+                attribute(context, &name, attr, &mut attributes, &mut properties)?;
             }
 
-            let children = children(context, parse_quote!(#name), element.children.iter());
+            let children = children(context, parse_quote!(#name), element.children.iter())?;
 
-            parse_quote_spanned! {element.name.span() => #[allow(clippy::let_and_return)] {
-                let __view = <#name as #ori_core::Build>::build();
+            Ok(
+                parse_quote_spanned! {element.name().span() => #[allow(clippy::let_and_return)] {
+                    let __view = <#name as #ori_core::Build>::build();
 
-                #(#children)*
-                #(#properties)*
-                #(#attributes)*
+                    #(#children)*
+                    #(#properties)*
+                    #(#attributes)*
 
-                __view
-            }}
+                    __view
+                }},
+            )
         }
         Node::Block(block) => {
-            let expr = block.value.as_ref();
-            let inner_expr = match expr {
-                Expr::Block(block) => match block.block.stmts.first().unwrap() {
-                    Stmt::Expr(Expr::Call(expr)) => expr.args.first().unwrap(),
-                    _ => unreachable!(),
-                },
+            let block = block.try_block().unwrap();
+            let inner_expr = match block.stmts.first().unwrap() {
+                Stmt::Expr(Expr::Call(expr), _) => expr.args.first().unwrap(),
                 _ => unreachable!(),
             };
             let dynamic = expr_is_dynamic(inner_expr);
 
-            let fragment = parse_quote_spanned!(expr.span() =>
+            let fragment = parse_quote_spanned!(block.span() =>
                 #[allow(unused_braces)]
-                #ori_core::View::fragment(::std::iter::Iterator::collect::<::std::vec::Vec<_>>(#expr))
+                #ori_core::View::fragment(::std::iter::Iterator::collect::<::std::vec::Vec<_>>(#block))
             );
 
             if dynamic {
-                parse_quote_spanned! {expr.span() => {
+                Ok(parse_quote_spanned! {block.span() => {
                     let __view = #context.owned_memo_scoped(move |#context| {
                         #context.emit(#ori_core::RequestRedrawEvent);
                         #fragment
                     });
                     #ori_core::View::dynamic(__view)
-                }}
+                }})
             } else {
-                fragment
+                Ok(fragment)
             }
         }
         Node::Comment(comment) => {
-            let comment = comment.value.as_ref();
+            let comment = &comment.value;
 
-            parse_quote_spanned! {comment.span() =>
+            Ok(parse_quote_spanned! {comment.span() =>
                 #ori_core::View::new(#ori_core::Comment::new(#comment))
-            }
+            })
         }
         Node::Text(text) => {
-            let text = text.value.as_ref();
+            let text = &text.value;
 
-            parse_quote_spanned! {text.span() =>
+            Ok(parse_quote_spanned! {text.span() =>
                 #ori_core::View::new(#text)
-            }
+            })
         }
         _ => unreachable!(),
     }
 }
 
-fn get_attribute(node: &Node) -> &NodeAttribute {
-    let Node::Attribute(attribute) = node else {
+fn get_keyed(node: &NodeAttribute) -> &KeyedAttribute {
+    let NodeAttribute::Attribute(keyed) = node else {
         unreachable!()
     };
 
-    attribute
+    keyed
 }
 
 fn attribute(
     context: &Expr,
     name: &Ident,
-    attr: &NodeAttribute,
+    attr: &KeyedAttribute,
     attributes: &mut Vec<TokenStream>,
     properties: &mut Vec<TokenStream>,
-) {
+) -> manyhow::Result<()> {
     if let NodeName::Path(ref path) = attr.key {
-        let Some(ref value) = attr.value else { return };
+        let Some(value) = attr.value() else { return Ok(()) };
 
         if path.path == parse_quote!(class) {
             attributes.push(class(context, name, value));
-            return;
+            return Ok(());
         }
 
         if path.path.get_ident().map_or(false, |ident| ident == "ref") {
             attributes.push(node_ref(context, name, value));
-            return;
+            return Ok(());
         }
 
         properties.push(property(context, name, path, value));
-        return;
+        return Ok(());
     }
 
     if let NodeName::Punctuated(ref punct) = attr.key {
-        let (kind, key) = attribute_kind(attr);
+        let (kind, key) = attribute_kind(attr)?;
 
         match kind.as_str() {
             "on" => {
-                if let Some(ref value) = attr.value {
+                if let Some(value) = attr.value() {
                     let key = Ident::new(&key, punct.span());
                     properties.push(event(context, name, &key, value));
                 } else {
-                    abort!(punct, "expected event handler");
+                    bail!(punct, "expected event handler");
                 }
             }
             "bind" => {
-                if let Some(ref value) = attr.value {
+                if let Some(value) = attr.value() {
                     let key = Ident::new(&key, punct.span());
                     properties.push(binding(context, name, &key, value));
                 } else {
-                    abort!(punct, "expected binding");
+                    bail!(punct, "expected binding");
                 }
             }
             "style" => {
-                if let Some(ref value) = attr.value {
+                if let Some(value) = attr.value() {
                     attributes.push(style(context, name, &key, value));
                 } else {
-                    abort!(punct, "expected attribute");
+                    bail!(punct, "expected attribute");
                 }
             }
-            _ => abort!(kind, "invalid attribute kind"),
+            _ => bail!(kind, "invalid attribute kind"),
         }
     }
+
+    Ok(())
 }
 
-fn attribute_kind(attribute: &NodeAttribute) -> (String, String) {
+fn attribute_kind(attribute: &KeyedAttribute) -> manyhow::Result<(String, String)> {
     let NodeName::Punctuated(ref punct) = attribute.key else {
         unreachable!()
     };
@@ -302,7 +319,7 @@ fn attribute_kind(attribute: &NodeAttribute) -> (String, String) {
     let kind = pair.value();
 
     if pair.punct().unwrap().as_char() != ':' {
-        abort!(punct, "expected ':'");
+        bail!(punct, "expected ':'");
     }
 
     let mut key = String::new();
@@ -313,7 +330,7 @@ fn attribute_kind(attribute: &NodeAttribute) -> (String, String) {
 
         if let Some(punct) = pair.punct() {
             if punct.as_char() != '-' {
-                abort!(punct, "expected '-'");
+                bail!(punct, "expected '-'");
             }
 
             key.push('-');
@@ -321,20 +338,19 @@ fn attribute_kind(attribute: &NodeAttribute) -> (String, String) {
     }
 
     if key.is_empty() {
-        abort!(punct, "expected attribute name");
+        bail!(punct, "expected attribute name");
     }
 
-    (kind.to_string(), key)
+    Ok((kind.to_string(), key))
 }
 
 /// Checks if the given expression is dynamic, which means that it can change reactively.
 fn expr_is_dynamic(value: &Expr) -> bool {
     match value {
         Expr::Array(expr) => expr.elems.iter().any(expr_is_dynamic),
-        Expr::Assign(_) | Expr::AssignOp(_) => false,
+        Expr::Assign(_) => false,
         Expr::Block(expr) => expr.block.stmts.iter().any(|stmt| match stmt {
-            Stmt::Expr(expr) => expr_is_dynamic(expr),
-            Stmt::Semi(expr, _) => expr_is_dynamic(expr),
+            Stmt::Expr(expr, _) => expr_is_dynamic(expr),
             _ => true,
         }),
         Expr::Unary(expr) => expr_is_dynamic(&expr.expr),
@@ -354,7 +370,6 @@ fn expr_is_dynamic(value: &Expr) -> bool {
         },
         Expr::Try(expr) => expr_is_dynamic(&expr.expr),
         Expr::Tuple(expr) => expr.elems.iter().any(expr_is_dynamic),
-        Expr::Type(_) => false,
         _ => true,
     }
 }

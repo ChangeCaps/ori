@@ -7,7 +7,8 @@ use fontdue::{
 use glam::Vec2;
 
 use crate::{
-    FontAtlas, FontQuery, Glyph, Mesh, Rect, Renderer, TextAlign, TextSection, TextWrap, Vertex,
+    FontAtlas, FontQuery, Glyph, Glyphs, Mesh, Rect, Renderer, TextAlign, TextSection, TextWrap,
+    Vertex,
 };
 
 /// An error that occurred while loading fonts.
@@ -137,22 +138,19 @@ impl Fonts {
     }
 
     fn text_layout_inner(&mut self, font: &Font, text: &TextSection<'_>) -> Option<Layout> {
-        let mut text = text.clone();
-        text.rect.max.x += text.font_size * 0.7;
-
         let max_width = match text.wrap {
             TextWrap::None => None,
-            _ => Some(text.rect.width()),
+            _ => Some(text.bounds.x),
         };
 
         let max_height = match text.wrap {
-            TextWrap::None => Some(text.rect.height()),
+            TextWrap::None => Some(text.bounds.y),
             _ => None,
         };
 
         let settings = LayoutSettings {
-            x: text.rect.min.x.round(),
-            y: text.rect.min.y.round(),
+            x: 0.0,
+            y: 0.0,
             max_width,
             max_height,
             horizontal_align: text.h_align.to_horizontal(),
@@ -185,16 +183,55 @@ impl Fonts {
     }
 
     /// Creates a text layout for `text` and returns the glyphs.
-    pub fn text_glyphs(&mut self, text: &TextSection<'_>) -> Option<Vec<Glyph>> {
+    pub fn layout_glyphs(&mut self, text: &TextSection<'_>) -> Option<Glyphs> {
         let id = self.query_id(&text.font_query())?;
         let font = self.get_font(id)?;
 
         let layout = self.text_layout_inner(&font, text)?;
+        let size = self.measure_layout(&font, &layout, text)?;
 
-        self.layout_glyphs(&font, &layout)
+        let x_diff = size.x - text.bounds.x;
+        let x_offset = if text.wrap != TextWrap::None {
+            match text.h_align {
+                TextAlign::Left => 0.0,
+                TextAlign::Center => x_diff / 2.0,
+                TextAlign::Right => x_diff,
+            }
+        } else {
+            0.0
+        };
+
+        let y_diff = size.y - text.bounds.y;
+        let y_offset = if text.wrap == TextWrap::None {
+            match text.v_align {
+                TextAlign::Top => 0.0,
+                TextAlign::Center => y_diff / 2.0,
+                TextAlign::Bottom => y_diff,
+            }
+        } else {
+            0.0
+        };
+
+        let offset = Vec2::new(x_offset, y_offset);
+        let glyphs = self.layout_glyphs_inner(&font, &layout, offset)?;
+
+        Some(Glyphs {
+            glyphs,
+            size,
+            font: id,
+            wrap: text.wrap,
+            h_align: text.h_align,
+            v_align: text.v_align,
+            color: text.color,
+        })
     }
 
-    fn layout_glyphs(&self, font: &Font, layout: &Layout) -> Option<Vec<Glyph>> {
+    fn layout_glyphs_inner(
+        &self,
+        font: &Font,
+        layout: &Layout,
+        offset: Vec2,
+    ) -> Option<Vec<Glyph>> {
         if layout.glyphs().is_empty() {
             return None;
         }
@@ -214,7 +251,7 @@ impl Fonts {
                 };
                 let advance = metrics.advance_width.ceil();
 
-                let min = Vec2::new(glyph.x, glyph.y);
+                let min = Vec2::new(glyph.x, glyph.y) + offset;
                 let size = Vec2::new(metrics.width as f32, metrics.height as f32);
 
                 let glyph = Glyph {
@@ -226,6 +263,7 @@ impl Fonts {
                     line_descent: line.min_descent,
                     line_ascent: line.max_ascent,
                     advance,
+                    key: glyph.key,
                 };
 
                 glyphs.push(glyph);
@@ -268,32 +306,32 @@ impl Fonts {
             width = f32::max(width, line_width);
         }
 
-        Some(Vec2::new(width.ceil(), layout.height()))
+        Some(Vec2::new(width, layout.height().ceil()))
     }
 
     /// Measures the size of `text`, and returns the smallest [`Rect`] that can contains it.
-    pub fn measure_text(&mut self, text: &TextSection<'_>) -> Option<Rect> {
+    pub fn measure_text(&mut self, text: &TextSection<'_>) -> Option<Vec2> {
         let font = self.query(&text.font_query())?;
         let layout = self.text_layout_inner(&font, text)?;
-        let size = self.measure_layout(&font, &layout, text)?;
-        let rect = Rect::min_size(text.rect.min, size);
-        Some(rect)
+        self.measure_layout(&font, &layout, text)
     }
 
     /// Creates a mesh for `text`.
-    pub fn text_mesh(&mut self, renderer: &dyn Renderer, text: &TextSection<'_>) -> Option<Mesh> {
-        let id = self.query_id(&text.font_query())?;
-        let font = self.get_font(id)?;
-        let layout = self.text_layout_inner(&font, text)?;
-        let layout_size = self.measure_layout(&font, &layout, text)?;
-        let atlas = self.get_atlas(id);
+    pub fn text_mesh(
+        &mut self,
+        renderer: &dyn Renderer,
+        glyphs: &Glyphs,
+        rect: Rect,
+    ) -> Option<Mesh> {
+        let font = self.get_font(glyphs.font())?;
+        let atlas = self.get_atlas(glyphs.font());
 
-        let mut glyphs = Vec::<Rect>::new();
+        let mut uvs = Vec::<Rect>::new();
 
         'outer: loop {
-            for glyph in layout.glyphs() {
+            for glyph in glyphs.iter() {
                 match atlas.glyph_rect_uv(renderer, &font, glyph.key) {
-                    Some(rect) => glyphs.push(rect),
+                    Some(rect) => uvs.push(rect),
                     None => {
                         atlas.grow(renderer);
                         continue 'outer;
@@ -304,56 +342,54 @@ impl Fonts {
             break;
         }
 
-        let x_offset = if text.wrap == TextWrap::None {
-            match text.h_align {
+        let x_diff = rect.width() - glyphs.size().x;
+        let y_diff = rect.height() - glyphs.size().y;
+
+        let x_offset = if glyphs.wrap() != TextWrap::None {
+            match glyphs.h_align() {
                 TextAlign::Left => 0.0,
-                TextAlign::Center => (text.rect.width() - layout_size.x) / 2.0,
-                TextAlign::Right => text.rect.width() - layout_size.x,
+                TextAlign::Center => x_diff / 2.0,
+                TextAlign::Right => x_diff,
             }
         } else {
             0.0
         };
-
-        let y_offset = if text.wrap != TextWrap::None {
-            match text.v_align {
+        let y_offset = if glyphs.wrap() != TextWrap::None {
+            match glyphs.v_align() {
                 TextAlign::Top => 0.0,
-                TextAlign::Center => (text.rect.height() - layout_size.y) / 2.0,
-                TextAlign::Bottom => text.rect.height() - layout_size.y,
+                TextAlign::Center => y_diff / 2.0,
+                TextAlign::Bottom => y_diff,
             }
         } else {
             0.0
         };
 
         let offset = Vec2::new(x_offset, y_offset);
-
         let mut mesh = Mesh::new();
 
-        for (glyph, uv) in layout.glyphs().iter().zip(glyphs) {
-            let min = Vec2::new(glyph.x, glyph.y);
-            let size = Vec2::new(glyph.width as f32, glyph.height as f32);
-            let glyph_rect = Rect::min_size(min, size);
-
+        for (glyph, uv) in glyphs.iter().zip(uvs) {
+            let rect = glyph.rect.translate(rect.min + offset);
             let index = mesh.vertices.len() as u32;
 
             mesh.vertices.push(Vertex {
-                position: glyph_rect.top_left() + offset,
+                position: rect.top_left(),
                 uv: uv.top_left(),
-                color: text.color,
+                color: glyphs.color(),
             });
             mesh.vertices.push(Vertex {
-                position: glyph_rect.top_right() + offset,
+                position: rect.top_right(),
                 uv: uv.top_right(),
-                color: text.color,
+                color: glyphs.color(),
             });
             mesh.vertices.push(Vertex {
-                position: glyph_rect.bottom_right() + offset,
+                position: rect.bottom_right(),
                 uv: uv.bottom_right(),
-                color: text.color,
+                color: glyphs.color(),
             });
             mesh.vertices.push(Vertex {
-                position: glyph_rect.bottom_left() + offset,
+                position: rect.bottom_left(),
                 uv: uv.bottom_left(),
-                color: text.color,
+                color: glyphs.color(),
             });
 
             mesh.indices.push(index);

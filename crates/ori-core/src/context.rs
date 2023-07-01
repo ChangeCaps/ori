@@ -5,7 +5,7 @@ use std::{
 
 use glam::Vec2;
 use ori_graphics::{
-    Fonts, Frame, ImageCache, ImageHandle, ImageSource, Quad, Rect, Renderer, TextSection,
+    Fonts, Frame, Glyphs, ImageCache, ImageHandle, ImageSource, Quad, Rect, Renderer, TextSection,
 };
 use ori_reactive::EventSink;
 use ori_style::{
@@ -164,8 +164,8 @@ impl<'a> DrawContext<'a> {
     }
 
     /// Draws the given text.
-    pub fn draw_text(&mut self, text: &TextSection<'_>) {
-        if let Some(mesh) = self.fonts.text_mesh(self.renderer, text) {
+    pub fn draw_text(&mut self, glyphs: &Glyphs, rect: Rect) {
+        if let Some(mesh) = self.fonts.text_mesh(self.renderer, glyphs, rect) {
             self.draw(mesh);
         }
     }
@@ -444,12 +444,13 @@ pub trait Context {
         result.unwrap_or_default()
     }
 
+    fn layout_text(&mut self, text: &TextSection<'_>) -> Option<Glyphs> {
+        self.fonts_mut().layout_glyphs(text)
+    }
+
     /// Measures the given text.
-    fn measure_text(&mut self, text: &TextSection<'_>) -> Rect {
-        match self.fonts_mut().measure_text(text) {
-            Some(rect) => rect,
-            None => Rect::min_size(text.rect.min, Vec2::ZERO),
-        }
+    fn measure_text(&mut self, text: &TextSection<'_>) -> Vec2 {
+        self.fonts_mut().measure_text(text).unwrap_or_default()
     }
 
     /// Tries to downcast the `renderer` to the given type.

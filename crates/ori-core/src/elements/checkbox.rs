@@ -84,11 +84,13 @@ impl Element for Checkbox {
                 h_align: TextAlign::Center,
                 v_align: TextAlign::Center,
                 color: cx.style("color"),
-                rect: cx.rect(),
+                bounds: cx.size(),
                 ..Default::default()
             };
 
-            cx.draw_text(&section);
+            if let Some(glyphs) = cx.layout_text(&section) {
+                cx.draw_text(&glyphs, cx.rect());
+            }
         }
     }
 }

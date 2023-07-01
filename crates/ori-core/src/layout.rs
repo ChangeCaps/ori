@@ -362,7 +362,7 @@ impl JustifyContent {
                 }
             }
             JustifyContent::SpaceBetween => {
-                let gap = (container_size - total_size) / (children.len() - 1) as f32;
+                let gap = (container_size - total_size + total_gap) / (children.len() - 1) as f32;
 
                 let mut position = 0.0;
 

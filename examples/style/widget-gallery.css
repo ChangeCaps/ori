@@ -17,7 +17,7 @@ div.row {
 	gap: 10px;
 
 	direction: row;
-	justify-content: center; 
+	justify-content: space-between; 
 	align-items: center;
 }
 
@@ -36,4 +36,12 @@ text-input.long-text {
 	text-valign: start;
 
 	border-width: none;
+}
+
+button text {
+	text-align: center;
+}
+
+.radio {
+	text-valign: start;
 }

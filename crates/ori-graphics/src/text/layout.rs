@@ -1,6 +1,7 @@
 use fontdue::layout::{HorizontalAlign, VerticalAlign, WrapStyle};
+use glam::Vec2;
 
-use crate::{Color, FontFamily, FontQuery, FontStretch, FontStyle, FontWeight, Rect};
+use crate::{Color, FontFamily, FontQuery, FontStretch, FontStyle, FontWeight};
 
 /// Alignment of a section of text.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
@@ -92,7 +93,7 @@ pub struct TextSection<'a> {
     /// The wrapping.
     pub wrap: TextWrap,
     /// The bounding rectangle.
-    pub rect: Rect,
+    pub bounds: Vec2,
 }
 
 impl<'a> Default for TextSection<'a> {
@@ -109,7 +110,7 @@ impl<'a> Default for TextSection<'a> {
             h_align: TextAlign::default(),
             line_height: 1.0,
             wrap: TextWrap::default(),
-            rect: Rect::default(),
+            bounds: Vec2::default(),
         }
     }
 }

@@ -1,5 +1,5 @@
 use glam::Vec2;
-use ori_graphics::{Rect, TextSection};
+use ori_graphics::{Glyphs, TextSection};
 use ori_macro::Build;
 use ori_style::Style;
 
@@ -46,7 +46,7 @@ impl Text {
 }
 
 impl Element for Text {
-    type State = Option<f32>;
+    type State = Option<Glyphs>;
 
     fn build(&self) -> Self::State {
         None
@@ -63,7 +63,6 @@ impl Element for Text {
         space: AvailableSpace,
     ) -> Vec2 {
         let font_size = cx.style_range("font-size", 0.0..cx.parent_space.max.y);
-        *state = Some(font_size);
 
         let section = TextSection {
             text: &self.text,
@@ -77,30 +76,20 @@ impl Element for Text {
             v_align: cx.style("text-valign"),
             line_height: cx.style("line-height"),
             wrap: cx.style("text-wrap"),
-            rect: Rect::min_size(Vec2::ZERO, space.max),
+            bounds: space.max,
         };
 
-        let text_rect = cx.measure_text(&section);
-        text_rect.size()
+        let glyphs = cx.fonts.layout_glyphs(&section);
+        *state = glyphs;
+
+        state.as_ref().map_or(Vec2::ZERO, |glyphs| glyphs.size())
     }
 
     fn draw(&self, state: &mut Self::State, cx: &mut DrawContext) {
-        let font_size = state.unwrap_or(16.0);
-        let section = TextSection {
-            text: &self.text,
-            font_size,
-            font_family: cx.style("font-family"),
-            font_weight: cx.style("font-weight"),
-            font_stretch: cx.style("font-stretch"),
-            font_style: cx.style("font-style"),
-            color: cx.style("color"),
-            h_align: cx.style("text-align"),
-            v_align: cx.style("text-valign"),
-            line_height: cx.style("line-height"),
-            wrap: cx.style("text-wrap"),
-            rect: cx.rect(),
-        };
+        cx.draw_quad();
 
-        cx.draw_text(&section);
+        if let Some(glyphs) = state {
+            cx.draw_text(glyphs, cx.rect());
+        }
     }
 }

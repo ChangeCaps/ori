@@ -1,9 +1,9 @@
+use manyhow::bail;
 use proc_macro2::TokenStream;
-use proc_macro_error::abort;
 use quote::quote;
 use syn::{
-    parse_macro_input, parse_quote, spanned::Spanned, Attribute, Data, DataStruct, DeriveInput,
-    Fields, FieldsNamed, Generics, Ident,
+    parse_quote, spanned::Spanned, Attribute, Data, DataStruct, DeriveInput, Fields, FieldsNamed,
+    Generics, Ident,
 };
 
 use crate::krate::find_crate;
@@ -24,13 +24,13 @@ impl Attrs {
         let mut is_children = false;
 
         for attr in attrs {
-            if attr.path.is_ident("prop") {
+            if attr.path().is_ident("prop") {
                 is_prop = true;
-            } else if attr.path.is_ident("event") {
+            } else if attr.path().is_ident("event") {
                 is_event = true;
-            } else if attr.path.is_ident("bind") {
+            } else if attr.path().is_ident("bind") {
                 is_bind = true;
-            } else if attr.path.is_ident("children") {
+            } else if attr.path().is_ident("children") {
                 is_children = true;
             }
         }
@@ -44,29 +44,29 @@ impl Attrs {
     }
 }
 
-pub fn derive_build(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let input = parse_macro_input!(input as DeriveInput);
+pub fn derive_build(input: proc_macro::TokenStream) -> manyhow::Result<proc_macro::TokenStream> {
+    let input = syn::parse::<DeriveInput>(input.into())?;
 
-    let build = build(&input);
-    let children = children(&input);
+    let build = build(&input)?;
+    let children = children(&input)?;
 
     let expanded = quote! {
         #build
         #children
     };
 
-    expanded.into()
+    Ok(expanded.into())
 }
 
-fn data(input: &DeriveInput) -> (&DataStruct, &FieldsNamed) {
+fn data(input: &DeriveInput) -> manyhow::Result<(&DataStruct, &FieldsNamed)> {
     match input.data {
         Data::Struct(ref data) => match data.fields {
-            Fields::Named(ref fields) => (data, fields),
-            Fields::Unnamed(_) => abort!(input, "tuple structs are not supported"),
-            Fields::Unit => abort!(input, "unit structs are not supported"),
+            Fields::Named(ref fields) => Ok((data, fields)),
+            Fields::Unnamed(_) => bail!(input, "tuple structs are not supported"),
+            Fields::Unit => bail!(input, "unit structs are not supported"),
         },
-        Data::Enum(_) => abort!(input, "enum types are not supported"),
-        Data::Union(_) => abort!(input, "union types are not supported"),
+        Data::Enum(_) => bail!(input, "enum types are not supported"),
+        Data::Union(_) => bail!(input, "union types are not supported"),
     }
 }
 
@@ -78,14 +78,14 @@ fn setter_generics(input: &DeriveInput) -> Generics {
     generics
 }
 
-fn build(input: &DeriveInput) -> TokenStream {
+fn build(input: &DeriveInput) -> manyhow::Result<TokenStream> {
     let name = &input.ident;
 
     let ori_core = find_crate("core");
 
-    let property_setter = prop_setter(input);
-    let event_setter = event_setter(input);
-    let binding_setter = binding_setter(input);
+    let property_setter = prop_setter(input)?;
+    let event_setter = event_setter(input)?;
+    let binding_setter = binding_setter(input)?;
 
     let setter_generics = setter_generics(input);
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
@@ -119,7 +119,7 @@ fn build(input: &DeriveInput) -> TokenStream {
         node.downcast::<Self, ()>(closure).expect("downcast failed");
     };
 
-    quote! { const _: () = {
+    Ok(quote! { const _: () = {
         pub struct PropertiesSetter #setter_impl_generics #where_clause {
             this: &'__setter mut #name #ty_generics,
         }
@@ -165,12 +165,12 @@ fn build(input: &DeriveInput) -> TokenStream {
                 #bindings
             }
         }
-    };}
+    };})
 }
 
-fn children(input: &DeriveInput) -> TokenStream {
+fn children(input: &DeriveInput) -> manyhow::Result<TokenStream> {
     let name = &input.ident;
-    let (_, fields) = data(input);
+    let (_, fields) = data(input)?;
 
     let ori_core = find_crate("core");
 
@@ -208,13 +208,13 @@ fn children(input: &DeriveInput) -> TokenStream {
         })
     });
 
-    quote! {
+    Ok(quote! {
         #(#fields)*
-    }
+    })
 }
 
-fn prop_setter(input: &DeriveInput) -> TokenStream {
-    let (_, fields) = data(input);
+fn prop_setter(input: &DeriveInput) -> manyhow::Result<TokenStream> {
+    let (_, fields) = data(input)?;
 
     let fields = fields.named.iter().filter_map(|field| {
         let name = &field.ident;
@@ -233,9 +233,9 @@ fn prop_setter(input: &DeriveInput) -> TokenStream {
         })
     });
 
-    quote! {
+    Ok(quote! {
         #(#fields)*
-    }
+    })
 }
 
 fn event_name(name: &Ident) -> Ident {
@@ -244,8 +244,8 @@ fn event_name(name: &Ident) -> Ident {
     Ident::new(&event_name, name.span())
 }
 
-fn event_setter(input: &DeriveInput) -> TokenStream {
-    let (_, fields) = data(input);
+fn event_setter(input: &DeriveInput) -> manyhow::Result<TokenStream> {
+    let (_, fields) = data(input)?;
 
     let ori_core = find_crate("core");
     let ori_reactive = find_crate("reactive");
@@ -273,13 +273,13 @@ fn event_setter(input: &DeriveInput) -> TokenStream {
         })
     });
 
-    quote! {
+    Ok(quote! {
         #(#fields)*
-    }
+    })
 }
 
-fn binding_setter(input: &DeriveInput) -> TokenStream {
-    let (_, fields) = data(input);
+fn binding_setter(input: &DeriveInput) -> manyhow::Result<TokenStream> {
+    let (_, fields) = data(input)?;
 
     let ori_core = find_crate("core");
     let ori_reactive = find_crate("reactive");
@@ -307,7 +307,7 @@ fn binding_setter(input: &DeriveInput) -> TokenStream {
         })
     });
 
-    quote! {
+    Ok(quote! {
         #(#fields)*
-    }
+    })
 }

@@ -1,5 +1,5 @@
 use glam::Vec2;
-use ori_graphics::{Color, Glyph, Quad, Rect, TextSection};
+use ori_graphics::{Color, Glyph, Glyphs, Quad, Rect, TextSection};
 use ori_macro::Build;
 use ori_reactive::{Emitter, Event, OwnedSignal};
 use ori_style::Style;
@@ -75,20 +75,23 @@ impl TextInput {
             h_align: cx.style("text-align"),
             line_height: cx.style("line-height"),
             wrap: cx.style("text-wrap"),
-            rect: cx.padding().apply(cx.rect()),
+            bounds: cx.size() - cx.padding().size(),
         }
     }
 
     fn cursor_select(&self, state: &mut TextInputState, cx: &mut impl Context, position: Vec2) {
-        let section = TextSection {
-            text: &self.text.get(),
-            ..self.section(state, cx)
-        };
+        // early out if the text is empty
+        if self.text.get().is_empty() {
+            state.cursor = 0;
+            return;
+        }
+
+        let position = position - cx.rect().top_left() - cx.padding().top_left();
 
         let mut line = None;
         let mut dist = f32::MAX;
 
-        for glyph in cx.fonts_mut().text_glyphs(&section).into_iter().flatten() {
+        for glyph in state.glyphs.iter().flatten() {
             let delta = position - glyph.rect.center();
 
             if glyph.rect.contains(position) {
@@ -263,25 +266,19 @@ impl TextInput {
     }
 
     fn cursor_position(&self, state: &TextInputState, glyphs: &[Glyph]) -> Option<Vec2> {
-        match self.find_glyph(state, glyphs) {
-            Some(glyph) => Some(Vec2::new(
-                glyph.rect.min.x,
-                glyph.baseline + glyph.line_descent,
-            )),
-            None => {
-                let last = glyphs.last()?;
-                Some(Vec2::new(
-                    last.rect.max.x,
-                    last.baseline + last.line_descent,
-                ))
-            }
-        }
+        let glyph = self.find_glyph(state, glyphs)?;
+
+        Some(Vec2::new(
+            glyph.rect.min.x,
+            glyph.baseline - (glyph.line_ascent + glyph.line_descent) / 2.0,
+        ))
     }
 }
 
 #[doc(hidden)]
 #[derive(Clone, Debug, Default)]
 pub struct TextInputState {
+    pub glyphs: Option<Glyphs>,
     pub cursor_blink: f32,
     pub font_size: f32,
     pub cursor: usize,
@@ -322,11 +319,16 @@ impl Element for TextInput {
 
         let section = TextSection {
             text: &self.text(),
-            rect: Rect::min_size(Vec2::ZERO, space.max - cx.padding().size()),
+            bounds: space.max - cx.padding().size(),
             ..self.section(state, cx)
         };
 
-        let mut text_size = cx.measure_text(&section).size() + cx.padding().size();
+        let glyphs = cx.layout_text(&section);
+        state.glyphs = glyphs;
+
+        let mut text_size = state.glyphs.as_ref().map_or(Vec2::ZERO, |g| g.size());
+
+        text_size += cx.padding().size();
         text_size.y = f32::max(text_size.y, state.font_size + cx.padding().size().y);
         text_size.max(space.min)
     }
@@ -334,23 +336,21 @@ impl Element for TextInput {
     fn draw(&self, state: &mut Self::State, cx: &mut DrawContext) {
         cx.draw_quad();
 
-        let section = TextSection {
-            text: &self.text(),
-            ..self.section(state, cx)
+        let Some(ref glyphs) = state.glyphs else {
+            return;
         };
 
-        cx.draw_text(&section);
+        let padded_rect = cx.padding().apply(cx.rect());
+        cx.draw_text(glyphs, padded_rect);
 
         if !cx.focused() {
             return;
         }
 
-        let inner_rect = cx.padding().apply(cx.rect());
-
-        let glyphs = cx.fonts_mut().text_glyphs(&section).unwrap_or_default();
-        let cursor_center = self
-            .cursor_position(state, &glyphs)
-            .unwrap_or(inner_rect.left_center());
+        let cursor_center = match self.cursor_position(state, glyphs) {
+            Some(position) if !self.text.get().is_empty() => position + padded_rect.top_left(),
+            _ => padded_rect.left_center() + Vec2::Y,
+        };
 
         let cursor_size = Vec2::new(1.0, state.font_size);
         let cursor_rect = Rect::center_size(cursor_center, cursor_size);
@@ -364,9 +364,7 @@ impl Element for TextInput {
         let quad = Quad {
             rect: cursor_rect,
             background: color,
-            border_radius: [0.0; 4],
-            border_width: 0.0,
-            border_color: Color::TRANSPARENT,
+            ..Quad::default()
         };
 
         cx.draw(quad);

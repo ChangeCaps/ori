@@ -262,7 +262,7 @@ impl Node {
     fn event_inner(&self, state: &mut NodeState, cx: &mut EventContext, event: &Event) {
         if let Some(pointer_event) = event.get::<PointerEvent>() {
             if Self::handle_pointer_event(state, pointer_event, event.is_handled()) {
-                cx.request_redraw();
+                cx.request_layout();
             }
         }
 
