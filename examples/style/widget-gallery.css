@@ -29,6 +29,10 @@ div.column {
 	align-items: stretch;
 }
 
+text-input {
+	font-size: 1.2em;
+}
+
 text-input.long-text {
 	font-size: 0.8em;
 	text-wrap: word;
