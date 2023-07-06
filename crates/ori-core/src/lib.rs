@@ -9,6 +9,7 @@ mod elements;
 mod event;
 mod layout;
 mod node;
+mod ui;
 mod view;
 mod window;
 
@@ -21,6 +22,7 @@ pub use elements::*;
 pub use event::*;
 pub use layout::*;
 pub use node::*;
+pub use ui::*;
 pub use view::*;
 pub use window::*;
 

@@ -4,7 +4,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use ori_core::{math::Vec2, Modifiers, View, Window, Windows};
+use ori_core::{math::Vec2, Modifiers, Ui, View, Window};
 use ori_graphics::{prelude::UVec2, Color, ImageSource};
 use ori_reactive::{Event, Scope};
 use ori_style::{LoadedStyleKind, StyleLoader, Stylesheet};
@@ -199,32 +199,33 @@ impl App {
         #[cfg(feature = "wgpu")]
         let render_backend = ori_wgpu::WgpuBackend::new();
 
-        let mut windows = Windows::new(window_backend, render_backend);
-        windows.style_loader = self.style_loader;
-        let ui = self.builder.take().unwrap();
-        (windows.create_window(&self.event_loop, &self.window, ui)).unwrap();
+        let mut ui = Ui::new(window_backend, render_backend);
+        ui.style_loader = self.style_loader;
+
+        let root = self.builder.take().unwrap();
+        (ui.create_window(&self.event_loop, &self.window, root)).unwrap();
 
         self.event_loop.run(move |event, target, control_flow| {
             *control_flow = ControlFlow::WaitUntil(Instant::now() + Duration::from_millis(10));
 
             match event {
                 WinitEvent::RedrawRequested(window) => {
-                    if let Some(id) = windows.window_backend.id(window) {
-                        windows.draw(id);
+                    if let Some(id) = ui.window_backend.id(window) {
+                        ui.draw(id);
                     }
                 }
                 WinitEvent::MainEventsCleared
                 | WinitEvent::NewEvents(StartCause::ResumeTimeReached { .. }) => {
-                    windows.idle();
+                    ui.idle();
                 }
                 WinitEvent::UserEvent((window, event)) => {
-                    let Some(id) = windows.window_backend.id(window) else {
+                    let Some(id) = ui.window_backend.id(window) else {
                         return;
                     };
 
-                    windows.event(target, id, &event);
+                    ui.event(target, id, &event);
 
-                    if windows.is_empty() {
+                    if ui.is_empty() {
                         *control_flow = ControlFlow::Exit;
                     }
                 }
@@ -233,7 +234,7 @@ impl App {
                     window_id: window,
                     ..
                 } => {
-                    let Some(window) = windows.window_backend.id(window) else {
+                    let Some(window) = ui.window_backend.id(window) else {
                         return;
                     };
 
@@ -243,12 +244,12 @@ impl App {
                             new_inner_size: &mut size,
                             ..
                         } => {
-                            windows.resize_window(window, size.width, size.height);
+                            ui.resize_window(window, size.width, size.height);
                         }
                         WindowEvent::CloseRequested => {
-                            windows.close_window(window);
+                            ui.close_window(window);
 
-                            if windows.is_empty() {
+                            if ui.is_empty() {
                                 *control_flow = ControlFlow::Exit;
                             }
                         }
@@ -259,11 +260,11 @@ impl App {
                         } => {
                             let device = convert_device_id(device_id);
                             let position = Vec2::new(position.x as f32, position.y as f32);
-                            windows.pointer_moved(window, device, position);
+                            ui.pointer_moved(window, device, position);
                         }
                         WindowEvent::CursorLeft { device_id } => {
                             let device = convert_device_id(device_id);
-                            windows.pointer_left(window, device);
+                            ui.pointer_left(window, device);
                         }
                         WindowEvent::MouseInput {
                             button,
@@ -274,7 +275,7 @@ impl App {
                             let device = convert_device_id(device_id);
                             let button = convert_mouse_button(button);
                             let pressed = is_pressed(element_state);
-                            windows.pointer_button(window, device, button, pressed);
+                            ui.pointer_button(window, device, button, pressed);
                         }
                         WindowEvent::MouseWheel {
                             delta: MouseScrollDelta::LineDelta(x, y),
@@ -283,7 +284,7 @@ impl App {
                         } => {
                             let device = convert_device_id(device_id);
                             let delta = Vec2::new(x, y);
-                            windows.pointer_scroll(window, device, delta);
+                            ui.pointer_scroll(window, device, delta);
                         }
                         WindowEvent::KeyboardInput {
                             input:
@@ -298,11 +299,11 @@ impl App {
                             let pressed = is_pressed(element_state);
 
                             if let Some(key) = key {
-                                windows.key(window, key, pressed);
+                                ui.key(window, key, pressed);
                             }
                         }
                         WindowEvent::ReceivedCharacter(c) => {
-                            windows.text(window, String::from(c));
+                            ui.text(window, String::from(c));
                         }
                         WindowEvent::ModifiersChanged(new_modifiers) => {
                             let modifiers = Modifiers {
@@ -312,7 +313,7 @@ impl App {
                                 meta: new_modifiers.logo(),
                             };
 
-                            windows.modifiers_changed(window, modifiers);
+                            ui.modifiers_changed(window, modifiers);
                         }
                         _ => {}
                     }
