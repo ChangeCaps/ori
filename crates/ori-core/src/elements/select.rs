@@ -31,8 +31,6 @@ impl Element for Select {
     }
 
     fn event(&self, _state: &mut Self::State, cx: &mut EventContext, event: &Event) {
-        cx.state.active = self.selected;
-
         self.children.event(cx, event);
 
         if event.is_handled() {
@@ -56,6 +54,8 @@ impl Element for Select {
         cx: &mut LayoutContext,
         space: AvailableSpace,
     ) -> Vec2 {
+        cx.state.active = self.selected;
+
         let flex = FlexLayout::from_style(cx);
         self.children.flex_layout(cx, space, flex)
     }

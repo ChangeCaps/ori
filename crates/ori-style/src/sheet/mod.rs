@@ -40,7 +40,7 @@ impl Display for StyleLoadError {
 /// Includes a style sheet from a file.
 ///
 /// This macro will load the style sheet from the given path if it exists, otherwise it will
-/// include the style sheet as a string literal.
+/// include the style sheet as a string literal. The path is relative to the `CARGO_MANIFEST_DIR`.
 ///
 /// Returns a [`LoadedStyleKind`].
 #[macro_export]

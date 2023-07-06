@@ -82,7 +82,9 @@ impl Element for Text {
         let glyphs = cx.fonts.layout_glyphs(&section);
         *state = glyphs;
 
-        state.as_ref().map_or(Vec2::ZERO, |glyphs| glyphs.size())
+        let text_size = state.as_ref().map_or(Vec2::ZERO, |glyphs| glyphs.size());
+
+        space.constrain(text_size)
     }
 
     fn draw(&self, state: &mut Self::State, cx: &mut DrawContext) {

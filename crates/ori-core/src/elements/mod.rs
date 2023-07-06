@@ -10,6 +10,7 @@ mod radio;
 mod scroll;
 mod select;
 mod slider;
+mod spacer;
 mod text;
 mod text_input;
 
@@ -25,5 +26,6 @@ pub use radio::*;
 pub use scroll::*;
 pub use select::*;
 pub use slider::*;
+pub use spacer::*;
 pub use text::*;
 pub use text_input::*;

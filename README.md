@@ -7,8 +7,8 @@ Ori is a reactive ui framework for creating native applications for rust.
 ```rust
 use ori::prelude::*;
 
-// ui is a function that takes a Scope returns a Node
-fn ui(cx: Scope) -> Node {
+// ui is a function that takes a Scope returns a View
+fn ui(cx: Scope) -> View {
     // create a signal that will hold the state of the counter
     let counter = cx.signal(0);
 

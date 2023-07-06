@@ -65,6 +65,8 @@ fn ui(cx: Scope) -> View {
                     <Checkbox checked=popup_window.get().is_some() on:click=toggle_popup />
                 </Div>
 
+                <HSpacer/>
+
                 <ComboBox title=combovalue.get()>
                     <Select selected=combovalue.get() == "Item 1" on:click=move |_| combovalue.set("Item 1")>
                         "Item 1"
@@ -91,7 +93,8 @@ fn ui(cx: Scope) -> View {
             </Scroll>
             <Div class="column">
                 <Knob bind:value=knob_value max=2.0 />
-                <Text style:text-align=TextAlign::Center text=format!("{:.2}", knob_value.get()) />
+                <Text style:text-align=TextAlign::Center
+                    text=format!("{:.2}", knob_value.get()) />
             </Div>
             <Slider style:direction=Axis::Vertical style:height=Em(10.0) min=-1.0 bind:value=knob_value />
             <Div class="column radio">

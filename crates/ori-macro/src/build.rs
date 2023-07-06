@@ -45,7 +45,7 @@ impl Attrs {
 }
 
 pub fn derive_build(input: proc_macro::TokenStream) -> manyhow::Result<proc_macro::TokenStream> {
-    let input = syn::parse::<DeriveInput>(input.into())?;
+    let input = syn::parse::<DeriveInput>(input)?;
 
     let build = build(&input)?;
     let children = children(&input)?;
@@ -58,12 +58,18 @@ pub fn derive_build(input: proc_macro::TokenStream) -> manyhow::Result<proc_macr
     Ok(expanded.into())
 }
 
-fn data(input: &DeriveInput) -> manyhow::Result<(&DataStruct, &FieldsNamed)> {
+fn data(input: &DeriveInput) -> manyhow::Result<(&DataStruct, FieldsNamed)> {
     match input.data {
         Data::Struct(ref data) => match data.fields {
-            Fields::Named(ref fields) => Ok((data, fields)),
+            Fields::Named(ref fields) => Ok((data, fields.clone())),
             Fields::Unnamed(_) => bail!(input, "tuple structs are not supported"),
-            Fields::Unit => bail!(input, "unit structs are not supported"),
+            Fields::Unit => Ok((
+                data,
+                FieldsNamed {
+                    brace_token: Default::default(),
+                    named: Default::default(),
+                },
+            )),
         },
         Data::Enum(_) => bail!(input, "enum types are not supported"),
         Data::Union(_) => bail!(input, "union types are not supported"),
