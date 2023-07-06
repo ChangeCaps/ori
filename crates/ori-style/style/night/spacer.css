@@ -1,0 +1,23 @@
+hspacer {
+	background-color: #606060;
+
+	height: 1px;
+	width: 0px;
+
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
+
+	align-self: stretch;
+}
+
+vspacer {
+	background-color: #606060;
+
+	height: 0px;
+	width: 1px;
+
+	margin-left: 0.5em;
+	margin-right: 0.5em;
+
+	align-self: stretch;
+}
