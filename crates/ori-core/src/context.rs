@@ -18,7 +18,7 @@ use crate::{AvailableSpace, Margin, NodeState, Padding, RequestRedrawEvent, Wind
 /// A context for [`Element::event`](crate::Element::event).
 #[allow(missing_docs)]
 pub struct EventContext<'a> {
-    pub state: &'a mut NodeState,
+    pub node: &'a mut NodeState,
     pub renderer: &'a dyn Renderer,
     pub window: &'a mut Window,
     pub fonts: &'a mut Fonts,
@@ -32,7 +32,7 @@ pub struct EventContext<'a> {
 /// A context for [`Element::layout`](crate::Element::layout).
 #[allow(missing_docs)]
 pub struct LayoutContext<'a> {
-    pub state: &'a mut NodeState,
+    pub node: &'a mut NodeState,
     pub renderer: &'a dyn Renderer,
     pub window: &'a mut Window,
     pub fonts: &'a mut Fonts,
@@ -107,7 +107,7 @@ impl<'a, 'b> DrawLayer<'a, 'b> {
 
         layer.draw(|frame| {
             let mut child = DrawContext {
-                state: self.draw_context.state,
+                node: self.draw_context.node,
                 frame,
                 renderer: self.draw_context.renderer,
                 window: self.draw_context.window,
@@ -128,7 +128,7 @@ impl<'a, 'b> DrawLayer<'a, 'b> {
 /// A context for [`Element::draw`](crate::Element::draw).
 #[allow(missing_docs)]
 pub struct DrawContext<'a> {
-    pub state: &'a mut NodeState,
+    pub node: &'a mut NodeState,
     pub frame: &'a mut Frame,
     pub renderer: &'a dyn Renderer,
     pub window: &'a mut Window,
@@ -251,10 +251,10 @@ pub trait Context {
     fn style_cache_mut(&mut self) -> &mut StyleCache;
 
     /// Returns the [`NodeState`] of the current element.
-    fn state(&self) -> &NodeState;
+    fn node(&self) -> &NodeState;
 
     /// Returns the [`NodeState`] of the current element.
-    fn state_mut(&mut self) -> &mut NodeState;
+    fn node_mut(&mut self) -> &mut NodeState;
 
     /// Returns the [`Renderer`] of the application.
     fn renderer(&self) -> &dyn Renderer;
@@ -298,7 +298,7 @@ pub trait Context {
         key: &str,
     ) -> Option<(StyleAttribute, StyleSpec)> {
         // get inline style attribute
-        if let Some(attribute) = self.state().style.get_attribute(key) {
+        if let Some(attribute) = self.node().style.get_attribute(key) {
             return Some((attribute.clone(), StyleSpec::INLINE));
         }
 
@@ -336,7 +336,7 @@ pub trait Context {
         let transition = attribute.transition();
 
         Some((
-            self.state_mut().transition(key, value, transition),
+            self.node_mut().transition(key, value, transition),
             specificity,
         ))
     }
@@ -390,7 +390,7 @@ pub trait Context {
         let height = self.window().size.y as f32;
         let pixels = value.pixels(range, scale, width, height);
 
-        Some((self.state_mut()).transition(key, pixels, transition))
+        Some((self.node_mut()).transition(key, pixels, transition))
     }
 
     /// Gets the value of a style attribute in pixels and [`StyleSpec`] for the given `key`.
@@ -409,7 +409,7 @@ pub trait Context {
         let pixels = value.pixels(range, scale, width, height);
 
         Some((
-            (self.state_mut()).transition(key, pixels, transition),
+            (self.node_mut()).transition(key, pixels, transition),
             specificity,
         ))
     }
@@ -473,17 +473,17 @@ pub trait Context {
 
     /// Returns `true` if the element is active.
     fn active(&self) -> bool {
-        self.state().active
+        self.node().active
     }
 
     /// Returns `true` if the element is hovered.
     fn hovered(&self) -> bool {
-        self.state().hovered
+        self.node().hovered
     }
 
     /// Returns `true` if the element is focused.
     fn focused(&self) -> bool {
-        self.state().focused
+        self.node().focused
     }
 
     /// Focuses the element, this will also request a redraw.
@@ -492,7 +492,7 @@ pub trait Context {
             return;
         }
 
-        self.state_mut().focused = true;
+        self.node_mut().focused = true;
         self.request_redraw();
     }
 
@@ -502,7 +502,7 @@ pub trait Context {
             return;
         }
 
-        self.state_mut().focused = false;
+        self.node_mut().focused = false;
         self.request_redraw();
     }
 
@@ -512,7 +512,7 @@ pub trait Context {
             return;
         }
 
-        self.state_mut().hovered = true;
+        self.node_mut().hovered = true;
         self.request_redraw();
     }
 
@@ -522,7 +522,7 @@ pub trait Context {
             return;
         }
 
-        self.state_mut().hovered = false;
+        self.node_mut().hovered = false;
         self.request_redraw();
     }
 
@@ -532,7 +532,7 @@ pub trait Context {
             return;
         }
 
-        self.state_mut().active = true;
+        self.node_mut().active = true;
         self.request_redraw();
     }
 
@@ -542,33 +542,33 @@ pub trait Context {
             return;
         }
 
-        self.state_mut().active = false;
+        self.node_mut().active = false;
         self.request_redraw();
     }
 
     /// Returns the local rect of the element.
     fn local_rect(&self) -> Rect {
-        self.state().local_rect
+        self.node().local_rect
     }
 
     /// Returns the global rect of the element.
     fn rect(&self) -> Rect {
-        self.state().global_rect
+        self.node().global_rect
     }
 
     /// Returns the margin of the element.
     fn margin(&self) -> Margin {
-        self.state().margin
+        self.node().margin
     }
 
     /// Returns the padding of the element.
     fn padding(&self) -> Padding {
-        self.state().padding
+        self.node().padding
     }
 
     /// Returns the size of the element.
     fn size(&self) -> Vec2 {
-        self.state().local_rect.size()
+        self.node().local_rect.size()
     }
 
     /// Requests a redraw.
@@ -586,7 +586,7 @@ pub trait Context {
     #[track_caller]
     fn request_layout(&mut self) {
         tracing::trace!("request layout");
-        self.state_mut().needs_layout = true;
+        self.node_mut().needs_layout = true;
     }
 
     /// Sends an event to the event sink.
@@ -596,7 +596,7 @@ pub trait Context {
 
     /// Returns the time in seconds since the last frame.
     fn delta_time(&self) -> f32 {
-        self.state().delta_time()
+        self.node().delta_time()
     }
 }
 
@@ -615,12 +615,12 @@ macro_rules! context {
                 self.style_cache
             }
 
-            fn state(&self) -> &NodeState {
-                self.state
+            fn node(&self) -> &NodeState {
+                self.node
             }
 
-            fn state_mut(&mut self) -> &mut NodeState {
-                self.state
+            fn node_mut(&mut self) -> &mut NodeState {
+                self.node
             }
 
             fn renderer(&self) -> &dyn Renderer {

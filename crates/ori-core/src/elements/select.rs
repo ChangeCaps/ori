@@ -54,7 +54,7 @@ impl Element for Select {
         cx: &mut LayoutContext,
         space: AvailableSpace,
     ) -> Vec2 {
-        cx.state.active = self.selected;
+        cx.node.active = self.selected;
 
         let flex = FlexLayout::from_style(cx);
         self.children.flex_layout(cx, space, flex)

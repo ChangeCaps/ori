@@ -45,7 +45,7 @@ impl Element for ComboBox {
     }
 
     fn event(&self, _state: &mut Self::State, cx: &mut EventContext, event: &Event) {
-        cx.state.active = self.open.get();
+        cx.node.active = self.open.get();
 
         self.title.event(cx, event);
 

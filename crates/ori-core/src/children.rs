@@ -72,7 +72,7 @@ impl FlexLayout {
 
     /// Gets the flex layout from the style of an element.
     pub fn from_style(cx: &mut LayoutContext) -> Self {
-        let padding = cx.state.padding;
+        let padding = cx.node.padding;
         let axis = cx.style::<Axis>("direction");
         let justify_content = cx.style("justify-content");
         let align_items = cx.style("align-items");

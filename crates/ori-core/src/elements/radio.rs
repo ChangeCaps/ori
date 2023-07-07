@@ -39,7 +39,7 @@ impl Element for Radio {
     }
 
     fn event(&self, _: &mut Self::State, cx: &mut EventContext, event: &Event) {
-        cx.state.active = self.selected;
+        cx.node.active = self.selected;
 
         if event.is_handled() || !cx.hovered() {
             return;

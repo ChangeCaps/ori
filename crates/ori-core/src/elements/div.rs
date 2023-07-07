@@ -59,7 +59,7 @@ impl Div {
                 cx.activate();
                 self.on_click.emit(event);
             }
-        } else if event.is_release() && cx.state.active {
+        } else if event.is_release() && cx.node.active {
             cx.deactivate();
 
             if !self.on_release.is_empty() {

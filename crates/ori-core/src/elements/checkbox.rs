@@ -51,7 +51,7 @@ impl Element for Checkbox {
     }
 
     fn event(&self, _: &mut Self::State, cx: &mut EventContext, event: &Event) {
-        cx.state.active = self.checked.get();
+        cx.node.active = self.checked.get();
 
         if event.is_handled() || !cx.hovered() {
             return;
@@ -72,7 +72,7 @@ impl Element for Checkbox {
     }
 
     fn draw(&self, _: &mut Self::State, cx: &mut DrawContext) {
-        cx.state.active = self.checked.get();
+        cx.node.active = self.checked.get();
 
         cx.draw_quad();
 

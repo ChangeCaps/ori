@@ -240,7 +240,7 @@ impl Node {
         f: impl FnOnce(&mut NodeState, &mut C) -> O,
     ) -> O {
         let element_state = &mut self.node_state();
-        element_state.propagate_up(cx.state_mut());
+        element_state.propagate_up(cx.node_mut());
 
         let _span = trace_span!("element", selector = %element_state.selector()).entered();
 
@@ -254,7 +254,7 @@ impl Node {
 
         cx.style_tree_mut().pop();
 
-        cx.state_mut().propagate_down(element_state);
+        cx.node_mut().propagate_down(element_state);
 
         res
     }
@@ -271,7 +271,7 @@ impl Node {
         }
 
         let mut cx = EventContext {
-            state,
+            node: state,
             renderer: cx.renderer,
             window: cx.window,
             fonts: cx.fonts,
@@ -315,7 +315,7 @@ impl Node {
         state.needs_layout = false;
 
         let mut cx = LayoutContext {
-            state,
+            node: state,
             renderer: cx.renderer,
             window: cx.window,
             fonts: cx.fonts,
@@ -328,10 +328,10 @@ impl Node {
             space,
         };
 
-        cx.state.margin = Margin::from_style(&mut cx, space);
-        cx.state.padding = Padding::from_style(&mut cx, space);
+        cx.node.margin = Margin::from_style(&mut cx, space);
+        cx.node.padding = Padding::from_style(&mut cx, space);
 
-        let space = space.apply_margin(cx.state.margin);
+        let space = space.apply_margin(cx.node.margin);
         let space = cx.style_constraints(space);
         cx.space = space;
 
@@ -360,7 +360,7 @@ impl Node {
     fn draw_inner(&self, state: &mut NodeState, cx: &mut DrawContext) {
         let parent_size = cx.size();
         let mut cx = DrawContext {
-            state,
+            node: state,
             frame: cx.frame,
             renderer: cx.renderer,
             window: cx.window,
@@ -375,12 +375,12 @@ impl Node {
 
         self.element().draw(self.element_state().as_mut(), &mut cx);
 
-        if cx.state.update_transitions() {
+        if cx.node.update_transitions() {
             cx.request_redraw();
             cx.request_layout();
         }
 
-        cx.state.draw();
+        cx.node.draw();
 
         Self::update_cursor(&mut cx);
     }

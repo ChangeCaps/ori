@@ -36,7 +36,7 @@ impl Node {
 
         let mut style_tree = StyleTree::new(element_state.selector());
         let mut cx = EventContext {
-            state: element_state,
+            node: element_state,
             renderer,
             window,
             fonts,
@@ -73,7 +73,7 @@ impl Node {
 
         let mut style_tree = StyleTree::new(element_state.selector());
         let mut cx = LayoutContext {
-            state: element_state,
+            node: element_state,
             renderer,
             window,
             fonts,
@@ -86,8 +86,8 @@ impl Node {
             space,
         };
 
-        cx.state.margin = Margin::from_style(&mut cx, space);
-        cx.state.padding = Padding::from_style(&mut cx, space);
+        cx.node.margin = Margin::from_style(&mut cx, space);
+        cx.node.padding = Padding::from_style(&mut cx, space);
 
         let space = cx.style_constraints(space);
         cx.space = space;
@@ -119,7 +119,7 @@ impl Node {
         let parent_size = window.size.as_vec2();
         let mut style_tree = StyleTree::new(element_state.selector());
         let mut cx = DrawContext {
-            state: element_state,
+            node: element_state,
             frame,
             renderer,
             window,
@@ -134,6 +134,6 @@ impl Node {
 
         self.element().draw(self.element_state().as_mut(), &mut cx);
 
-        cx.state.draw();
+        cx.node.draw();
     }
 }
