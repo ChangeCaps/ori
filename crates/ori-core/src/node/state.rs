@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use ori_graphics::Rect;
 use ori_style::{
-    FromStyleAttribute, Style, StyleAttribute, StyleCacheHash, StyleElementSelector, StyleSpec,
+    FromStyleAttribute, Style, StyleAttribute, StyleCacheKey, StyleElementSelector, StyleSpec,
     StyleTags, StyleTransition, StyleTransitionStates,
 };
 use uuid::Uuid;
@@ -169,7 +169,7 @@ impl NodeState {
 
         let mut style_tree = cx.style_tree().clone();
         style_tree.push(self.selector());
-        let hash = StyleCacheHash::new(&style_tree);
+        let hash = StyleCacheKey::new(&style_tree);
 
         if let Some(result) = cx.style_cache().get(hash, key) {
             return result;

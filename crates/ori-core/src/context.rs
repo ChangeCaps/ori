@@ -9,7 +9,7 @@ use ori_graphics::{
 };
 use ori_reactive::EventSink;
 use ori_style::{
-    FromStyleAttribute, Length, StyleAttribute, StyleCache, StyleCacheHash, StyleSpec, StyleTree,
+    FromStyleAttribute, Length, StyleAttribute, StyleCache, StyleCacheKey, StyleSpec, StyleTree,
     Stylesheet,
 };
 
@@ -302,7 +302,7 @@ pub trait Context {
             return Some((attribute.clone(), StyleSpec::INLINE));
         }
 
-        let hash = StyleCacheHash::new(self.style_tree());
+        let hash = StyleCacheKey::new(self.style_tree());
 
         // try to get cached attribute
         if let Some(result) = self.style_cache().get(hash, key) {
