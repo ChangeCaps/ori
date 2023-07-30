@@ -31,36 +31,55 @@ impl<R: Renderer> WindowUi<R> {
         if self.window.title != window.title {
             self.window.title = window.title.clone();
             window_backend.set_title(window.id(), window.title.clone());
+            tracing::debug!("Window {} title set to '{}'", window.id(), window.title);
         }
 
         if self.window.resizable != window.resizable {
             self.window.resizable = window.resizable;
             window_backend.set_resizable(window.id(), window.resizable);
+            tracing::debug!(
+                "Window {} resizable set to '{}'",
+                window.id(),
+                window.resizable
+            );
         }
 
         if self.window.clear_color != window.clear_color {
             self.window.clear_color = window.clear_color;
             window_backend.set_transparent(window.id(), window.clear_color.is_translucent());
+            tracing::debug!(
+                "Window {} clear color set to {}",
+                window.id(),
+                window.clear_color.to_hex(),
+            );
         }
 
         if self.window.icon != window.icon {
             self.window.icon = window.icon.clone();
             window_backend.set_icon(window.id(), window.icon.clone());
+            tracing::debug!("Window {} icon set", window.id());
         }
 
         if self.window.size != window.size {
             self.window.size = window.size;
             window_backend.set_size(window.id(), window.size);
+            tracing::debug!("Window {} size set to {}", window.id(), window.size);
         }
 
         if self.window.visible != window.visible {
             self.window.visible = window.visible;
             window_backend.set_visible(window.id(), window.visible);
+            tracing::debug!(
+                "Window {} visibility set to {}",
+                window.id(),
+                window.visible
+            );
         }
 
         if self.window.cursor != window.cursor {
             self.window.cursor = window.cursor;
             window_backend.set_cursor(window.id(), window.cursor);
+            tracing::debug!("Window {} cursor set to {:?}", window.id(), window.cursor);
         }
 
         self.scope.window().set(window.clone());
@@ -226,7 +245,7 @@ where
                 self.force_layout();
             }
             Err(err) => {
-                eprintln!("Failed to reload styles: {}", err);
+                tracing::error!("Failed to reload styles: {}", err);
             }
             _ => {}
         }
@@ -396,10 +415,10 @@ where
         if let Some(event) = event.get::<OpenWindow>() {
             match self.create_window(target, event.window(), event.take_ui()) {
                 Ok(_) => {
-                    tracing::info!("Window opened");
+                    tracing::debug!("Created window with id {}", event.window().id());
                 }
                 Err(err) => {
-                    tracing::error!("Failed to create window: {:?}", err);
+                    tracing::error!("Failed to create window {}: {:?}", event.window().id(), err);
                 }
             }
         }

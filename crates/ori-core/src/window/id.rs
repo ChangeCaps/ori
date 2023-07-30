@@ -1,4 +1,5 @@
 use std::{
+    fmt::Display,
     hash::Hash,
     sync::atomic::{AtomicU64, Ordering},
 };
@@ -26,5 +27,11 @@ impl WindowId {
         Self {
             id: NEXT_ID.fetch_add(1, Ordering::SeqCst),
         }
+    }
+}
+
+impl Display for WindowId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:#x}", self.id)
     }
 }
