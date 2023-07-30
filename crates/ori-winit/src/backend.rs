@@ -7,7 +7,7 @@ use raw_window_handle::{
     HasRawDisplayHandle, HasRawWindowHandle, RawDisplayHandle, RawWindowHandle,
 };
 use winit::{
-    dpi::LogicalSize,
+    dpi::PhysicalSize,
     event_loop::{EventLoopProxy, EventLoopWindowTarget},
     window::{Icon, Window as WinitWindow, WindowBuilder, WindowId as WinitWindowId},
 };
@@ -75,7 +75,10 @@ impl WindowBackend for WinitBackend {
             .with_title(window.title.clone())
             .with_resizable(window.resizable)
             .with_window_icon(icon)
-            .with_inner_size(LogicalSize::new(window.size.x as f64, window.size.y as f64))
+            .with_inner_size(PhysicalSize::new(
+                window.size.x as f64,
+                window.size.y as f64,
+            ))
             .with_visible(window.visible)
             .with_transparent(window.clear_color.is_translucent())
             .build(target)?;
@@ -147,7 +150,7 @@ impl WindowBackend for WinitBackend {
     }
 
     fn set_size(&mut self, id: WindowId, size: UVec2) {
-        self.windows[&id].set_inner_size(LogicalSize::new(size.x as f64, size.y as f64));
+        self.windows[&id].set_inner_size(PhysicalSize::new(size.x as f64, size.y as f64));
     }
 
     fn get_visible(&self, id: WindowId) -> bool {
