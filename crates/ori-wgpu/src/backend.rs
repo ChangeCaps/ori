@@ -29,6 +29,12 @@ pub enum WgpuBackendError {
     IncompatibleSurface,
 }
 
+impl From<RequestDeviceError> for WgpuBackendError {
+    fn from(error: RequestDeviceError) -> Self {
+        Self::RequestDevice(error)
+    }
+}
+
 struct WgpuBackendState {
     adapter: Adapter,
     device: Arc<Device>,
@@ -42,24 +48,24 @@ pub struct WgpuBackend {
 }
 
 impl WgpuBackend {
-    async fn crate_state_async(
+    async fn create_state_async(
         &self,
         surface: &Surface,
     ) -> Result<WgpuBackendState, WgpuBackendError> {
+        let options = RequestAdapterOptions {
+            power_preference: Default::default(),
+            compatible_surface: Some(surface),
+            force_fallback_adapter: false,
+        };
+
+        // FIXME: this is ugly
         let adapter = self
             .instance
-            .request_adapter(&RequestAdapterOptions {
-                power_preference: Default::default(),
-                compatible_surface: Some(surface),
-                force_fallback_adapter: false,
-            })
+            .request_adapter(&options)
             .await
-            .unwrap();
+            .ok_or(WgpuBackendError::NoAdapter)?;
 
-        let (device, queue) = adapter
-            .request_device(&Default::default(), None)
-            .await
-            .unwrap();
+        let (device, queue) = adapter.request_device(&Default::default(), None).await?;
 
         Ok(WgpuBackendState {
             adapter,
@@ -68,8 +74,8 @@ impl WgpuBackend {
         })
     }
 
-    fn crate_state(&self, surface: &Surface) -> Result<WgpuBackendState, WgpuBackendError> {
-        pollster::block_on(self.crate_state_async(surface))
+    fn create_state(&self, surface: &Surface) -> Result<WgpuBackendState, WgpuBackendError> {
+        pollster::block_on(self.create_state_async(surface))
     }
 
     fn state(&mut self, surface: &Surface) -> Result<&WgpuBackendState, WgpuBackendError> {
@@ -77,7 +83,7 @@ impl WgpuBackend {
             return Ok(state);
         }
 
-        self.state = Some(self.crate_state(surface)?);
+        self.state = Some(self.create_state(surface)?);
         Ok(self.state.as_ref().unwrap())
     }
 

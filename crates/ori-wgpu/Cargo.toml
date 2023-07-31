@@ -21,7 +21,7 @@ ori-style = { path = "../ori-style", version = "0.1.0-alpha.0", optional = true 
 bytemuck = { version = "1.13", features = ["derive"] }
 pollster = "0.3"
 raw-window-handle = "0.5"
-wgpu = "0.16"
+wgpu = "0.17"
 
 [features]
 default = []
