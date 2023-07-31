@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use ori_reactive::OwnedSignal;
+use ori_reactive::{OwnedSignal, Scope};
 
 use crate::{Element, Node};
 
 #[derive(Clone, Debug)]
 enum ViewKind {
-    Element(Node),
+    Node(Node),
     Fragment(Arc<[View]>),
     Dynamic(OwnedSignal<View>),
 }
@@ -45,8 +45,8 @@ impl View {
     }
 
     /// Creates a new [`View`] from an [`Node`].
-    pub fn node(element: Node) -> Self {
-        Self::from_kind(ViewKind::Element(element))
+    pub fn node(node: Node) -> Self {
+        Self::from_kind(ViewKind::Node(node))
     }
 
     /// Creates a new [`View`] fragment from a list of [`View`]s.
@@ -67,7 +67,7 @@ impl View {
     /// Returns the number of elements in the [`View`].
     pub fn len(&self) -> usize {
         match &self.kind {
-            ViewKind::Element(_) => 1,
+            ViewKind::Node(_) => 1,
             ViewKind::Fragment(fragment) => fragment.iter().map(View::len).sum(),
             ViewKind::Dynamic(signal) => signal.get().len(),
         }
@@ -81,7 +81,7 @@ impl View {
     /// If `self` is a node, returns a reference to the [`Node`].
     pub fn get_node(&self) -> Option<&Node> {
         match &self.kind {
-            ViewKind::Element(element) => Some(element),
+            ViewKind::Node(element) => Some(element),
             _ => None,
         }
     }
@@ -89,7 +89,7 @@ impl View {
     /// Tries to convert the [`View`] into a [`Node`].
     pub fn into_node(self) -> Option<Node> {
         match self.kind {
-            ViewKind::Element(element) => Some(element),
+            ViewKind::Node(element) => Some(element),
             _ => None,
         }
     }
@@ -114,7 +114,7 @@ impl View {
     /// [`Vec`]. Dynamic [`View`]s are fetched in a reactive manner.
     pub fn flatten(&self) -> Vec<Node> {
         match &self.kind {
-            ViewKind::Element(element) => vec![element.clone()],
+            ViewKind::Node(element) => vec![element.clone()],
             ViewKind::Fragment(fragment) => fragment.iter().flat_map(View::flatten).collect(),
             ViewKind::Dynamic(signal) => signal.get().flatten(),
         }
@@ -123,16 +123,16 @@ impl View {
     /// Calls the given `visitor` on all elements in the [`View`], including nested elements.
     /// Dynamic [`View`]s are fetched in a reactive manner.
     pub fn visit(&self, mut visitor: impl FnMut(&Node)) {
-        self.visit_inner(&mut visitor);
+        self.visit_recurse(&mut visitor);
     }
 
-    fn visit_inner(&self, visitor: &mut impl FnMut(&Node)) {
+    fn visit_recurse(&self, visitor: &mut impl FnMut(&Node)) {
         match &self.kind {
-            ViewKind::Element(element) => visitor(element),
+            ViewKind::Node(element) => visitor(element),
             ViewKind::Fragment(fragment) => {
-                fragment.iter().for_each(|view| view.visit_inner(visitor))
+                fragment.iter().for_each(|view| view.visit_recurse(visitor))
             }
-            ViewKind::Dynamic(signal) => signal.get().visit_inner(visitor),
+            ViewKind::Dynamic(signal) => signal.get().visit_recurse(visitor),
         }
     }
 }
@@ -167,5 +167,16 @@ impl<T: Into<View>> From<Option<T>> for View {
             Some(value) => value.into(),
             None => Self::empty(),
         }
+    }
+}
+
+pub trait ScopeViewExt {
+    fn dynamic(self, f: impl FnMut(Scope) -> Node + Send + 'static) -> View;
+}
+
+impl ScopeViewExt for Scope {
+    fn dynamic(self, mut f: impl FnMut(Scope) -> Node + Send + 'static) -> View {
+        let view = self.owned_memo_scoped(move |cx| View::node(f(cx)));
+        View::dynamic(view)
     }
 }

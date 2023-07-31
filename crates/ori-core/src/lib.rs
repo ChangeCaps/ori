@@ -42,7 +42,7 @@ pub mod prelude {
     };
     pub use crate::layout::{AlignItem, AvailableSpace, Axis, JustifyContent, Margin, Padding};
     pub use crate::node::{Node, NodeRef, ScopeNodeRefExt};
-    pub use crate::view::View;
+    pub use crate::view::{ScopeViewExt, View};
     pub use crate::window::{ScopeWindowExt, Window, WindowId};
 
     pub use glam::*;
