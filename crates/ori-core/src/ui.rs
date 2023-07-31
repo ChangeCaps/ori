@@ -175,9 +175,19 @@ where
         window: &Window,
         mut ui: impl FnMut(Scope) -> View + Send + 'static,
     ) -> Result<(), WindowError<W, R>> {
-        self.window_backend
-            .create_window(target, window)
-            .map_err(WindowError::WindowBackend)?;
+        {
+            // here we clone the window and set it to invisible
+            // the visibility will be set once the window and renderer is created
+            // this is to ensure that the window is only show when rendering is ready
+            //
+            // see https://docs.rs/winit/0.28.6/winit/#drawing-on-the-window
+            let mut window = window.clone();
+            window.visible = false;
+
+            self.window_backend
+                .create_window(target, &window)
+                .map_err(WindowError::WindowBackend)?;
+        }
 
         let surface = self
             .window_backend
@@ -215,7 +225,11 @@ where
             pointers: HashMap::new(),
         };
 
+        // now that everything is ready, we can show the window
+        self.window_backend.set_visible(window.id(), window.visible);
         self.window_ui.insert(window.id(), window_ui);
+
+        tracing::debug!("Window {} created", window.id());
 
         Ok(())
     }
