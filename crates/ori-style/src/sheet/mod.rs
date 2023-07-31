@@ -107,7 +107,8 @@ impl Stylesheet {
 
         if attr.is_inherit() {
             let parent = tree.parent()?;
-            return self.query_cached(cache, cache_key, &parent, key);
+            let (attr, _) = self.query_cached(cache, cache_key, &parent, key)?;
+            return Some((attr, spec));
         }
 
         Some((attr, spec))
