@@ -41,8 +41,8 @@ pub struct LayoutContext<'a> {
     pub style_cache: &'a mut StyleCache,
     pub event_sink: &'a EventSink,
     pub image_cache: &'a mut ImageCache,
-    pub parent_space: AvailableSpace,
     pub space: AvailableSpace,
+    pub parent_space: AvailableSpace,
 }
 
 impl<'a> LayoutContext<'a> {
