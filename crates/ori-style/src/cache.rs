@@ -4,7 +4,7 @@ use std::{
     mem::MaybeUninit,
 };
 
-use crate::{StyleAttribute, StyleSpec, StyleTree};
+use crate::{StyleAttribute, StyleSpec};
 
 /// A hash of a [`StyleTree`].
 ///
@@ -16,17 +16,8 @@ pub struct StyleCacheKey {
 }
 
 impl StyleCacheKey {
-    /// Hashes `tree` with [`seahash`], and creates a new [`StyleCacheKey`].
-    ///
-    /// *Note* this is not a cheap operation, and calls to this function should be
-    /// minimized.
-    pub fn new(tree: &StyleTree) -> Self {
-        let mut hasher = seahash::SeaHasher::default();
-        Hash::hash(&tree, &mut hasher);
-
-        Self {
-            hash: hasher.finish(),
-        }
+    pub const fn from_hash(hash: u64) -> Self {
+        Self { hash }
     }
 }
 
@@ -85,12 +76,18 @@ impl BuildHasher for StyleCacheHasher {
 }
 
 /// An entry in the style cache.
-pub type StyleCacheEntry = Option<(StyleAttribute, StyleSpec)>;
+#[derive(Clone, Debug)]
+pub struct StyleCacheEntry {
+    /// The location of the attribute.
+    pub attribute: StyleAttribute,
+    /// The specifity of the attribute.
+    pub specificity: StyleSpec,
+}
 
 /// A cache of style attributes.
 #[derive(Debug, Default)]
 pub struct StyleCache {
-    attributes: HashMap<u64, StyleCacheEntry, StyleCacheHasher>,
+    attributes: HashMap<u64, Option<StyleCacheEntry>, StyleCacheHasher>,
 }
 
 impl Clone for StyleCache {
@@ -122,28 +119,22 @@ impl StyleCache {
     }
 
     /// Insert a style attribute into the cache.
-    pub fn insert(&mut self, hash: StyleCacheKey, attribute: StyleAttribute, spec: StyleSpec) {
-        let hash = Self::hash(hash, attribute.key());
+    pub fn insert(&mut self, cache_key: StyleCacheKey, key: &str, entry: Option<StyleCacheEntry>) {
+        let hash = Self::hash(cache_key, key);
 
         #[cfg(all(debug_assertions, feature = "tracing"))]
         if self.attributes.contains_key(&hash) {
             tracing::warn!(
                 "Overwriting style cache entry for {}, this might be a hash collision",
-                attribute.key()
+                key
             );
         }
 
-        self.attributes.insert(hash, Some((attribute, spec)));
-    }
-
-    /// Insert None into the cache.
-    pub fn insert_none(&mut self, hash: StyleCacheKey, key: &str) {
-        let hash = Self::hash(hash, key);
-        self.attributes.insert(hash, None);
+        self.attributes.insert(hash, entry);
     }
 
     /// Get a style attribute from the cache.
-    pub fn get(&self, hash: StyleCacheKey, key: &str) -> Option<StyleCacheEntry> {
+    pub fn get(&self, hash: StyleCacheKey, key: &str) -> Option<Option<StyleCacheEntry>> {
         let hash = Self::hash(hash, key);
         self.attributes.get(&hash).cloned()
     }

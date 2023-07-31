@@ -28,7 +28,7 @@ struct StyleAttributeInner {
     transition: Option<StyleTransition>,
 }
 
-/// A [`Style`](super::Style) attribute.
+/// A [`Style`](crate::Style) attribute.
 ///
 /// An attribute is a name and a value.
 #[derive(Clone, Debug, PartialEq)]
@@ -61,6 +61,11 @@ impl StyleAttribute {
     /// Get the value of the attribute.
     pub fn value(&self) -> &StyleAttributeValue {
         &self.inner.value
+    }
+
+    /// Check if the attribute is inherit.
+    pub fn is_inherit(&self) -> bool {
+        matches!(self.inner.value, StyleAttributeValue::Inherit)
     }
 
     /// Get the transition of the attribute.

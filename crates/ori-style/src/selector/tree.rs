@@ -1,21 +1,24 @@
-use std::{fmt::Display, mem};
+use std::{
+    hash::{Hash, Hasher},
+    mem,
+};
 
-use crate::StyleElementSelector;
+use crate::{Style, StyleCacheKey};
 
 /// A style selector tree.
 ///
 /// This is used to match a style selector against an element.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug)]
 pub struct StyleTree {
     /// The ancestors of the selector.
-    pub ancestors: Vec<StyleElementSelector>,
+    pub ancestors: Vec<Style>,
     /// The top level element selector.
-    pub element: StyleElementSelector,
+    pub element: Style,
 }
 
 impl StyleTree {
     /// Creates a new [`StyleTree`].
-    pub fn new(element: StyleElementSelector) -> Self {
+    pub fn new(element: Style) -> Self {
         Self {
             ancestors: Vec::new(),
             element,
@@ -23,13 +26,13 @@ impl StyleTree {
     }
 
     /// Pushes an ancestor to the tree.
-    pub fn push(&mut self, ancestor: StyleElementSelector) {
-        let ancestor = mem::replace(&mut self.element, ancestor);
+    pub fn push(&mut self, element: Style) {
+        let ancestor = mem::replace(&mut self.element, element);
         self.ancestors.push(ancestor);
     }
 
     /// Pops an ancestor from the tree.
-    pub fn pop(&mut self) -> Option<StyleElementSelector> {
+    pub fn pop(&mut self) -> Option<Style> {
         let ancestor = self.ancestors.pop()?;
         Some(mem::replace(&mut self.element, ancestor))
     }
@@ -40,14 +43,23 @@ impl StyleTree {
         tree.pop()?;
         Some(tree)
     }
-}
 
-impl Display for StyleTree {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn hash_style(style: &Style, hasher: &mut seahash::SeaHasher) {
+        Hash::hash(&style.element, hasher);
+        Hash::hash(&style.classes, hasher);
+        Hash::hash(&style.tags, hasher);
+    }
+
+    /// Returns the cache key for the style tree.
+    pub fn cache_key(&self) -> StyleCacheKey {
+        let mut hasher = seahash::SeaHasher::default();
+
         for ancestor in &self.ancestors {
-            write!(f, "{} ", ancestor)?;
+            Self::hash_style(ancestor, &mut hasher);
         }
 
-        write!(f, "{}", self.element)
+        Self::hash_style(&self.element, &mut hasher);
+
+        StyleCacheKey::from_hash(hasher.finish())
     }
 }

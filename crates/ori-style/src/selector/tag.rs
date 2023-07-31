@@ -31,6 +31,11 @@ impl StyleTags {
         self.tags.is_empty()
     }
 
+    /// Clears the list.
+    pub fn clear(&mut self) {
+        self.tags.clear();
+    }
+
     /// Adds a tag to the list.
     pub fn push(&mut self, element: impl Into<StyleTag>) {
         self.tags.push(element.into());

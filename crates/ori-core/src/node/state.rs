@@ -2,8 +2,7 @@ use std::time::Instant;
 
 use ori_graphics::Rect;
 use ori_style::{
-    FromStyleAttribute, Style, StyleAttribute, StyleCacheKey, StyleElementSelector, StyleSpec,
-    StyleTags, StyleTransition, StyleTransitionStates,
+    FromStyleAttribute, Style, StyleAttribute, StyleSpec, StyleTransition, StyleTransitionStates,
 };
 use uuid::Uuid;
 
@@ -114,31 +113,20 @@ impl NodeState {
         self.needs_layout |= child.needs_layout;
     }
 
-    /// Returns the [`StyleStates´].
-    pub fn style_tags(&self) -> StyleTags {
-        let mut states = StyleTags::new();
+    /// Updates the style tags.
+    pub fn update_style_tags(&mut self) {
+        self.style.tags.clear();
 
         if self.active {
-            states.push("active");
+            self.style.tags.push("active");
         }
 
         if self.focused {
-            states.push("focus");
+            self.style.tags.push("focus");
         }
 
         if self.hovered {
-            states.push("hover");
-        }
-
-        states
-    }
-
-    /// Returns the [`StyleElementSelector`] for the element.
-    pub fn selector(&self) -> StyleElementSelector {
-        StyleElementSelector {
-            element: self.style.element.map(Into::into),
-            classes: self.style.classes.clone(),
-            tags: self.style_tags(),
+            self.style.tags.push("hover");
         }
     }
 
@@ -148,54 +136,35 @@ impl NodeState {
     }
 
     /// Gets the style attribute for the given key.
-    pub fn get_style_attribyte(
+    pub fn get_style_attribute(
         &mut self,
         cx: &mut impl Context,
         key: &str,
     ) -> Option<StyleAttribute> {
-        self.get_style_attribute_specificity(cx, key)
+        self.query_style_attribute(cx, key)
             .map(|(attribute, _)| attribute)
     }
 
     /// Gets the style attribute and specificity for the given key.
-    pub fn get_style_attribute_specificity(
+    pub fn query_style_attribute(
         &mut self,
         cx: &mut impl Context,
         key: &str,
     ) -> Option<(StyleAttribute, StyleSpec)> {
-        if let Some(attribute) = self.style.attributes.get(key) {
-            return Some((attribute.clone(), StyleSpec::INLINE));
-        }
-
         let mut style_tree = cx.style_tree().clone();
-        style_tree.push(self.selector());
-        let hash = StyleCacheKey::new(&style_tree);
+        style_tree.push(self.style.clone());
 
-        if let Some(result) = cx.style_cache().get(hash, key) {
-            return result;
-        }
-
-        let stylesheet = cx.stylesheet();
-
-        match stylesheet.get_attribute_specificity(&style_tree, key) {
-            Some((attribute, specificity)) => {
-                (cx.style_cache_mut()).insert(hash, attribute.clone(), specificity);
-                Some((attribute, specificity))
-            }
-            None => {
-                cx.style_cache_mut().insert_none(hash, key);
-                None
-            }
-        }
+        let (sheet, cache) = cx.stylesheet_and_cache_mut();
+        sheet.query_cached(cache, None, &style_tree, key)
     }
 
     /// Gets the style attribute for the given key, and converts it to the given type.
-    pub fn get_style_specificity<T: FromStyleAttribute + 'static>(
+    pub fn query_style<T: FromStyleAttribute + 'static>(
         &mut self,
         cx: &mut impl Context,
         key: &str,
     ) -> Option<(T, StyleSpec)> {
-        let (attribute, specificity) = self.get_style_attribute_specificity(cx, key)?;
+        let (attribute, specificity) = self.query_style_attribute(cx, key)?;
         let value = T::from_attribute(attribute.value().clone())?;
         let transition = attribute.transition();
 
@@ -208,7 +177,7 @@ impl NodeState {
         cx: &mut impl Context,
         key: &str,
     ) -> Option<T> {
-        self.get_style_specificity(cx, key).map(|(value, _)| value)
+        self.query_style(cx, key).map(|(value, _)| value)
     }
 
     /// Gets the style attribute for the given key, and converts it to the given type.
@@ -230,7 +199,7 @@ impl NodeState {
         let mut result = None;
 
         for key in keys {
-            if let Some((v, s)) = self.get_style_specificity(cx, key) {
+            if let Some((v, s)) = self.query_style(cx, key) {
                 if specificity.is_none() || s > specificity.unwrap() {
                     specificity = Some(s);
                     result = Some(v);

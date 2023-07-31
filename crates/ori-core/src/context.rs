@@ -9,8 +9,7 @@ use ori_graphics::{
 };
 use ori_reactive::EventSink;
 use ori_style::{
-    FromStyleAttribute, Length, StyleAttribute, StyleCache, StyleCacheKey, StyleSpec, StyleTree,
-    Stylesheet,
+    FromStyleAttribute, Length, StyleAttribute, StyleCache, StyleSpec, StyleTree, Stylesheet,
 };
 
 use crate::{AvailableSpace, Margin, NodeState, Padding, RequestRedrawEvent, Window};
@@ -250,6 +249,11 @@ pub trait Context {
     /// Returns the [`StyleCache`] of the application.
     fn style_cache_mut(&mut self) -> &mut StyleCache;
 
+    fn stylesheet_and_cache_mut(&mut self) -> (&Stylesheet, &mut StyleCache);
+
+    /// Gets the [`StyleAttribute`] and [`StyleSpec`] for the given `key`.
+    fn query_style_attribute(&mut self, key: &str) -> Option<(StyleAttribute, StyleSpec)>;
+
     /// Returns the [`NodeState`] of the current element.
     fn node(&self) -> &NodeState;
 
@@ -288,50 +292,16 @@ pub trait Context {
 
     /// Gets the [`StyleAttribute`] for the given `key`.
     fn get_style_attribute(&mut self, key: &str) -> Option<StyleAttribute> {
-        self.get_style_attribute_specificity(key)
+        self.query_style_attribute(key)
             .map(|(attribute, _)| attribute)
     }
 
-    /// Gets the [`StyleAttribute`] and [`StyleSpec`] for the given `key`.
-    fn get_style_attribute_specificity(
-        &mut self,
-        key: &str,
-    ) -> Option<(StyleAttribute, StyleSpec)> {
-        // get inline style attribute
-        if let Some(attribute) = self.node().style.get_attribute(key) {
-            return Some((attribute.clone(), StyleSpec::INLINE));
-        }
-
-        let hash = StyleCacheKey::new(self.style_tree());
-
-        // try to get cached attribute
-        if let Some(result) = self.style_cache().get(hash, key) {
-            return result;
-        }
-
-        let stylesheet = self.stylesheet();
-
-        // get attribute from stylesheet
-        match stylesheet.get_attribute_specificity(self.style_tree(), key) {
-            Some((attribute, specificity)) => {
-                // cache result
-                (self.style_cache_mut()).insert(hash, attribute.clone(), specificity);
-                Some((attribute, specificity))
-            }
-            None => {
-                // cache result
-                self.style_cache_mut().insert_none(hash, key);
-                None
-            }
-        }
-    }
-
     /// Gets the value of a style attribute for the given `key`.
-    fn get_style_specificity<T: FromStyleAttribute + 'static>(
+    fn query_style<T: FromStyleAttribute + 'static>(
         &mut self,
         key: &str,
     ) -> Option<(T, StyleSpec)> {
-        let (attribute, specificity) = self.get_style_attribute_specificity(key)?;
+        let (attribute, specificity) = self.query_style_attribute(key)?;
         let value = T::from_attribute(attribute.value().clone())?;
         let transition = attribute.transition();
 
@@ -345,7 +315,7 @@ pub trait Context {
     ///
     /// This will also transition the value if the attribute has a transition.
     fn get_style<T: FromStyleAttribute + 'static>(&mut self, key: &str) -> Option<T> {
-        self.get_style_specificity(key).map(|(value, _)| value)
+        self.query_style(key).map(|(value, _)| value)
     }
 
     /// Gets the value of a style attribute for the given `key`, if there is no value, returns `T::default()`.
@@ -365,7 +335,7 @@ pub trait Context {
         let mut result = None;
 
         for key in keys {
-            if let Some((v, s)) = self.get_style_specificity(key) {
+            if let Some((v, s)) = self.query_style(key) {
                 if specificity.is_none() || s > specificity.unwrap() {
                     specificity = Some(s);
                     result = Some(v);
@@ -399,7 +369,7 @@ pub trait Context {
         key: &str,
         range: Range<f32>,
     ) -> Option<(f32, StyleSpec)> {
-        let (attribute, specificity) = self.get_style_attribute_specificity(key)?;
+        let (attribute, specificity) = self.query_style_attribute(key)?;
         let value = Length::from_attribute(attribute.value().clone())?;
         let transition = attribute.transition();
 
@@ -613,6 +583,16 @@ macro_rules! context {
 
             fn style_cache_mut(&mut self) -> &mut StyleCache {
                 self.style_cache
+            }
+
+            fn stylesheet_and_cache_mut(&mut self) -> (&Stylesheet, &mut StyleCache) {
+                (self.stylesheet, self.style_cache)
+            }
+
+            fn query_style_attribute(&mut self, key: &str) -> Option<(StyleAttribute, StyleSpec)> {
+                let cache = &mut self.style_cache;
+                let tree = &self.style_tree;
+                self.stylesheet.query_cached(cache, None, tree, key)
             }
 
             fn node(&self) -> &NodeState {

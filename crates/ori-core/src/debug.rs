@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use ori_graphics::Rect;
-use ori_style::StyleElementSelector;
+use ori_style::Style;
 
 /// Debug information about the current state of the UI.
 #[derive(Clone, Debug, Default)]
@@ -22,7 +22,7 @@ impl Display for Debug {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DebugElement {
     /// The selectors of the element.
-    pub selector: StyleElementSelector,
+    pub style: Style,
     /// The local rect of the element.
     pub local_rect: Rect,
     /// The global rect of the element.
@@ -39,15 +39,15 @@ fn debug_recursive(
     let indent = " ".repeat(depth * 2);
 
     if element.children.is_empty() {
-        writeln!(f, "{}<{}/>", indent, element.selector)?;
+        writeln!(f, "{}<{}/>", indent, element.style)?;
     } else {
-        writeln!(f, "{}<{}>", indent, element.selector)?;
+        writeln!(f, "{}<{}>", indent, element.style)?;
 
         for child in &element.children {
             debug_recursive(f, child, depth + 1)?;
         }
 
-        writeln!(f, "{}</{}>", indent, element.selector)?;
+        writeln!(f, "{}</{}>", indent, element.style)?;
     }
 
     Ok(())

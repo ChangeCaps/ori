@@ -189,7 +189,7 @@ impl<V: Element> Element for Styled<V> {
     fn style(&self) -> Style {
         let mut style = self.value.style();
         style.classes.extend(self.classes.clone());
-        style.attributes.extend(self.attributes.clone());
+        style.inline.extend(self.attributes.clone());
         style
     }
 

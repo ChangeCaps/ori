@@ -34,7 +34,7 @@ impl Node {
             element_state.needs_layout = true;
         }
 
-        let mut style_tree = StyleTree::new(element_state.selector());
+        let mut style_tree = StyleTree::new(element_state.style.clone());
         let mut cx = EventContext {
             node: element_state,
             renderer,
@@ -71,7 +71,7 @@ impl Node {
 
         let space = AvailableSpace::new(Vec2::ZERO, window.size.as_vec2());
 
-        let mut style_tree = StyleTree::new(element_state.selector());
+        let mut style_tree = StyleTree::new(element_state.style.clone());
         let mut cx = LayoutContext {
             node: element_state,
             renderer,
@@ -117,7 +117,7 @@ impl Node {
         element_state.style = self.element().style();
 
         let parent_size = window.size.as_vec2();
-        let mut style_tree = StyleTree::new(element_state.selector());
+        let mut style_tree = StyleTree::new(element_state.style.clone());
         let mut cx = DrawContext {
             node: element_state,
             frame,

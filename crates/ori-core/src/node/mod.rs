@@ -10,9 +10,8 @@ use std::{any::Any, fmt::Debug, sync::Arc};
 use glam::Vec2;
 use ori_graphics::Rect;
 use ori_reactive::Event;
-use ori_style::{FromStyleAttribute, StyleTags};
+use ori_style::FromStyleAttribute;
 use parking_lot::{Mutex, MutexGuard};
-use tracing::trace_span;
 
 use crate::{
     AnyElement, AvailableSpace, Context, DebugEvent, DrawContext, Element, EmptyElement,
@@ -21,13 +20,13 @@ use crate::{
 
 struct NodeInner {
     view_state: Mutex<Box<dyn Any + Send>>,
-    node_state: Mutex<NodeState>,
+    node_state: Mutex<Box<NodeState>>,
     element: Mutex<Box<dyn AnyElement>>,
 }
 
 impl Debug for NodeInner {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ElementInner")
+        f.debug_struct("NodeInner")
             .field("view_state", &self.view_state)
             .field("node_state", &self.node_state)
             .field("view", &self.element.type_id())
@@ -66,7 +65,7 @@ impl Node {
 
         let inner = Arc::new(NodeInner {
             view_state: Mutex::new(Box::new(view_state)),
-            node_state: Mutex::new(element_state),
+            node_state: Mutex::new(Box::new(element_state)),
             element: Mutex::new(Box::new(element)),
         });
 
@@ -83,7 +82,7 @@ impl Node {
     /// Returns a [`MutexGuard`] to the [`NodeState`].
     ///
     /// Be careful when using this, as it can cause deadlocks.
-    pub fn node_state(&self) -> MutexGuard<'_, NodeState> {
+    pub fn node_state(&self) -> MutexGuard<'_, Box<NodeState>> {
         self.inner.as_ref().node_state.lock()
     }
 
@@ -142,11 +141,6 @@ impl Node {
         key: &[&str],
     ) -> S {
         self.node_state().style_group(cx, key)
-    }
-
-    /// Returns the [`StyleTags`].
-    pub fn style_tags(&self) -> StyleTags {
-        self.node_state().style_tags()
     }
 
     /// Returns true if the element needs to be laid out.
@@ -239,22 +233,19 @@ impl Node {
         cx: &mut C,
         f: impl FnOnce(&mut NodeState, &mut C) -> O,
     ) -> O {
-        let element_state = &mut self.node_state();
-        element_state.propagate_up(cx.node_mut());
+        let node_state = &mut self.node_state();
+        node_state.propagate_up(cx.node_mut());
 
-        let _span = trace_span!("element", selector = %element_state.selector()).entered();
-
-        if element_state.needs_layout {
+        if node_state.needs_layout {
             cx.request_redraw();
         }
 
-        cx.style_tree_mut().push(element_state.selector());
-
-        let res = f(element_state, cx);
-
+        node_state.update_style_tags();
+        cx.style_tree_mut().push(node_state.style.clone());
+        let res = f(node_state, cx);
         cx.style_tree_mut().pop();
 
-        cx.node_mut().propagate_down(element_state);
+        cx.node_mut().propagate_down(node_state);
 
         res
     }

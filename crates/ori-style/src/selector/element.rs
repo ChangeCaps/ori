@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use smol_str::SmolStr;
 
-use crate::{StyleClasses, StyleSpec, StyleTags};
+use crate::{Style, StyleClasses, StyleSpec, StyleTags};
 
 /// A style element, (e.g. `div`).
 pub type StyleElement = SmolStr;
@@ -38,8 +38,8 @@ impl StyleElementSelector {
     }
 
     /// Checks if the selector matches an element in the tree.
-    pub fn matches(&self, other: &Self) -> bool {
-        if self.element.is_some() && self.element != other.element {
+    pub fn matches(&self, other: &Style) -> bool {
+        if self.element.is_some() && self.element.as_deref() != other.element {
             return false;
         }
 

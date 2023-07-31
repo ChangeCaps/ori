@@ -5,7 +5,10 @@ pub use rule::*;
 
 use std::{fmt::Display, fs, io, path::Path, str::FromStr};
 
-use crate::{StyleAttribute, StyleAttributeValue, StyleSpec, StyleTree, StyleheetParseError};
+use crate::{
+    StyleAttribute, StyleCache, StyleCacheEntry, StyleCacheKey, StyleSpec, StyleTree,
+    StyleheetParseError,
+};
 
 /// An error that can occur when loading a style sheet.
 #[derive(Debug)]
@@ -92,27 +95,66 @@ impl Stylesheet {
         self.rules.extend(rules);
     }
 
-    /// Get an attribute from the style sheet.
-    pub fn get_attribute(&self, tree: &StyleTree, name: &str) -> Option<StyleAttribute> {
-        let (attribute, _) = self.get_attribute_specificity(tree, name)?;
-        Some(attribute)
-    }
-
     /// Get and attribute and its specificity from the style sheet.
-    pub fn get_attribute_specificity(
+    pub fn query_cached(
         &self,
+        cache: &mut StyleCache,
+        cache_key: Option<StyleCacheKey>,
         tree: &StyleTree,
-        name: &str,
+        key: &str,
     ) -> Option<(StyleAttribute, StyleSpec)> {
-        let (attribute, specificity) = self.get_attribute_specificity_inner(tree, name)?;
+        let (attr, spec) = self.query_cached_recurse_inner(cache, cache_key, tree, key)?;
 
-        match attribute.value() {
-            StyleAttributeValue::Inherit => self.get_attribute_specificity(&tree.parent()?, name),
-            _ => Some((attribute, specificity)),
+        if attr.is_inherit() {
+            let parent = tree.parent()?;
+            return self.query_cached(cache, cache_key, &parent, key);
         }
+
+        Some((attr, spec))
     }
 
-    fn get_attribute_specificity_inner(
+    fn query_cached_recurse_inner(
+        &self,
+        cache: &mut StyleCache,
+        cache_key: Option<StyleCacheKey>,
+        tree: &StyleTree,
+        key: &str,
+    ) -> Option<(StyleAttribute, StyleSpec)> {
+        // first check if the attribute is inline, in that case return early
+        if let Some(attribute) = tree.element.inline.get(key) {
+            return Some((attribute.clone(), StyleSpec::INLINE));
+        }
+
+        let cache_key = match cache_key {
+            Some(key) => key,
+            None => tree.cache_key(),
+        };
+
+        // we need to check the cache, if the attribute was found in the cache, then we can return
+        if let Some(entry) = cache.get(cache_key, key) {
+            match entry {
+                Some(entry) => return Some((entry.attribute.clone(), entry.specificity)),
+                None => return None,
+            }
+        }
+
+        // if the attribute was not found in the cache, then we need to search the stylesheet
+        let Some((attr, spec)) =  self.query_attribute_specificity_inner(tree, key) else {
+            cache.insert(cache_key, key, None);
+            return None;
+        };
+
+        let cache_entry = StyleCacheEntry {
+            attribute: attr.clone(),
+            specificity: spec,
+        };
+
+        cache.insert(cache_key, key, Some(cache_entry));
+
+        Some((attr, spec))
+    }
+
+    fn query_attribute_specificity_inner(
         &self,
         tree: &StyleTree,
         name: &str,

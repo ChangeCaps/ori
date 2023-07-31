@@ -15,6 +15,16 @@ impl StyleAttributes {
         }
     }
 
+    /// Returns the number of attributes in the collection.
+    pub fn len(&self) -> usize {
+        self.attributes.len()
+    }
+
+    /// Returns true if the collection is empty.
+    pub fn is_empty(&self) -> bool {
+        self.attributes.is_empty()
+    }
+
     /// Push an attribute to the collection.
     pub fn push(&mut self, attribute: StyleAttribute) {
         self.attributes.push(attribute);
@@ -47,6 +57,11 @@ impl StyleAttributes {
     /// Get the attributes in the collection.
     pub fn attributes(&self) -> &[StyleAttribute] {
         &self.attributes
+    }
+
+    /// Get the attributes in the collection.
+    pub fn iter(&self) -> impl Iterator<Item = &StyleAttribute> {
+        self.attributes.iter()
     }
 }
 
