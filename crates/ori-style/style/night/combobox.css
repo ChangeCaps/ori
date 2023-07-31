@@ -2,7 +2,7 @@ combobox {
 	border-width: 1.5px;
 	border-radius: 5px;
 	border-color: #404040;
-	background-color: #212121;
+	background: #212121;
 
 	padding: 0.5em;
 	gap: 0.5em;

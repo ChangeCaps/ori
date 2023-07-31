@@ -1,6 +1,6 @@
 slider {
 	direction: horizontal;
-	background-color: #363636;
+	background: #363636;
 	color: #ffaebc;
 	border-radius: 0.25em;
 	length: 5em;
@@ -12,5 +12,5 @@ slider {
 }
 
 slider:hover {
-	background-color: #404040;
+	background: #404040;
 }
