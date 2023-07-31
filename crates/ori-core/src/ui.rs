@@ -8,8 +8,8 @@ use ori_style::{StyleCache, StyleLoader};
 
 use crate::{
     Body, CloseWindow, Cursor, ForceLayoutEvent, Key, KeyboardEvent, Modifiers, Node, OpenWindow,
-    PointerButton, PointerEvent, RequestRedrawEvent, ScopeWindowExt, View, Window, WindowBackend,
-    WindowClosedEvent, WindowId, WindowResizedEvent,
+    PointerButton, PointerEvent, PrepareLayoutEvent, RequestRedrawEvent, ScopeWindowExt, View,
+    Window, WindowBackend, WindowClosedEvent, WindowId, WindowResizedEvent,
 };
 
 const TEXT_FONT: &[u8] = include_bytes!("../fonts/NotoSans-Medium.ttf");
@@ -476,7 +476,7 @@ where
     pub fn layout(&mut self, id: WindowId) {
         tracing::trace!("Laying out window {:?}", id);
 
-        self.event_inner(id, &Event::new(()));
+        self.event_inner(id, &Event::new(PrepareLayoutEvent));
 
         if let Some(ui) = self.window_ui.get_mut(&id) {
             let mut window = ui.scope.window().get();
