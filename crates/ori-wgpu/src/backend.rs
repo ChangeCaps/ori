@@ -35,15 +35,16 @@ impl From<RequestDeviceError> for WgpuBackendError {
     }
 }
 
+#[derive(Clone)]
 struct WgpuBackendState {
-    adapter: Adapter,
+    adapter: Arc<Adapter>,
     device: Arc<Device>,
     queue: Arc<Queue>,
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct WgpuBackend {
-    instance: Instance,
+    instance: Arc<Instance>,
     state: Option<WgpuBackendState>,
 }
 
@@ -68,7 +69,7 @@ impl WgpuBackend {
         let (device, queue) = adapter.request_device(&Default::default(), None).await?;
 
         Ok(WgpuBackendState {
-            adapter,
+            adapter: Arc::new(adapter),
             device: Arc::new(device),
             queue: Arc::new(queue),
         })
