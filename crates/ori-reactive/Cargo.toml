@@ -11,7 +11,7 @@ license = "MIT OR Apache-2.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-# deliberately not using the latest version of parking_lot because sharded uses an older version
-parking_lot = "0.11"
-sharded = { version = "0.2", features = ["parking_lot", "seahash"] }
+parking_lot = "0.12"
+dashmap = "5.5"
+seahash = "4.1"
 tracing = { version = "0.1", default-features = false }

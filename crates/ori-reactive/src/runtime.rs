@@ -1,6 +1,7 @@
 use std::{
     any::Any,
     fmt::Debug,
+    hash::BuildHasher,
     mem,
     panic::Location,
     sync::{
@@ -9,7 +10,7 @@ use std::{
     },
 };
 
-use sharded::Map;
+use dashmap::DashMap;
 
 #[derive(Debug)]
 struct RuntimeScope {
@@ -36,6 +37,17 @@ impl Debug for RuntimeResource {
     }
 }
 
+#[derive(Clone, Copy, Default)]
+struct RuntimeHasher;
+
+impl BuildHasher for RuntimeHasher {
+    type Hasher = seahash::SeaHasher;
+
+    fn build_hasher(&self) -> Self::Hasher {
+        seahash::SeaHasher::new()
+    }
+}
+
 /// A runtime that manages scopes and resources.
 ///
 /// Scopes are used to manage the lifetime of resources. When a scope is disposed, all resources
@@ -45,15 +57,15 @@ impl Debug for RuntimeResource {
 /// disposed when their reference count reaches zero.
 #[derive(Default)]
 pub struct Runtime {
-    scopes: Map<ScopeId, RuntimeScope>,
-    resources: Map<ResourceId, RuntimeResource>,
+    scopes: DashMap<ScopeId, RuntimeScope, RuntimeHasher>,
+    resources: DashMap<ResourceId, RuntimeResource, RuntimeHasher>,
 }
 
 impl Runtime {
     fn new_global() -> Self {
         Self {
-            scopes: Map::default(),
-            resources: Map::default(),
+            scopes: DashMap::default(),
+            resources: DashMap::default(),
         }
     }
 
@@ -82,9 +94,7 @@ impl Runtime {
         );
 
         if let Some(parent) = parent {
-            let (key, mut shard) = self.scopes.write(parent);
-
-            if let Some(parent) = shard.get_mut(key) {
+            if let Some(mut parent) = self.scopes.get_mut(&parent) {
                 parent.children.push(id);
             }
         }
@@ -96,8 +106,7 @@ impl Runtime {
     #[track_caller]
     #[tracing::instrument(skip(self))]
     pub fn scope_parent(&self, scope: ScopeId) -> Option<ScopeId> {
-        let (key, shard) = self.scopes.read(&scope);
-        shard.get(key)?.parent
+        self.scopes.get(&scope).and_then(|scope| scope.parent)
     }
 
     /// Manages the resource at `resource` in the scope at `scope`.
@@ -106,8 +115,7 @@ impl Runtime {
     pub fn manage_resource(&self, scope: ScopeId, resource: ResourceId) {
         tracing::trace!("managing resource {:?} in scope {:?}", resource, scope);
 
-        let (key, mut shard) = self.scopes.write(scope);
-        if let Some(scope) = shard.get_mut(key) {
+        if let Some(mut scope) = self.scopes.get_mut(&scope) {
             scope.resources.push(resource);
         }
     }
@@ -116,8 +124,8 @@ impl Runtime {
     #[track_caller]
     #[tracing::instrument(skip(self))]
     pub fn dispose_scope(&self, scope: ScopeId) {
-        let scope = {
-            match self.scopes.remove(scope) {
+        let (_, scope) = {
+            match self.scopes.remove(&scope) {
                 Some(scope) => scope,
                 None => return,
             }
@@ -162,8 +170,7 @@ impl Runtime {
     pub fn reference_resource(&self, id: ResourceId) {
         tracing::trace!("referencing resource {:?}", id);
 
-        let (key, mut shard) = self.resources.write(id);
-        if let Some(resource) = shard.get_mut(key) {
+        if let Some(mut resource) = self.resources.get_mut(&id) {
             resource.references += 1;
         }
     }
@@ -172,8 +179,7 @@ impl Runtime {
     #[track_caller]
     #[tracing::instrument(skip(self))]
     pub fn get_reference_count(&self, id: ResourceId) -> Option<u32> {
-        let (key, shard) = self.resources.read(&id);
-        shard.get(key).map(|r| r.references + 1)
+        self.resources.get(&id).map(|r| r.references + 1)
     }
 
     /// Gets and clone of the value of the resource at `id`.
@@ -204,8 +210,7 @@ impl Runtime {
     ) -> Option<U> {
         tracing::trace!("getting resource {:?} at {}", id, Location::caller());
 
-        let (key, shard) = self.resources.read(&id);
-        let resource = shard.get(key)?;
+        let resource = self.resources.get(&id)?;
 
         let ptr = resource.data.as_ref() as *const _ as *const T;
         Some(f(&*ptr))
@@ -227,8 +232,7 @@ impl Runtime {
     ) -> Option<U> {
         tracing::trace!("getting resource {:?} at {}", id, Location::caller());
 
-        let (key, mut shard) = self.resources.write(id);
-        let resource = shard.get_mut(key)?;
+        let mut resource = self.resources.get_mut(&id)?;
 
         let ptr = resource.data.as_mut() as *mut _ as *mut T;
         Some(f(unsafe { &mut *ptr }))
@@ -245,14 +249,12 @@ impl Runtime {
         id: ResourceId,
         value: T,
     ) -> Result<(), T> {
-        let (key, mut shard) = self.resources.write(id);
-        let old = match shard.get_mut(key) {
-            Some(resource) => mem::replace(&mut resource.data, Box::new(value)),
+        let old = match self.resources.get_mut(&id) {
+            Some(mut resource) => mem::replace(&mut resource.data, Box::new(value)),
             None => return Err(value),
         };
 
         // we need to drop the shard before dropping the old resource, otherwise we'll deadlock
-        drop(shard);
         drop(old);
 
         Ok(())
@@ -267,7 +269,7 @@ impl Runtime {
     #[track_caller]
     #[tracing::instrument(skip(self))]
     pub unsafe fn remove_resource<T: 'static>(&self, id: ResourceId) -> Option<T> {
-        let resource = self.resources.remove(id)?;
+        let (_, resource) = self.resources.remove(&id)?;
 
         let ptr = Box::into_raw(resource.data) as *mut T;
         Some(unsafe { *Box::from_raw(ptr) })
@@ -278,18 +280,16 @@ impl Runtime {
     #[track_caller]
     #[tracing::instrument(skip(self))]
     pub fn dispose_resource(&self, id: ResourceId) {
-        let (key, mut shard) = self.resources.write(id);
-
-        let Some(resource) = shard.get_mut(key) else { return };
+        let Some(mut resource) = self.resources.get_mut(&id) else { return };
 
         if resource.references > 0 {
             resource.references -= 1;
             return;
         }
 
-        drop(shard);
+        drop(resource);
 
-        let resource = self.resources.remove(id).unwrap();
+        let (_, resource) = self.resources.remove(&id).unwrap();
 
         tracing::trace!(
             "dropping resource {}, created at {}",

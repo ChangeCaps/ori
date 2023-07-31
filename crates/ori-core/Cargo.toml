@@ -18,8 +18,7 @@ ori-style = { path = "../ori-style", version = "0.1.0-alpha.1" }
 
 deref-derive = "0.1"
 glam = "0.24"
-# deliberately not using the latest version of parking_lot because ori-reactive uses an older version
-parking_lot = "0.11"
+parking_lot = "0.12"
 smallvec = { version = "1.10", features = ["union", "const_generics", "const_new"] }
 tracing = { version = "0.1", default-features = false, features = ["attributes"] }
 uuid = { version = "1.3", features = ["v4"] }
