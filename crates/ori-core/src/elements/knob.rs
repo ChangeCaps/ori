@@ -83,34 +83,42 @@ impl Element for Knob {
 
         let diameter = size * 0.7;
 
+        let background = cx.style_group(&["background-color", "background"]);
+
         let center = Quad {
             rect: Rect::center_size(cx.rect().center(), Vec2::splat(diameter)),
-            background: cx.style_group(&["background-color", "background"]),
+            background,
             border_radius: [diameter * 0.5; 4],
             border_width: cx.style_range("border-width", 0.0..diameter * 0.5),
             border_color: cx.style("border-color"),
         };
         cx.draw(center);
 
-        let ring_track =
-            Curve::arc_center_angle(cx.rect().center(), diameter * 0.65, -PI * 1.25, PI * 0.25);
-        let mesh = ring_track.stroke(diameter * 0.075, cx.style("background-color"));
+        let center = cx.rect().center();
+        let ring_radius = diameter * 0.65;
+        let ring_start = -PI * 1.25;
+        let ring_end = PI * 0.25;
+        let ring_length = ring_end - ring_start;
+        let ring_stroke = diameter * 0.075;
+
+        let ring_track = Curve::arc_center_angle(center, ring_radius, ring_start, ring_end);
+        let mesh = ring_track.stroke(ring_stroke, background);
         cx.draw(mesh);
 
         let range = self.max - self.min;
         let value = self.value.get();
         let t = f32::clamp((value - self.min) / range, 0.0, 1.0);
-        let angle = -PI * 1.25 + t * PI * 1.5;
+        let angle = ring_start + t * ring_length;
 
-        let ring = Curve::arc_center_angle(cx.rect().center(), diameter * 0.65, -PI * 1.25, angle);
-        let mesh = ring.stroke(diameter * 0.075, cx.style("color"));
+        let ring = Curve::arc_center_angle(center, ring_radius, ring_start, angle);
+        let mesh = ring.stroke(ring_stroke, cx.style("color"));
         cx.draw(mesh);
 
         let mut arm = Curve::new();
-        arm.add_point(cx.rect().center());
-        arm.add_point(cx.rect().center() + Vec2::new(angle.cos(), angle.sin()) * diameter * 0.65);
+        arm.add_point(center);
+        arm.add_point(center + Vec2::new(angle.cos(), angle.sin()) * ring_radius);
 
-        let mesh = arm.stroke(diameter * 0.075, cx.style("color"));
+        let mesh = arm.stroke(ring_stroke, cx.style("color"));
         cx.draw(mesh);
     }
 }
