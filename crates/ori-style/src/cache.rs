@@ -6,7 +6,7 @@ use std::{
 
 use crate::{StyleAttribute, StyleSpec};
 
-/// A hash of a [`StyleTree`].
+/// A hash of a [`StyleTree`](crate::StyleTree).
 ///
 /// This is used as a key in a [`StyleCache`].
 #[repr(transparent)]

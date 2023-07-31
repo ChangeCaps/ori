@@ -132,7 +132,7 @@ where
     W: WindowBackend,
     R: RenderBackend<Surface = W::Surface>,
 {
-    /// Creates a new [`Windows`] instance.
+    /// Creates a new [`Ui`] instance.
     ///
     /// **Note** that `W` and `R` need to have the same `Surface` type.
     pub fn new(window_backend: W, render_backend: R) -> Self {

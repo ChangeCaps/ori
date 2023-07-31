@@ -45,7 +45,7 @@ impl Display for StyleLoadError {
 /// This macro will load the style sheet from the given path if it exists, otherwise it will
 /// include the style sheet as a string literal. The path is relative to the `CARGO_MANIFEST_DIR`.
 ///
-/// Returns a [`LoadedStyleKind`].
+/// Returns a [`LoadedStyleKind`](crate::LoadedStyleKind).
 #[macro_export]
 macro_rules! style {
     ($path:literal) => {

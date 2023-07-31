@@ -5,9 +5,12 @@
 //!
 //! # Example
 //! ```no_run
+//! # /* ------------------------------ IMPORTANT ------------------------------
+//! #  * REMEMBER TO UPDATE 'examples/readme.rs' AND 'README.md' WHEN CHANGING THIS EXAMPLE
+//! #  * ---------------------------------------------------------------------- */
 //! use ori::prelude::*;
 //!
-//! // ui is a function that takes a Scope returns a View
+//! // define the ui
 //! fn ui(cx: Scope) -> View {
 //!     // create a signal that will hold the state of the counter
 //!     let counter = cx.signal(0);
@@ -22,7 +25,7 @@
 //! }
 //!
 //! fn main() {
-//!     // start the application
+//!     // configure and start the application
 //!     App::new(ui).run();
 //! }
 //! ```
