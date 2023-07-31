@@ -68,13 +68,16 @@ pub trait Element: Send + Sync + 'static {
     fn style(&self) -> Style;
 
     /// Handles an event.
+    ///
+    /// If the element has [`Children`](crate::Children), this method should
+    /// almost always propagate all events to the children.
     fn event(&self, state: &mut Self::State, cx: &mut EventContext, event: &Event) {}
 
     /// Handle layout and returns the size of the element.
     ///
     /// This method should return a size that fits the [`AvailableSpace`].
     ///
-    /// The default implementation returns the minimum size.
+    /// The default implementation returns [`AvailableSpace::min`].
     fn layout(
         &self,
         state: &mut Self::State,
@@ -90,19 +93,19 @@ pub trait Element: Send + Sync + 'static {
 
 /// A type-erased [`Element`].
 pub trait AnyElement: Any + Send + Sync {
-    /// Builds the state of the view.
+    /// Builds the state of the view, see [`Element::build`].
     fn build(&self) -> Box<dyn Any + Send>;
 
-    /// Returns the style of the view.
+    /// Returns the style of the view, see [`Element::style`].
     fn style(&self) -> Style;
 
-    /// Handles an event.
+    /// Handles an event, see [`Element::event`].
     fn event(&self, state: &mut dyn Any, cx: &mut EventContext, event: &Event);
 
-    /// Layout the view.
+    /// Layout the view, see [`Element::layout`].
     fn layout(&self, state: &mut dyn Any, cx: &mut LayoutContext, space: AvailableSpace) -> Vec2;
 
-    /// Draws the view.
+    /// Draws the view, see [`Element::draw`].
     fn draw(&self, state: &mut dyn Any, cx: &mut DrawContext);
 }
 
