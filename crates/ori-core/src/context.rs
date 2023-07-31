@@ -207,7 +207,7 @@ impl<'a> DrawContext<'a> {
     /// - `border-bottom-right-radius`: The bottom right border radius of the quad.
     /// - `border-bottom-left-radius`: The bottom left border radius of the quad.
     /// - `border-width`: The border width of the quad.
-    pub fn draw_quad(&mut self) {
+    pub fn draw_background(&mut self) {
         let range = 0.0..self.rect().size().min_element();
 
         let quad = Quad {

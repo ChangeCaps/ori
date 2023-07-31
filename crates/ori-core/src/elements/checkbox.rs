@@ -74,7 +74,7 @@ impl Element for Checkbox {
     fn draw(&self, _: &mut Self::State, cx: &mut DrawContext) {
         cx.node.active = self.checked.get();
 
-        cx.draw_quad();
+        cx.draw_background();
 
         if self.checked.get() {
             let section = TextSection {

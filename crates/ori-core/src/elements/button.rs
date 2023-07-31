@@ -74,7 +74,7 @@ impl Element for Button {
     }
 
     fn draw(&self, _: &mut Self::State, cx: &mut DrawContext) {
-        cx.draw_quad();
+        cx.draw_background();
         self.children.draw(cx);
     }
 }

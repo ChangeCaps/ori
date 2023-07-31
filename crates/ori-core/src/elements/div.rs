@@ -98,7 +98,7 @@ impl Element for Div {
     }
 
     fn draw(&self, _: &mut Self::State, cx: &mut DrawContext) {
-        cx.draw_quad();
+        cx.draw_background();
 
         cx.draw_layer(|cx| {
             self.children.draw(cx);

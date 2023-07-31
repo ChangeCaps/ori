@@ -88,7 +88,7 @@ impl Element for Text {
     }
 
     fn draw(&self, state: &mut Self::State, cx: &mut DrawContext) {
-        cx.draw_quad();
+        cx.draw_background();
 
         if let Some(glyphs) = state {
             cx.draw_text(glyphs, cx.rect());

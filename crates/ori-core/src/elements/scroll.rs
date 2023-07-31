@@ -168,7 +168,7 @@ impl Element for Scroll {
     }
 
     fn draw(&self, state: &mut Self::State, cx: &mut DrawContext) {
-        cx.draw_quad();
+        cx.draw_background();
 
         let overflow = self.overflow(cx);
         let padding = cx.padding().top_left();

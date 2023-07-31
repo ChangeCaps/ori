@@ -58,7 +58,7 @@ impl Element for Radio {
     }
 
     fn draw(&self, _: &mut Self::State, cx: &mut DrawContext) {
-        cx.draw_quad();
+        cx.draw_background();
 
         if self.selected {
             let rect = cx.rect().shrink(4.0);

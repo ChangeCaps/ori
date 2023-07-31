@@ -334,7 +334,7 @@ impl Element for TextInput {
     }
 
     fn draw(&self, state: &mut Self::State, cx: &mut DrawContext) {
-        cx.draw_quad();
+        cx.draw_background();
 
         let Some(ref glyphs) = state.glyphs else {
             return;

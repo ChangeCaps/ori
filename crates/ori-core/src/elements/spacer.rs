@@ -27,7 +27,7 @@ impl Element for HSpacer {
     }
 
     fn draw(&self, _state: &mut Self::State, cx: &mut DrawContext) {
-        cx.draw_quad();
+        cx.draw_background();
     }
 }
 
@@ -54,6 +54,6 @@ impl Element for VSpacer {
     }
 
     fn draw(&self, _state: &mut Self::State, cx: &mut DrawContext) {
-        cx.draw_quad();
+        cx.draw_background();
     }
 }
