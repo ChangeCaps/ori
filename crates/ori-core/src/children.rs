@@ -336,6 +336,7 @@ impl Children {
         axis.pack(major, minor).max(space.min)
     }
 
+    /// Returns true if any child needs to be laid out.
     pub fn needs_layout(&self) -> bool {
         self.nodes().any(|child| child.needs_layout())
     }

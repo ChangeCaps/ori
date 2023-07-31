@@ -254,6 +254,7 @@ pub trait Context {
     /// Returns the [`StyleCache`] of the application.
     fn style_cache_mut(&mut self) -> &mut StyleCache;
 
+    /// Returns the [`Stylesheet`] and [`StyleCache`] of the application.
     fn stylesheet_and_cache_mut(&mut self) -> (&Stylesheet, &mut StyleCache);
 
     /// Gets the [`StyleAttribute`] and [`StyleSpec`] for the given `key`.
@@ -419,6 +420,7 @@ pub trait Context {
         result.unwrap_or_default()
     }
 
+    /// Layout a section of text.
     fn layout_text(&mut self, text: &TextSection<'_>) -> Option<Glyphs> {
         self.fonts_mut().layout_glyphs(text)
     }
