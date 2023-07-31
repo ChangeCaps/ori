@@ -79,7 +79,7 @@ impl<R: Renderer> WindowUi<R> {
         if self.window.cursor != window.cursor {
             self.window.cursor = window.cursor;
             window_backend.set_cursor(window.id(), window.cursor);
-            tracing::debug!("Window {} cursor set to {:?}", window.id(), window.cursor);
+            tracing::trace!("Window {} cursor set to {:?}", window.id(), window.cursor);
         }
 
         self.scope.window().set(window.clone());
@@ -241,6 +241,8 @@ where
         if let Some(ui) = self.window_ui.remove(&id) {
             ui.scope.dispose();
         }
+
+        tracing::debug!("Window {} closed", id);
 
         for window in self.window_ids() {
             self.event_inner(window, &Event::new(WindowClosedEvent::new(id)));
@@ -427,14 +429,11 @@ where
         }
 
         if let Some(event) = event.get::<OpenWindow>() {
-            match self.create_window(target, event.window(), event.take_ui()) {
-                Ok(_) => {
-                    tracing::debug!("Created window with id {}", event.window().id());
-                }
-                Err(err) => {
-                    tracing::error!("Failed to create window {}: {:?}", event.window().id(), err);
-                }
+            if let Err(err) = self.create_window(target, event.window(), event.take_ui()) {
+                tracing::error!("Failed to create window {}: {:?}", event.window().id(), err);
             }
+
+            return;
         }
 
         if event.is::<RequestRedrawEvent>() {
@@ -448,7 +447,7 @@ where
     }
 
     fn event_inner(&mut self, id: WindowId, event: &Event) {
-        tracing::trace!("event for window {:?}: {:?}", id, event);
+        tracing::trace!("Event for window {:?}: {:?}", id, event.type_name());
 
         if let Some(ui) = self.window_ui.get_mut(&id) {
             ui.event_emitter.emit(event);
@@ -475,7 +474,7 @@ where
 
     /// Layout a window.
     pub fn layout(&mut self, id: WindowId) {
-        tracing::trace!("layout window {:?}", id);
+        tracing::trace!("Laying out window {:?}", id);
 
         self.event_inner(id, &Event::new(()));
 
@@ -500,7 +499,7 @@ where
 
     /// Draw a window.
     pub fn draw(&mut self, id: WindowId) {
-        tracing::trace!("drawing window {:?}", id);
+        tracing::trace!("Drawing window {:?}", id);
 
         self.layout(id);
 
