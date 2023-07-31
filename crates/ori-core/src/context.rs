@@ -1,5 +1,6 @@
 use std::{
     any::Any,
+    mem,
     ops::{Deref, DerefMut, Range},
 };
 
@@ -66,11 +67,15 @@ impl<'a> LayoutContext<'a> {
     }
 
     /// Calls `f`, temporarily changing the available space.
-    pub fn with_space<T>(&mut self, space: AvailableSpace, f: impl FnOnce(&mut Self) -> T) -> T {
-        let tmp = self.space;
-        self.space = space;
+    pub fn with_space<T>(
+        &mut self,
+        mut space: AvailableSpace,
+        f: impl FnOnce(&mut Self) -> T,
+    ) -> T {
+        mem::swap(&mut self.space, &mut space);
         let result = f(self);
-        self.space = tmp;
+        mem::swap(&mut self.space, &mut space);
+
         result
     }
 }
