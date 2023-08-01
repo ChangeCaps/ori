@@ -52,7 +52,7 @@ use crate::{AvailableSpace, DrawContext, EventContext, LayoutContext};
 ///
 ///     // Draws the element.
 ///     fn draw(&self, _state: &mut Self::State, cx: &mut DrawContext) {
-///         cx.draw_quad();
+///         cx.draw_background();
 ///     }
 /// }
 /// ```
