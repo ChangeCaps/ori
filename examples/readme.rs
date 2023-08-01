@@ -1,4 +1,5 @@
 //! This is the example from the readme.
+use ori::prelude::*;
 
 // define the ui
 fn ui(cx: Scope) -> View {
