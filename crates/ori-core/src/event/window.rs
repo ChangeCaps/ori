@@ -85,6 +85,8 @@ impl CloseWindow {
 
 /// An event that drags a window, when emitted.
 ///
+/// This is only supported on some platforms, and will only work right after a
+/// mouse button is pressed.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct DragWindow {
     pub window: Option<WindowId>,
