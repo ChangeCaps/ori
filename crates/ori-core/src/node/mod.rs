@@ -12,7 +12,7 @@ use std::{any::Any, fmt::Debug, sync::Arc};
 use glam::Vec2;
 use ori_graphics::Rect;
 use ori_reactive::Event;
-use ori_style::FromStyleAttribute;
+use ori_style::{FromStyleAttribute, StyleAttributeBuilder};
 use parking_lot::{Mutex, MutexGuard};
 
 use crate::{
@@ -74,21 +74,21 @@ impl Node {
         Self { inner }
     }
 
-    /// Returns a [`MutexGuard`] to the state of the `T`.
+    /// Returns a [`MutexGuard`] of the [`Element::State`].
     ///
     /// Be careful when using this, as it can cause deadlocks.
     pub fn element_state(&self) -> MutexGuard<'_, Box<dyn Any + Send>> {
         self.inner.as_ref().view_state.lock()
     }
 
-    /// Returns a [`MutexGuard`] to the [`NodeState`].
+    /// Returns a [`MutexGuard`] of the [`NodeState`].
     ///
     /// Be careful when using this, as it can cause deadlocks.
     pub fn node_state(&self) -> MutexGuard<'_, Box<NodeState>> {
         self.inner.as_ref().node_state.lock()
     }
 
-    /// Returns a [`MutexGuard`] to the `T`.
+    /// Returns a [`MutexGuard`] of the [`Box<dyn AnyElement>`].
     pub fn element(&self) -> MutexGuard<'_, Box<dyn AnyElement>> {
         self.inner.as_ref().element.lock()
     }
@@ -107,6 +107,23 @@ impl Node {
         self.request_layout();
 
         Ok(result)
+    }
+
+    /// Returns the [`ElementId`] of the [`Element`].
+    pub fn id(&self) -> ElementId {
+        self.node_state().id
+    }
+
+    /// Sets the class of the [`Element`].
+    pub fn set_class(&self, class: &str) {
+        self.node_state().style.set_class(class);
+        self.request_layout();
+    }
+
+    /// Sets an attribute for the [`Element`].
+    pub fn set_attr(&self, key: &str, builder: impl StyleAttributeBuilder) {
+        self.node_state().style.set_attr(key, builder);
+        self.request_layout();
     }
 
     /// Returns the [`PropGuard`] for the given [`Element`].
