@@ -1,6 +1,6 @@
 use ori_reactive::{Scope, Signal};
 
-use crate::{CloseWindow, OpenWindow, View, Window, WindowId};
+use crate::{BuildUi, CloseWindow, OpenWindow, Window, WindowId};
 
 /// Extension trait for [`Scope`] that provides window related methods.
 pub trait ScopeWindowExt {
@@ -8,11 +8,7 @@ pub trait ScopeWindowExt {
     fn window(self) -> Signal<Window>;
 
     /// Open a new window.
-    fn open_window(
-        self,
-        window: Window,
-        ui: impl FnMut(Scope) -> View + Send + Sync + 'static,
-    ) -> WindowId;
+    fn open_window<I>(self, window: Window, ui: impl BuildUi<I>) -> WindowId;
 
     /// Close the current window.
     ///
@@ -25,11 +21,7 @@ impl ScopeWindowExt for Scope {
         self.context::<Signal<Window>>()
     }
 
-    fn open_window(
-        self,
-        window: Window,
-        ui: impl FnMut(Scope) -> View + Send + Sync + 'static,
-    ) -> WindowId {
+    fn open_window<I>(self, window: Window, ui: impl BuildUi<I>) -> WindowId {
         let id = window.id();
         self.emit(OpenWindow::new(window, ui));
         id

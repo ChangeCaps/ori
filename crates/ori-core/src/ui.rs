@@ -2,14 +2,14 @@ use std::{collections::HashMap, fmt::Debug};
 
 use glam::{UVec2, Vec2};
 use ori_graphics::{Fonts, Frame, ImageCache, RenderBackend, Renderer};
-use ori_macro::view;
 use ori_reactive::{Emitter, Event, EventSink, Scope, Task};
 use ori_style::{StyleCache, StyleLoader};
 
 use crate::{
-    Body, CloseWindow, Cursor, ForceLayoutEvent, Key, KeyboardEvent, Modifiers, Node, OpenWindow,
-    PointerButton, PointerEvent, PrepareLayoutEvent, RequestRedrawEvent, ScopeWindowExt, View,
-    Window, WindowBackend, WindowClosedEvent, WindowId, WindowResizedEvent,
+    Body, BoxedBuildUi, CloseWindow, Cursor, ForceLayoutEvent, Key, KeyboardEvent, Modifiers, Node,
+    OpenWindow, Parent, PointerButton, PointerEvent, PrepareLayoutEvent, RequestRedrawEvent,
+    ScopeViewExt, ScopeWindowExt, Window, WindowBackend, WindowClosedEvent, WindowId,
+    WindowResizedEvent,
 };
 
 const TEXT_FONT: &[u8] = include_bytes!("../fonts/NotoSans-Medium.ttf");
@@ -18,7 +18,7 @@ const ICON_FONT: &[u8] = include_bytes!("../fonts/MaterialIcons-Regular.ttf");
 struct WindowUi<R: Renderer> {
     renderer: R,
     window: Window,
-    element: Node,
+    root: Node,
     scope: Scope,
     event_sink: EventSink,
     event_emitter: Emitter<Event>,
@@ -173,7 +173,7 @@ where
         &mut self,
         target: W::Target<'_>,
         window: &Window,
-        mut ui: impl FnMut(Scope) -> View + Send + 'static,
+        ui: BoxedBuildUi,
     ) -> Result<(), WindowError<W, R>> {
         {
             // here we clone the window and set it to invisible
@@ -208,16 +208,13 @@ where
         let scope = Scope::new(event_sink.clone(), event_emitter.clone());
         scope.with_context(scope.signal(window.clone()));
 
-        let element = view! {scope,
-            <Body>
-                { ui(scope) }
-            </Body>
-        };
+        // create the root view
+        let root = Self::create_root_node(scope, ui);
 
         let window_ui = WindowUi {
             renderer,
             window: window.clone(),
-            element: element.into_node().unwrap(),
+            root,
             scope,
             event_sink,
             event_emitter,
@@ -232,6 +229,16 @@ where
         tracing::debug!("Window {} created", window.id());
 
         Ok(())
+    }
+
+    /// Creates the root node for a window, this will automatically add the body element.
+    fn create_root_node(cx: Scope, ui: BoxedBuildUi) -> Node {
+        // create the body element
+        let mut body = Body::new();
+        body.add_child(cx.dynamic(ui));
+
+        // create the root node
+        Node::new(body)
     }
 
     /// Close a window.
@@ -456,7 +463,7 @@ where
             window.cursor = Cursor::default();
 
             ori_reactive::effect::delay_effects(|| {
-                ui.element.event_root_inner(
+                ui.root.event_root_inner(
                     self.style_loader.stylesheet(),
                     &mut self.style_cache,
                     &ui.renderer,
@@ -482,7 +489,7 @@ where
             let mut window = ui.scope.window().get();
 
             ori_reactive::effect::delay_effects(|| {
-                ui.element.layout_root_inner(
+                ui.root.layout_root_inner(
                     self.style_loader.stylesheet(),
                     &mut self.style_cache,
                     &ui.renderer,
@@ -510,7 +517,7 @@ where
             window.cursor = Cursor::default();
 
             ori_reactive::effect::delay_effects(|| {
-                ui.element.draw_root_inner(
+                ui.root.draw_root_inner(
                     self.style_loader.stylesheet(),
                     &mut self.style_cache,
                     &mut self.frame,

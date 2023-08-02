@@ -3,14 +3,14 @@ use ori_graphics::{Glyphs, TextSection};
 use ori_macro::Build;
 use ori_style::Style;
 
-use crate::{AvailableSpace, Context, DrawContext, Element, LayoutContext, View};
+use crate::{AvailableSpace, Context, DrawContext, Element, IntoView, LayoutContext, View};
 
 macro_rules! impl_from {
     ($($ty:ty),*) => {
         $(
-            impl From<$ty> for View {
-                fn from(value: $ty) -> Self {
-                    Self::new(Text::new(value))
+            impl IntoView for $ty {
+                fn into_view(self) -> View {
+                    View::new(Text::new(self))
                 }
             }
         )*

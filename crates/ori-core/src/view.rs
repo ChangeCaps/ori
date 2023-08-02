@@ -2,19 +2,13 @@ use std::sync::Arc;
 
 use ori_reactive::{OwnedSignal, Scope};
 
-use crate::{Element, Node};
+use crate::{BuildUi, Element, Node};
 
 #[derive(Clone, Debug)]
 enum ViewKind {
     Node(Node),
     Fragment(Arc<[View]>),
     Dynamic(OwnedSignal<View>),
-}
-
-impl<T: Element> From<T> for View {
-    fn from(element: T) -> Self {
-        Self::node(Node::new(element))
-    }
 }
 
 impl Default for ViewKind {
@@ -40,8 +34,8 @@ impl View {
     }
 
     /// Creates a new [`Node`].
-    pub fn new(into_node: impl Into<View>) -> Self {
-        into_node.into()
+    pub fn new(into_view: impl IntoView) -> Self {
+        into_view.into_view()
     }
 
     /// Creates a new [`View`] from an [`Node`].
@@ -50,8 +44,8 @@ impl View {
     }
 
     /// Creates a new [`View`] fragment from a list of [`View`]s.
-    pub fn fragment(fragment: impl Into<Arc<[View]>>) -> Self {
-        Self::from_kind(ViewKind::Fragment(fragment.into()))
+    pub fn fragment(fragment: impl IntoIterator<Item = View>) -> Self {
+        Self::from_kind(ViewKind::Fragment(fragment.into_iter().collect()))
     }
 
     /// Creates a new dynamic [`View`] from an [`OwnedSignal`].
@@ -137,46 +131,92 @@ impl View {
     }
 }
 
-impl<T: Into<View>> From<Vec<T>> for View {
-    fn from(views: Vec<T>) -> Self {
-        Self::fragment(views.into_iter().map(Into::into).collect::<Vec<_>>())
+/// A trait for types that can be converted into a [`View`].
+///
+/// This trait is implemented for all types that implement [`Into<View>`],
+/// and should therefore not be implemented manually.
+pub trait IntoView {
+    fn into_view(self) -> View;
+}
+
+impl IntoView for View {
+    fn into_view(self) -> View {
+        self
     }
 }
 
-impl<T: Clone + Into<View>> From<&[T]> for View {
-    fn from(views: &[T]) -> Self {
-        Self::fragment(views.iter().cloned().map(Into::into).collect::<Vec<_>>())
+impl<T: Element> IntoView for T {
+    fn into_view(self) -> View {
+        View::node(Node::new(self))
     }
 }
 
-impl From<Arc<[View]>> for View {
-    fn from(views: Arc<[View]>) -> Self {
-        Self::fragment(views)
+impl IntoView for Node {
+    fn into_view(self) -> View {
+        View::node(self)
     }
 }
 
-impl From<OwnedSignal<View>> for View {
-    fn from(dynamic: OwnedSignal<View>) -> Self {
-        Self::from_kind(ViewKind::Dynamic(dynamic))
+impl<T: IntoView> IntoView for Vec<T> {
+    fn into_view(self) -> View {
+        View::fragment(self.into_iter().map(IntoView::into_view))
     }
 }
 
-impl<T: Into<View>> From<Option<T>> for View {
-    fn from(value: Option<T>) -> Self {
-        match value {
-            Some(value) => value.into(),
-            None => Self::empty(),
+impl<T: Clone + IntoView> IntoView for &[T] {
+    fn into_view(self) -> View {
+        View::fragment(self.iter().cloned().map(IntoView::into_view))
+    }
+}
+
+impl<T: IntoView, const LEN: usize> IntoView for [T; LEN] {
+    fn into_view(self) -> View {
+        View::fragment(self.into_iter().map(IntoView::into_view))
+    }
+}
+
+macro_rules! impl_from_tuple {
+    (@internal $($name:ident),*) => {
+        impl<$($name: IntoView),*> IntoView for ($($name,)*) {
+            fn into_view(self) -> View {
+                #[allow(non_snake_case)]
+                let ($($name,)*) = self;
+                View::fragment(vec![$($name.into_view(),)*])
+            }
+        }
+    };
+    ($first:ident $(, $name:ident)*) => {
+        impl_from_tuple!(@internal $first $(,$name)*);
+        impl_from_tuple!($($name),*);
+    };
+    () => {
+        impl_from_tuple!(@internal);
+    };
+}
+
+impl_from_tuple!(A, B, C, D, E, F, G, H, I, J, K, L);
+
+impl IntoView for OwnedSignal<View> {
+    fn into_view(self) -> View {
+        View::dynamic(self)
+    }
+}
+
+impl<T: IntoView> IntoView for Option<T> {
+    fn into_view(self) -> View {
+        match self {
+            Some(view) => view.into_view(),
+            None => View::empty(),
         }
     }
 }
 
 pub trait ScopeViewExt {
-    fn dynamic(self, f: impl FnMut(Scope) -> Node + Send + 'static) -> View;
+    fn dynamic<I: IntoView>(self, f: impl BuildUi<I>) -> View;
 }
 
 impl ScopeViewExt for Scope {
-    fn dynamic(self, mut f: impl FnMut(Scope) -> Node + Send + 'static) -> View {
-        let view = self.owned_memo_scoped(move |cx| View::node(f(cx)));
-        View::dynamic(view)
+    fn dynamic<I: IntoView>(self, mut f: impl BuildUi<I>) -> View {
+        View::dynamic(self.owned_memo_scoped(move |cx| f.ui(cx)))
     }
 }

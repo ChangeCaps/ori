@@ -1,6 +1,6 @@
 use ori_reactive::{Callback, Emitter, OwnedSignal, Scope, Signal};
 
-use crate::View;
+use crate::{IntoView, View};
 
 /// A trait for types that can be built from a [`View`].
 ///
@@ -85,12 +85,12 @@ pub trait Parent {
     fn set_children(&mut self, slot: usize, children: impl Iterator<Item = View>);
 
     /// Adds `child` to a new slot and returns the slot index.
-    fn add_child(&mut self, child: impl Into<View>) -> usize {
+    fn add_child(&mut self, child: impl IntoView) -> usize {
         self.add_children(std::iter::once(View::new(child)))
     }
 
     /// Sets the children of `slot` to `child`.
-    fn set_child(&mut self, slot: usize, child: impl Into<View>) {
+    fn set_child(&mut self, slot: usize, child: impl IntoView) {
         self.set_children(slot, std::iter::once(View::new(child)))
     }
 
@@ -104,7 +104,7 @@ pub trait Parent {
     }
 
     /// Adds `child` to a new slot.
-    fn with_child(mut self, child: impl Into<View>) -> Self
+    fn with_child(mut self, child: impl IntoView) -> Self
     where
         Self: Sized,
     {

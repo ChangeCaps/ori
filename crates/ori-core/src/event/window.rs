@@ -1,9 +1,9 @@
-use std::{mem, sync::Mutex};
+use std::mem;
 
 use glam::Vec2;
-use ori_reactive::Scope;
+use parking_lot::Mutex;
 
-use crate::{View, Window, WindowId};
+use crate::{BoxedBuildUi, BuildUi, View, Window, WindowId};
 
 /// An event that requests a redraw.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
@@ -39,15 +39,15 @@ impl WindowClosedEvent {
 /// An event that opens a new window, when emitted.
 pub struct OpenWindow {
     window: Window,
-    ui: Mutex<Box<dyn FnMut(Scope) -> View + Send + Sync>>,
+    ui: Mutex<BoxedBuildUi>,
 }
 
 impl OpenWindow {
     /// Create a new open window event.
-    pub fn new(window: Window, ui: impl FnMut(Scope) -> View + Send + Sync + 'static) -> Self {
+    pub fn new<I>(window: Window, ui: impl BuildUi<I>) -> Self {
         Self {
             window,
-            ui: Mutex::new(Box::new(ui)),
+            ui: Mutex::new(ui.boxed()),
         }
     }
 
@@ -57,8 +57,8 @@ impl OpenWindow {
     }
 
     /// Takes the ui function, replacing it with an empty one.
-    pub fn take_ui(&self) -> Box<dyn FnMut(Scope) -> View + Send + Sync> {
-        mem::replace(&mut self.ui.lock().unwrap(), Box::new(|_| View::empty()))
+    pub fn take_ui(&self) -> BoxedBuildUi {
+        mem::replace(&mut self.ui.lock(), Box::new(|_| View::empty()))
     }
 }
 

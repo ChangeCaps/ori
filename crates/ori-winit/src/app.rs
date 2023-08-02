@@ -4,9 +4,9 @@ use std::{
     time::{Duration, Instant},
 };
 
-use ori_core::{math::Vec2, Modifiers, Ui, View, Window};
+use ori_core::{math::Vec2, BoxedBuildUi, BuildUi, Modifiers, Ui, Window};
 use ori_graphics::{prelude::UVec2, Color, ImageSource};
-use ori_reactive::{Event, Scope};
+use ori_reactive::Event;
 use ori_style::{LoadedStyleKind, StyleLoader, Stylesheet};
 use winit::{
     event::{Event as WinitEvent, KeyboardInput, MouseScrollDelta, StartCause, WindowEvent},
@@ -46,19 +46,19 @@ pub struct App {
     window: Window,
     style_loader: StyleLoader,
     event_loop: EventLoop<(WinitWindowId, Event)>,
-    builder: Option<Box<dyn FnMut(Scope) -> View + Send>>,
+    builder: Option<BoxedBuildUi>,
 }
 
 impl App {
     /// Create a new [`App`] with the given content.
-    pub fn new(content: impl FnMut(Scope) -> View + Send + 'static) -> Self {
+    pub fn new<I>(content: impl BuildUi<I>) -> Self {
         let event_loop = EventLoopBuilder::with_user_event().build();
         Self::new_with_event_loop(event_loop, content)
     }
 
-    pub fn new_with_event_loop(
+    pub fn new_with_event_loop<I>(
         event_loop: EventLoop<(WinitWindowId, Event)>,
-        content: impl FnMut(Scope) -> View + Send + 'static,
+        content: impl BuildUi<I>,
     ) -> Self {
         init_tracing().unwrap();
 
@@ -70,7 +70,7 @@ impl App {
             window: Window::default(),
             style_loader,
             event_loop,
-            builder: Some(Box::new(content)),
+            builder: Some(content.boxed()),
         }
     }
 
@@ -161,7 +161,7 @@ impl App {
 }
 
 impl App {
-    pub fn new_any_thread(content: impl FnMut(Scope) -> View + Send + 'static) -> Self {
+    pub fn new_any_thread<I>(content: impl BuildUi<I>) -> Self {
         let mut builder = EventLoopBuilder::with_user_event();
 
         #[cfg(target_os = "windows")]

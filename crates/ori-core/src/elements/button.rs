@@ -1,11 +1,11 @@
 use glam::Vec2;
 use ori_macro::Build;
-use ori_reactive::{Emitter, Event};
+use ori_reactive::{Emitter, Event, Scope};
 use ori_style::Style;
 
 use crate::{
-    AvailableSpace, Children, Context, DrawContext, Element, EventContext, FlexLayout,
-    LayoutContext, Parent, PointerEvent, View,
+    AvailableSpace, BindCallback, Children, Context, DrawContext, Element, EventContext,
+    FlexLayout, IntoView, LayoutContext, Parent, PointerEvent,
 };
 
 /// A button element.
@@ -21,11 +21,15 @@ pub struct Button {
 
 impl Button {
     /// Create a new button.
-    pub fn new(child: impl Into<View>) -> Self {
+    pub fn new(child: impl IntoView) -> Self {
         Self {
             on_click: Emitter::new(),
             children: Children::new().with_child(child),
         }
+    }
+
+    pub fn on_click(&mut self, cx: Scope, f: impl FnMut(&PointerEvent) + Send + 'static) {
+        self.on_click.bind(cx, f);
     }
 
     fn handle_pointer_event(

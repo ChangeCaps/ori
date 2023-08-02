@@ -1,6 +1,7 @@
 //! The core crate for the Ori UI framework.
 
 mod build;
+mod build_ui;
 mod children;
 mod context;
 mod debug;
@@ -14,6 +15,7 @@ mod view;
 mod window;
 
 pub use build::*;
+pub use build_ui::*;
 pub use children::*;
 pub use context::*;
 pub use debug::*;
@@ -42,7 +44,7 @@ pub mod prelude {
     };
     pub use crate::layout::{AlignItem, AvailableSpace, Axis, JustifyContent, Margin, Padding};
     pub use crate::node::{Node, NodeRef, ScopeNodeRefExt};
-    pub use crate::view::{ScopeViewExt, View};
+    pub use crate::view::{IntoView, ScopeViewExt, View};
     pub use crate::window::{ScopeWindowExt, Window, WindowId};
 
     pub use glam::*;
