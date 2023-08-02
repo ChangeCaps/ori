@@ -106,6 +106,12 @@ impl<R: Renderer> WindowUi<R> {
                 window.id(),
                 window.maximized
             );
+
+            let new_size = window_backend.get_size(window.id());
+            if new_size != self.window.size {
+                self.window.size = new_size;
+                self.scope.window().modify().size = new_size;
+            }
         }
 
         if self.window.visible != window.visible {

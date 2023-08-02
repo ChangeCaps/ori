@@ -304,7 +304,6 @@ impl Node {
         let cursor = cx.style("cursor");
 
         if cx.node().unique && cx.window().get_untracked().cursor != cursor {
-            println!("to {:?}, {:?}", cursor, cx.style_tree().element.element);
             cx.window().modify().cursor = cursor;
         }
     }
