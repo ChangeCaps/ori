@@ -1,10 +1,7 @@
 use manyhow::bail;
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{
-    parse_quote, spanned::Spanned, Attribute, Data, DataStruct, DeriveInput, Fields, FieldsNamed,
-    Generics, Ident,
-};
+use syn::{spanned::Spanned, Attribute, Data, DataStruct, DeriveInput, Fields, FieldsNamed, Ident};
 
 use crate::krate::find_crate;
 
@@ -76,14 +73,6 @@ fn data(input: &DeriveInput) -> manyhow::Result<(&DataStruct, FieldsNamed)> {
     }
 }
 
-fn setter_generics(input: &DeriveInput) -> Generics {
-    let mut generics = input.generics.clone();
-
-    generics.params.push(parse_quote!('__setter));
-
-    generics
-}
-
 fn build(input: &DeriveInput) -> manyhow::Result<TokenStream> {
     let name = &input.ident;
 
@@ -93,82 +82,73 @@ fn build(input: &DeriveInput) -> manyhow::Result<TokenStream> {
     let event_setter = event_setter(input)?;
     let binding_setter = binding_setter(input)?;
 
-    let setter_generics = setter_generics(input);
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
-    let (setter_impl_generics, setter_ty_generics, setter_where_clause) =
-        setter_generics.split_for_impl();
-
-    let properties = quote! {
-        let closure = |this: &mut Self| {
-            let setter = PropertiesSetter { this };
-            f(setter);
-        };
-        let node = view.get_node().expect("node not found");
-        node.downcast::<Self, ()>(closure).expect("downcast failed");
-    };
-
-    let events = quote! {
-        let closure = |this: &mut Self| {
-            let setter = EventsSetter { this };
-            f(setter);
-        };
-        let node = view.get_node().expect("node not found");
-        node.downcast::<Self, ()>(closure).expect("downcast failed");
-    };
-
-    let bindings = quote! {
-        let closure = |this: &mut Self| {
-            let setter = BindingsSetter { this };
-            f(setter);
-        };
-        let node = view.get_node().expect("node not found");
-        node.downcast::<Self, ()>(closure).expect("downcast failed");
-    };
 
     Ok(quote! { const _: () = {
-        pub struct PropertiesSetter #setter_impl_generics #where_clause {
-            this: &'__setter mut #name #ty_generics,
+        #[repr(transparent)]
+        pub struct PropertiesSetter #impl_generics #where_clause {
+            this: #name #ty_generics,
         }
 
-        impl #setter_impl_generics PropertiesSetter #setter_ty_generics #setter_where_clause {
+        impl #impl_generics PropertiesSetter #ty_generics #where_clause {
             #property_setter
         }
 
-        pub struct EventsSetter #setter_impl_generics #where_clause {
-            this: &'__setter mut #name #ty_generics,
+        #[repr(transparent)]
+        pub struct EventsSetter #impl_generics #where_clause {
+            this: #name #ty_generics,
         }
 
-        impl #setter_impl_generics EventsSetter #setter_ty_generics #setter_where_clause {
+        impl #impl_generics EventsSetter #ty_generics #where_clause {
             #event_setter
         }
 
-        pub struct BindingsSetter #setter_impl_generics #where_clause {
-            this: &'__setter mut #name #ty_generics,
+        #[repr(transparent)]
+        pub struct BindingsSetter #impl_generics #where_clause {
+            this: #name #ty_generics,
         }
 
-        impl #setter_impl_generics BindingsSetter #setter_ty_generics #setter_where_clause {
+        impl #impl_generics BindingsSetter #ty_generics #where_clause {
             #binding_setter
         }
 
         impl #impl_generics #ori_core::Build for #name #ty_generics #where_clause {
-            type Properties<'__setter> = PropertiesSetter #setter_ty_generics;
-            type Events<'__setter> = EventsSetter #setter_ty_generics;
-            type Bindings<'__setter> = BindingsSetter #setter_ty_generics;
+            type Properties = PropertiesSetter #ty_generics;
+            type Events = EventsSetter #ty_generics;
+            type Bindings = BindingsSetter #ty_generics;
 
             fn build() -> #ori_core::View {
                 #ori_core::View::new(Self::default())
             }
 
-            fn properties(view: &#ori_core::View, f: impl ::std::ops::FnOnce(Self::Properties<'_>)) {
-                #properties
+            fn prop_ref(&self) -> &<Self as #ori_core::Build>::Properties {
+                // SAFETY: PropertiesSetter is repr(transparent) over Self.
+                unsafe { ::std::mem::transmute(self) }
             }
 
-            fn events(view: &#ori_core::View, f: impl ::std::ops::FnOnce(Self::Events<'_>)) {
-                #events
+            fn prop(&mut self) -> &mut <Self as #ori_core::Build>::Properties {
+                // SAFETY: PropertiesSetter is repr(transparent) over Self.
+                unsafe { ::std::mem::transmute(self) }
             }
 
-            fn bindings(view: &#ori_core::View, f: impl ::std::ops::FnOnce(Self::Bindings<'_>)) {
-                #bindings
+            fn on_ref(&self) -> &<Self as #ori_core::Build>::Events {
+                // SAFETY: EventsSetter is repr(transparent) over Self.
+                unsafe { ::std::mem::transmute(self) }
+            }
+
+            fn on(&mut self) -> &mut <Self as #ori_core::Build>::Events {
+                // SAFETY: EventsSetter is repr(transparent) over Self.
+                unsafe { ::std::mem::transmute(self) }
+            }
+
+            fn bind_ref(&self) -> &<Self as #ori_core::Build>::Bindings {
+                // SAFETY: BindingsSetter is repr(transparent) over Self.
+                unsafe { ::std::mem::transmute(self) }
+            }
+
+            fn bind(&mut self) -> &mut <Self as #ori_core::Build>::Bindings {
+                // SAFETY: BindingsSetter is repr(transparent) over Self.
+                unsafe { ::std::mem::transmute(self) }
             }
         }
     };})
@@ -305,10 +285,9 @@ fn binding_setter(input: &DeriveInput) -> manyhow::Result<TokenStream> {
         Some(quote! {
             pub fn #event(
                 &mut self,
-                cx: #ori_reactive::Scope,
                 #name: #ori_reactive::Signal<<#ty as #ori_core::Bindable>::Item>
             ) {
-                <#ty as #ori_core::Bindable>::bind(&mut self.this.#name, cx, #name);
+                <#ty as #ori_core::Bindable>::bind(&mut self.this.#name, #name);
             }
         })
     });

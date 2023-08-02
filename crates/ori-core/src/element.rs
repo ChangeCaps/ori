@@ -145,6 +145,11 @@ impl<T: Element> AnyElement for T {
 }
 
 impl dyn AnyElement {
+    /// Checks if this `AnyElement` is a concrete type.
+    pub fn is<T: AnyElement>(&self) -> bool {
+        <dyn AnyElement>::type_id(self) == TypeId::of::<T>()
+    }
+
     /// Attempts to downcast this `AnyElement` to a concrete type.
     pub fn downcast_ref<T: AnyElement>(&self) -> Option<&T> {
         if self.type_id() == TypeId::of::<T>() {

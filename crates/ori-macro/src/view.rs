@@ -447,9 +447,10 @@ fn property(context: &Expr, name: &Ident, key: &ExprPath, value: &Expr) -> Token
     };
 
     let set_property = quote_spanned! {value.span() =>
-        <#name as #ori_core::Build>::properties(&__view, |mut __properties| {
-            __properties.#key(#value);
-        });
+        let __node = __view.get_node().unwrap();
+        __node.downcast::<#name, _>(|__node| {
+            <#name as #ori_core::Build>::prop(__node).#key(#value);
+        }).unwrap();
     };
 
     if expr_is_dynamic(value) {
@@ -464,9 +465,10 @@ fn event(context: &Expr, name: &Ident, key: &Ident, value: &Expr) -> TokenStream
     let ori_core = find_crate("core");
 
     let set_event = quote_spanned! {value.span() =>
-        <#name as #ori_core::Build>::events(&__view, |mut __events| {
-            __events.#key(#context, #value);
-        });
+        let __node = __view.get_node().unwrap();
+        __node.downcast::<#name, _>(|__node| {
+            <#name as #ori_core::Build>::on(__node).#key(#context, #value);
+        }).unwrap();
     };
 
     if expr_is_dynamic(value) {
@@ -481,9 +483,10 @@ fn binding(context: &Expr, name: &Ident, key: &Ident, value: &Expr) -> TokenStre
     let ori_core = find_crate("core");
 
     let set_binding = quote_spanned! {value.span() =>
-        <#name as #ori_core::Build>::bindings(&__view, |mut __bindings| {
-            __bindings.#key(#context, #value);
-        });
+        let __node = __view.get_node().unwrap();
+        __node.downcast::<#name, _>(|__node| {
+            <#name as #ori_core::Build>::bind(__node).#key(#value);
+        }).unwrap();
     };
 
     if expr_is_dynamic(value) {

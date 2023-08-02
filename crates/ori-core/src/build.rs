@@ -3,27 +3,38 @@ use ori_reactive::{Callback, Emitter, OwnedSignal, Scope, Signal};
 use crate::View;
 
 /// A trait for types that can be built from a [`View`].
+///
+/// This trait can be derived using the [`Build`](ori_macro::Build) derive macro.
 pub trait Build {
     /// The properties type.
-    type Properties<'a>;
+    type Properties;
 
     /// The events type.
-    type Events<'a>;
+    type Events;
 
     /// The bindings type.
-    type Bindings<'a>;
+    type Bindings;
 
     /// Builds the default view.
     fn build() -> View;
 
     /// Retrieves the properties of the view.
-    fn properties(view: &View, f: impl FnOnce(Self::Properties<'_>));
+    fn prop_ref(&self) -> &Self::Properties;
+
+    /// Retrieves the properties of the view.
+    fn prop(&mut self) -> &mut Self::Properties;
 
     /// Retrieves the events of the view.
-    fn events(view: &View, f: impl FnOnce(Self::Events<'_>));
+    fn on_ref(&self) -> &Self::Events;
+
+    /// Retrieves the events of the view.
+    fn on(&mut self) -> &mut Self::Events;
 
     /// Retrieves the bindings of the view.
-    fn bindings(view: &View, f: impl FnOnce(Self::Bindings<'_>));
+    fn bind_ref(&self) -> &Self::Bindings;
+
+    /// Retrieves the bindings of the view.
+    fn bind(&mut self) -> &mut Self::Bindings;
 }
 
 /// A trait that is implemented for every type a callback can be subscribed to.
@@ -51,13 +62,13 @@ pub trait Bindable<'a> {
     type Item: Send;
 
     /// Binds the signal to the value.
-    fn bind(&mut self, cx: Scope, signal: Signal<Self::Item>);
+    fn bind(&mut self, signal: Signal<Self::Item>);
 }
 
 impl<'a, T: Send + Sync + Clone + 'static> Bindable<'a> for OwnedSignal<T> {
     type Item = T;
 
-    fn bind(&mut self, _cx: Scope, signal: Signal<Self::Item>) {
+    fn bind(&mut self, signal: Signal<Self::Item>) {
         self.bind(signal);
     }
 }

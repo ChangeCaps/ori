@@ -1,7 +1,9 @@
+mod build;
 mod r#ref;
 mod root;
 mod state;
 
+pub use build::*;
 pub use r#ref::*;
 pub use state::*;
 
@@ -14,7 +16,7 @@ use ori_style::FromStyleAttribute;
 use parking_lot::{Mutex, MutexGuard};
 
 use crate::{
-    AnyElement, AvailableSpace, Context, DebugEvent, DrawContext, Element, EmptyElement,
+    AnyElement, AvailableSpace, Build, Context, DebugEvent, DrawContext, Element, EmptyElement,
     EventContext, ForceLayoutEvent, LayoutContext, Margin, Padding, PointerEvent,
 };
 
@@ -105,6 +107,69 @@ impl Node {
         self.request_layout();
 
         Ok(result)
+    }
+
+    /// Returns the [`PropGuard`] for the given [`Element`].
+    pub fn try_prop<B: Element + Build>(&self) -> Option<PropGuard<'_, B>> {
+        let element = self.element();
+
+        if !<dyn AnyElement>::is::<B>(element.as_ref()) {
+            return None;
+        }
+
+        // SAFETY: we just checked that the element is of type `B`.
+        unsafe { Some(PropGuard::new(element)) }
+    }
+
+    /// Returns the [`PropGuard`] for the given [`Element`].
+    #[track_caller]
+    pub fn prop<B: Element + Build>(&self) -> PropGuard<'_, B> {
+        match self.try_prop() {
+            Some(prop) => prop,
+            None => panic!("Element is not of type {}", std::any::type_name::<B>()),
+        }
+    }
+
+    /// Returns the [`OnGuard`] for the given [`Element`].
+    pub fn try_on<B: Element + Build>(&self) -> Option<OnGuard<'_, B>> {
+        let element = self.element();
+
+        if !<dyn AnyElement>::is::<B>(element.as_ref()) {
+            return None;
+        }
+
+        // SAFETY: we just checked that the element is of type `B`.
+        unsafe { Some(OnGuard::new(element)) }
+    }
+
+    /// Returns the [`OnGuard`] for the given [`Element`].
+    #[track_caller]
+    pub fn on<B: Element + Build>(&self) -> OnGuard<'_, B> {
+        match self.try_on() {
+            Some(on) => on,
+            None => panic!("Element is not of type {}", std::any::type_name::<B>()),
+        }
+    }
+
+    /// Returns the [`BindGuard`] for the given [`Element`].
+    pub fn try_bind<B: Element + Build>(&self) -> Option<BindGuard<'_, B>> {
+        let element = self.element();
+
+        if !<dyn AnyElement>::is::<B>(element.as_ref()) {
+            return None;
+        }
+
+        // SAFETY: we just checked that the element is of type `B`.
+        unsafe { Some(BindGuard::new(element)) }
+    }
+
+    /// Returns the [`BindGuard`] for the given [`Element`].
+    #[track_caller]
+    pub fn bind<B: Element + Build>(&self) -> BindGuard<'_, B> {
+        match self.try_bind() {
+            Some(bind) => bind,
+            None => panic!("Element is not of type {}", std::any::type_name::<B>()),
+        }
     }
 
     /// Sets the offset of the element, relative to the parent.
