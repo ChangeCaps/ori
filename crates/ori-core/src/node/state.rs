@@ -58,6 +58,8 @@ pub struct NodeState {
     pub focused: bool,
     /// Whether the element is hovered.
     pub hovered: bool,
+    /// Whether the element is unique.
+    pub unique: bool,
     /// The last time the element was drawn.
     pub last_draw: Instant,
     /// The style of the element.
@@ -81,6 +83,7 @@ impl Default for NodeState {
             active: false,
             focused: false,
             hovered: false,
+            unique: false,
             last_draw: Instant::now(),
             style: Style::default(),
             needs_layout: true,
@@ -111,6 +114,7 @@ impl NodeState {
     /// This is called after events are propagated.
     pub fn propagate_down(&mut self, child: &mut NodeState) {
         self.needs_layout |= child.needs_layout;
+        self.unique &= !child.hovered;
     }
 
     /// Updates the style tags.

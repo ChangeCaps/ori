@@ -198,6 +198,16 @@ impl<T: Send + Sync> Signal<T> {
         }
     }
 
+    /// Compares the signal's value with the given value, and sets it if they are not equal.
+    pub fn set_eq(self, value: T)
+    where
+        T: Clone + PartialEq,
+    {
+        if self.get_untracked() != value {
+            self.set(value);
+        }
+    }
+
     /// Lock the signal's value for the duration of the callback, see [`ReadSignal::with`].
     ///
     /// **Note** that the [`Runtime`](crate::Runtime) will be locked for the duration of the callback.

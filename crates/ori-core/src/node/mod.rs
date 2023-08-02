@@ -301,11 +301,10 @@ impl Node {
 
     // updates the cursor of the window.
     fn update_cursor(cx: &mut impl Context) {
-        let Some(cursor) = cx.style("cursor") else {
-            return;
-        };
+        let cursor = cx.style("cursor");
 
-        if cx.hovered() || cx.active() {
+        if cx.node().unique && cx.window().get_untracked().cursor != cursor {
+            println!("to {:?}, {:?}", cursor, cx.style_tree().element.element);
             cx.window().modify().cursor = cursor;
         }
     }
@@ -360,6 +359,7 @@ impl Node {
             return;
         }
 
+        cx.node.unique = cx.node.hovered;
         (self.element()).event(self.element_state().as_mut(), &mut cx, event);
 
         Self::update_cursor(&mut cx);
@@ -454,8 +454,6 @@ impl Node {
         }
 
         cx.node.draw();
-
-        Self::update_cursor(&mut cx);
     }
 
     /// Draw the element.

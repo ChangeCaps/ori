@@ -6,10 +6,10 @@ use ori_reactive::{Emitter, Event, EventSink, Scope, Task};
 use ori_style::{StyleCache, StyleLoader};
 
 use crate::{
-    Body, BoxedBuildUi, CloseWindow, Cursor, DragWindow, ForceLayoutEvent, Key, KeyboardEvent,
-    Modifiers, Node, OpenWindow, Parent, PointerButton, PointerEvent, PrepareLayoutEvent,
-    RequestRedrawEvent, ScopeViewExt, ScopeWindowExt, Window, WindowBackend, WindowClosedEvent,
-    WindowId, WindowResizedEvent,
+    Body, BoxedBuildUi, CloseWindow, DragWindow, ForceLayoutEvent, Key, KeyboardEvent, Modifiers,
+    Node, OpenWindow, Parent, PointerButton, PointerEvent, PrepareLayoutEvent, RequestRedrawEvent,
+    ScopeViewExt, ScopeWindowExt, Window, WindowBackend, WindowClosedEvent, WindowId,
+    WindowResizedEvent,
 };
 
 const TEXT_FONT: &[u8] = include_bytes!("../fonts/NotoSans-Medium.ttf");
@@ -29,10 +29,14 @@ struct WindowUi<R: Renderer> {
 impl<R: Renderer> WindowUi<R> {
     /// Queries information about the window that won't be provided by events.
     fn query_window(&mut self, window_backend: &mut impl WindowBackend) {
-        let mut window = self.scope.window().modify();
+        let mut window = self.scope.window().get_untracked();
 
         window.minimized = window_backend.get_minimized(self.window.id());
         window.maximized = window_backend.get_maximized(self.window.id());
+
+        if window != self.scope.window().get_untracked() {
+            self.scope.window().set(window);
+        }
     }
 
     fn update_window(&mut self, window_backend: &mut impl WindowBackend, window: &Window) {
@@ -506,7 +510,6 @@ where
             ui.query_window(&mut self.window_backend);
 
             let window = ui.scope.window();
-            window.modify().cursor = Cursor::default();
 
             ori_reactive::effect::delay_effects(|| {
                 ui.root.event_root_inner(
@@ -561,7 +564,6 @@ where
             self.frame.clear();
 
             let window = ui.scope.window();
-            window.modify().cursor = Cursor::default();
 
             ori_reactive::effect::delay_effects(|| {
                 ui.root.draw_root_inner(
