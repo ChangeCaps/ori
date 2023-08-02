@@ -60,6 +60,16 @@ impl Window {
     pub const fn id(&self) -> WindowId {
         self.id
     }
+
+    /// Toggle the `minimized` state of the window.
+    pub fn minimize(&mut self) {
+        self.minimized = !self.minimized;
+    }
+
+    /// Toggle the `maximized` state of the window.
+    pub fn maximize(&mut self) {
+        self.maximized = !self.maximized;
+    }
 }
 
 impl WindowBuilder for Window {
