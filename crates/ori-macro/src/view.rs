@@ -62,7 +62,12 @@ pub fn view(input: proc_macro::TokenStream) -> manyhow::Result<proc_macro::Token
 
     let config = rstml::ParserConfig::new().transform_block(transform_block);
     let parser = rstml::Parser::new(config);
-    let nodes = parser.parse_simple(rest)?;
+
+    let nodes = if !rest.is_empty() {
+        parser.parse_simple(rest)?
+    } else {
+        Vec::new()
+    };
 
     let expanded = if nodes.len() == 1 {
         create_node(&context, nodes.iter())?
