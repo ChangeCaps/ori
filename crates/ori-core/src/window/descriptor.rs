@@ -12,7 +12,7 @@ pub struct Window {
     /// Whether the window is resizable.
     pub resizable: bool,
     /// Whether the window has decorations.
-    pub decorations: bool,
+    pub decorated: bool,
     /// The clear color of the window.
     pub clear_color: Color,
     /// The icon of the window.
@@ -37,7 +37,7 @@ impl Default for Window {
             id: WindowId::new(),
             title: String::from("Ori App"),
             resizable: true,
-            decorations: true,
+            decorated: true,
             clear_color: Color::WHITE,
             icon: None,
             scale: 1.0,
@@ -60,116 +60,87 @@ impl Window {
     pub const fn id(&self) -> WindowId {
         self.id
     }
+}
 
-    /// Set the `title` of the window.
-    pub fn title(mut self, title: impl Into<String>) -> Self {
-        self.title = title.into();
-        self
-    }
-
-    /// Set whether the window is `resizable`.
-    pub fn resizable(mut self, resizable: bool) -> Self {
-        self.resizable = resizable;
-        self
-    }
-
-    /// Set the `clear_color` of the window.
-    pub fn clear_color(mut self, clear_color: Color) -> Self {
-        self.clear_color = clear_color;
-        self
-    }
-
-    /// Set the `icon` of the window.
-    pub fn icon(mut self, icon: Option<ImageData>) -> Self {
-        self.icon = icon;
-        self
-    }
-
-    /// Set the `scale` of the window.
-    pub fn scale(mut self, scale: f32) -> Self {
-        self.scale = scale;
-        self
-    }
-
-    /// Set the `size` of the window.
-    pub fn size(mut self, width: u32, height: u32) -> Self {
-        self.size = UVec2::new(width, height);
-        self
-    }
-
-    /// Set whether the window is `visible`.
-    pub fn visible(mut self, visible: bool) -> Self {
-        self.visible = visible;
-        self
-    }
-
-    /// Set the `cursor` of the window.
-    pub fn cursor(mut self, cursor: Cursor) -> Self {
-        self.cursor = cursor;
+impl WindowBuilder for Window {
+    fn window_mut(&mut self) -> &mut Window {
         self
     }
 }
 
+/// A trait for building a [`Window`].
 pub trait WindowBuilder: Sized {
     fn window_mut(&mut self) -> &mut Window;
 
+    /// Sets the `title` of the window.
     fn title(mut self, title: impl Into<String>) -> Self {
         self.window_mut().title = title.into();
         self
     }
 
+    /// Sets whether the window is `resizable`.
     fn resizable(mut self, resizable: bool) -> Self {
         self.window_mut().resizable = resizable;
         self
     }
 
-    fn decorations(mut self, decorations: bool) -> Self {
-        self.window_mut().decorations = decorations;
+    /// Sets whether the window has `decorations`.
+    fn decorated(mut self, decorated: bool) -> Self {
+        self.window_mut().decorated = decorated;
         self
     }
 
+    /// Sets the `size` of the window.
     fn size(mut self, width: u32, height: u32) -> Self {
         self.window_mut().size = UVec2::new(width, height);
         self
     }
 
+    /// Sets the `width` of the window.
     fn width(mut self, width: u32) -> Self {
         self.window_mut().size.x = width;
         self
     }
 
+    /// Sets the `height` of the window.
     fn height(mut self, height: u32) -> Self {
         self.window_mut().size.y = height;
         self
     }
 
+    /// Sets the `maximized` state of the window.
+    fn maximized(mut self, maximized: bool) -> Self {
+        self.window_mut().maximized = maximized;
+        self
+    }
+
+    /// Sets the `clear_color` of the window.
     fn clear_color(mut self, clear_color: Color) -> Self {
         self.window_mut().clear_color = clear_color;
         self
     }
 
+    /// Sets the `clear_color` of the window to [`Color::TRANSPARENT`].
     fn transparent(mut self) -> Self {
         self.window_mut().clear_color = Color::TRANSPARENT;
         self
     }
 
+    /// Sets the `icon` of the window.
     fn icon(mut self, icon: impl Into<ImageSource>) -> Self {
         self.window_mut().icon = Some(icon.into().load());
         self
     }
 
+    /// Sets the `scale` of the window.
     fn scale(mut self, scale: f32) -> Self {
         self.window_mut().scale = scale;
         self
     }
 
+    /// Sets the `visible` state of the window.
     fn visible(mut self, visible: bool) -> Self {
         self.window_mut().visible = visible;
-        self
-    }
-
-    fn cursor(mut self, cursor: Cursor) -> Self {
-        self.window_mut().cursor = cursor;
         self
     }
 }

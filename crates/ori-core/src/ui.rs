@@ -52,13 +52,13 @@ impl<R: Renderer> WindowUi<R> {
             );
         }
 
-        if self.window.decorations != window.decorations {
-            self.window.decorations = window.decorations;
-            window_backend.set_decorations(window.id(), window.decorations);
+        if self.window.decorated != window.decorated {
+            self.window.decorated = window.decorated;
+            window_backend.set_decorations(window.id(), window.decorated);
             tracing::debug!(
                 "Window {} decorations set to '{}'",
                 window.id(),
-                window.decorations
+                window.decorated
             );
         }
 

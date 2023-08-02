@@ -74,7 +74,7 @@ impl WindowBackend for WinitBackend {
         let winit_window = WindowBuilder::new()
             .with_title(window.title.clone())
             .with_resizable(window.resizable)
-            .with_decorations(window.decorations)
+            .with_decorations(window.decorated)
             .with_window_icon(icon)
             .with_inner_size(PhysicalSize::new(
                 window.size.x as f64,
