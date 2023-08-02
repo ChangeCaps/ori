@@ -33,6 +33,7 @@ impl<R: Renderer> WindowUi<R> {
 
         window.minimized = window_backend.get_minimized(self.window.id());
         window.maximized = window_backend.get_maximized(self.window.id());
+        window.size = window_backend.get_size(self.window.id());
 
         if window != self.scope.window().get_untracked() {
             self.scope.window().set(window);
