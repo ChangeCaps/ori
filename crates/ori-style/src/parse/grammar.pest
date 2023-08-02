@@ -39,9 +39,9 @@ Wildcard = { "*" }
 ElementSelector = ${ (Element ~ (Class | Tag)*) | (Class | Tag)+ }
 
 // combinator
-Descendant = { WHITESPACE }
 Child = { WHITESPACE ~ ">" ~ WHITESPACE }
-Combinator = { Descendant | Child }
+Descendant = { WHITESPACE }
+Combinator = { Child | Descendant }
 Selector = ${ ElementSelector ~ (Combinator ~ ElementSelector)* }
 Selectors = { (Selector ~ ",")* ~ Selector }
 
