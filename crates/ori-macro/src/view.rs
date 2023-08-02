@@ -239,9 +239,19 @@ fn view_node(context: &Expr, node: &Node) -> manyhow::Result<Expr> {
         Node::Text(text) => {
             let text = &text.value;
 
-            Ok(parse_quote_spanned! {text.span() =>
-                #ori_core::View::new(#text)
-            })
+            let set_text = quote_spanned! {text.span() =>
+                let __node = __view.get_node().unwrap();
+                __node.downcast::<#ori_core::Text, _>(|__node| {
+                    __node.text = ::std::string::ToString::to_string(#text);
+                }).unwrap();
+            };
+
+            let set_text_dynamic = wrap_dynamic(context, set_text);
+            Ok(parse_quote_spanned! {text.span() => {
+                let __view = #ori_core::View::new(#ori_core::Text::new(""));
+                #set_text_dynamic
+                __view
+            }})
         }
         _ => unreachable!(),
     }
