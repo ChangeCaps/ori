@@ -205,9 +205,7 @@ impl Scope {
     /// Creates a [`Signal`] that will be managed by this scope.
     pub fn signal<T: Send + Sync + 'static>(self, value: T) -> Signal<T> {
         let signal = Signal::new_leaking(value);
-
         self.manage_signal(*signal);
-
         signal
     }
 

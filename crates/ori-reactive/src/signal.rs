@@ -83,6 +83,16 @@ impl<T: Send + Sync> ReadSignal<T> {
         }
     }
 
+    /// Lock the signal's value for the duration of the callback.
+    ///
+    /// **Note** that the [`Runtime`](crate::Runtime) will be locked for the duration of the callback.
+    /// Therefore using any signal, or atom for pretty much anything inside the callback is
+    /// *very* likely to cause a deadlock.
+    pub fn with(self, f: impl FnOnce(&T)) {
+        self.resource.with(f);
+        self.track();
+    }
+
     /// Tracks the signal as a dependency of the current effect, see [`effect::track_callback`].
     pub fn track(self) {
         if let Some(emitter) = self.emitter.get() {
@@ -120,8 +130,9 @@ impl<T> Copy for ReadSignal<T> {}
 /// A signal that can be read from, subscribed to, and set, see [`ReadSignal`].
 ///
 /// Signals implement [`Clone`] and [`Copy`].
+#[repr(transparent)]
 pub struct Signal<T: 'static> {
-    signal: ReadSignal<T>,
+    pub(crate) signal: ReadSignal<T>,
 }
 
 impl<T> Deref for Signal<T> {
@@ -185,6 +196,17 @@ impl<T: Send + Sync> Signal<T> {
         if self.try_set(value).is_err() {
             panic!("Signal::set() called on a disposed signal");
         }
+    }
+
+    /// Lock the signal's value for the duration of the callback, see [`ReadSignal::with`].
+    ///
+    /// **Note** that the [`Runtime`](crate::Runtime) will be locked for the duration of the callback.
+    /// Therefore using any signal, or atom for pretty much anything inside the callback is
+    /// *very* likely to cause a deadlock.
+    pub fn with_mut(self, f: impl FnOnce(&mut T)) {
+        self.resource.with_mut(f);
+        self.track();
+        self.emit();
     }
 
     /// Modifies the signal's value, see [`Modify`].
@@ -266,6 +288,7 @@ impl<T: Send + Sync> Drop for Modify<T> {
 ///
 /// Signals implement [`Clone`] but not [`Copy`]. **Note** that cloning an [`OwnedSignal`] will increment its
 /// reference count, and won't copy the signal's value.
+#[repr(transparent)]
 pub struct OwnedSignal<T: 'static> {
     signal: Signal<T>,
 }
