@@ -106,12 +106,6 @@ impl<R: Renderer> WindowUi<R> {
                 window.id(),
                 window.maximized
             );
-
-            let new_size = window_backend.get_size(window.id());
-            if new_size != self.window.size {
-                self.window.size = new_size;
-                self.scope.window().modify().size = new_size;
-            }
         }
 
         if self.window.visible != window.visible {
@@ -298,7 +292,7 @@ where
         tracing::debug!("Window {} closed", id);
 
         for window in self.window_ids() {
-            self.event_inner(window, &Event::new(WindowClosedEvent::new(id)));
+            self.event_inner(window, &Event::new(WindowClosedEvent::new(id)), true);
         }
     }
 
@@ -323,7 +317,7 @@ where
     /// Forces all elements to be relaid out.
     pub fn force_layout(&mut self) {
         for id in self.window_ids() {
-            self.event_inner(id, &Event::new(ForceLayoutEvent));
+            self.event_inner(id, &Event::new(ForceLayoutEvent), true);
             self.window_backend.request_redraw(id);
         }
     }
@@ -336,7 +330,7 @@ where
         }
 
         let event = WindowResizedEvent::new(Vec2::new(width as f32, height as f32));
-        self.event_inner(id, &Event::new(event));
+        self.event_inner(id, &Event::new(event), true);
     }
 
     /// Get the position of a pointer with a given `device` with a given `id`.
@@ -377,7 +371,7 @@ where
             ..Default::default()
         };
 
-        self.event_inner(window, &Event::new(event));
+        self.event_inner(window, &Event::new(event), true);
     }
 
     /// Handle a pointer leaving the window.
@@ -390,7 +384,7 @@ where
             ..Default::default()
         };
 
-        self.event_inner(window, &Event::new(event));
+        self.event_inner(window, &Event::new(event), true);
     }
 
     /// Handle a pointer button being pressed or released.
@@ -410,7 +404,7 @@ where
             ..Default::default()
         };
 
-        self.event_inner(window, &Event::new(event));
+        self.event_inner(window, &Event::new(event), true);
     }
 
     /// Handle a pointer being scrolled.
@@ -423,7 +417,7 @@ where
             ..Default::default()
         };
 
-        self.event_inner(window, &Event::new(event));
+        self.event_inner(window, &Event::new(event), true);
     }
 
     /// Handle a key being pressed or released.
@@ -435,7 +429,7 @@ where
             ..Default::default()
         };
 
-        self.event_inner(window, &Event::new(event));
+        self.event_inner(window, &Event::new(event), true);
     }
 
     /// Handle text being input.
@@ -446,7 +440,7 @@ where
             ..Default::default()
         };
 
-        self.event_inner(window, &Event::new(event));
+        self.event_inner(window, &Event::new(event), true);
     }
 
     /// Handle modifiers being changed.
@@ -460,7 +454,7 @@ where
             ..Default::default()
         };
 
-        self.event_inner(window, &Event::new(event));
+        self.event_inner(window, &Event::new(event), true);
     }
 
     /// Handle an [`Event`].
@@ -504,11 +498,11 @@ where
         }
 
         for id in self.window_ids() {
-            self.event_inner(id, event);
+            self.event_inner(id, event, true);
         }
     }
 
-    fn event_inner(&mut self, id: WindowId, event: &Event) {
+    fn event_inner(&mut self, id: WindowId, event: &Event, update_window: bool) {
         tracing::trace!("Event for window {:?}: {:?}", id, event.type_name());
 
         if let Some(ui) = self.window_ui.get_mut(&id) {
@@ -530,15 +524,16 @@ where
                 );
             });
 
-            ui.update_window(&mut self.window_backend, &window.get());
+            if update_window {
+                ui.update_window(&mut self.window_backend, &window.get());
+            }
         }
     }
 
-    /// Layout a window.
-    pub fn layout(&mut self, id: WindowId) {
+    fn layout_inner(&mut self, id: WindowId, update_window: bool) {
         tracing::trace!("Laying out window {:?}", id);
 
-        self.event_inner(id, &Event::new(PrepareLayoutEvent));
+        self.event_inner(id, &Event::new(PrepareLayoutEvent), false);
 
         if let Some(ui) = self.window_ui.get_mut(&id) {
             ui.query_window(&mut self.window_backend);
@@ -556,15 +551,22 @@ where
                 );
             });
 
-            ui.update_window(&mut self.window_backend, &window.get());
+            if update_window {
+                ui.update_window(&mut self.window_backend, &window.get());
+            }
         }
+    }
+
+    /// Layout a window.
+    pub fn layout(&mut self, id: WindowId) {
+        self.layout_inner(id, true);
     }
 
     /// Draw a window.
     pub fn draw(&mut self, id: WindowId) {
         tracing::trace!("Drawing window {:?}", id);
 
-        self.layout(id);
+        self.layout_inner(id, false);
 
         if let Some(ui) = self.window_ui.get_mut(&id) {
             self.frame.clear();
