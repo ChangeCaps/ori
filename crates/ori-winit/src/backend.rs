@@ -80,6 +80,7 @@ impl WindowBackend for WinitBackend {
                 window.size.x as f64,
                 window.size.y as f64,
             ))
+            .with_maximized(window.maximized)
             .with_visible(window.visible)
             .with_transparent(window.clear_color.is_translucent())
             .build(target)?;
@@ -112,6 +113,10 @@ impl WindowBackend for WinitBackend {
         if let Some(window) = self.windows.get(&id) {
             window.request_redraw();
         }
+    }
+
+    fn drag_window(&mut self, id: WindowId) {
+        let _ = self.windows[&id].drag_window();
     }
 
     fn get_title(&self, id: WindowId) -> String {
@@ -160,6 +165,22 @@ impl WindowBackend for WinitBackend {
 
     fn set_size(&mut self, id: WindowId, size: UVec2) {
         self.windows[&id].set_inner_size(PhysicalSize::new(size.x as f64, size.y as f64));
+    }
+
+    fn get_minimized(&self, id: WindowId) -> bool {
+        self.windows[&id].is_minimized().unwrap_or(false)
+    }
+
+    fn set_minimized(&mut self, id: WindowId, minimized: bool) {
+        self.windows[&id].set_minimized(minimized);
+    }
+
+    fn get_maximized(&self, id: WindowId) -> bool {
+        self.windows[&id].is_maximized()
+    }
+
+    fn set_maximized(&mut self, id: WindowId, maximized: bool) {
+        self.windows[&id].set_maximized(maximized);
     }
 
     fn get_visible(&self, id: WindowId) -> bool {

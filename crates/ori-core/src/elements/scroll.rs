@@ -27,11 +27,11 @@ impl Scroll {
         let axis = cx.style::<Axis>("direction");
         let max_width = axis.major(cx.rect().size());
 
-        let width = cx.style_range("scrollbar-width", 0.0..max_width);
-        let padding = cx.style_range("scrollbar-padding", 0.0..max_width - width);
+        let width = cx.style_length("scrollbar-width", 0.0..max_width);
+        let padding = cx.style_length("scrollbar-padding", 0.0..max_width - width);
 
         let max_height = axis.minor(cx.rect().size()) - padding * 2.0;
-        let height = cx.style_range("scrollbar-height", 0.0..max_height);
+        let height = cx.style_length("scrollbar-height", 0.0..max_height);
 
         let scrollbar_size = axis.pack(height, width);
         let range = axis.major(cx.rect().size()) - height - padding * 2.0;
@@ -49,9 +49,9 @@ impl Scroll {
         let axis = cx.style::<Axis>("direction");
 
         let max_width = axis.major(cx.rect().size());
-        let width = cx.style_range("scrollbar-width", 0.0..max_width);
+        let width = cx.style_length("scrollbar-width", 0.0..max_width);
 
-        let padding = cx.style_range("scrollbar-padding", 0.0..max_width - width);
+        let padding = cx.style_length("scrollbar-padding", 0.0..max_width - width);
 
         Rect::min_size(
             axis.pack(
@@ -158,7 +158,7 @@ impl Element for Scroll {
             axis: cx.style::<Axis>("direction"),
             justify_content: cx.style("justify-content"),
             align_items: cx.style("align-items"),
-            gap: cx.style_range("gap", 0.0..space.max.min_element() / 2.0),
+            gap: cx.style_length("gap", 0.0..space.max.min_element() / 2.0),
             ..Default::default()
         };
 
@@ -187,13 +187,13 @@ impl Element for Scroll {
         let rect = self.scrollbar_track_rect(cx);
 
         let max_radius = rect.size().min_element() / 2.0;
-        let radius = cx.style_range("scrollbar-border-radius", 0.0..max_radius);
+        let radius = cx.style_length("scrollbar-border-radius", 0.0..max_radius);
 
         let quad = Quad {
             rect,
             background: cx.style("scrollbar-track-color"),
             border_radius: [radius; 4],
-            border_width: cx.style_range("scrollbar-track-border-width", 0.0..max_radius),
+            border_width: cx.style_length("scrollbar-track-border-width", 0.0..max_radius),
             border_color: cx.style("scrollbar-track-border-color"),
         };
 
@@ -208,7 +208,7 @@ impl Element for Scroll {
             rect,
             background: cx.style("scrollbar-color"),
             border_radius: [radius; 4],
-            border_width: cx.style_range("scrollbar-border-width", 0.0..max_radius),
+            border_width: cx.style_length("scrollbar-border-width", 0.0..max_radius),
             border_color: cx.style("scrollbar-border-color"),
         };
 

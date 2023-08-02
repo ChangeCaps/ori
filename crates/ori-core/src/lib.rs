@@ -39,7 +39,7 @@ pub mod prelude {
     pub use crate::element::Element;
     pub use crate::elements::*;
     pub use crate::event::{
-        CloseWindow, Cursor, Key, KeyboardEvent, Modifiers, OpenWindow, PointerButton,
+        CloseWindow, Cursor, DragWindow, Key, KeyboardEvent, Modifiers, OpenWindow, PointerButton,
         PointerEvent, RequestRedrawEvent, WindowClosedEvent, WindowResizedEvent,
     };
     pub use crate::layout::{AlignItem, AvailableSpace, Axis, JustifyContent, Margin, Padding};

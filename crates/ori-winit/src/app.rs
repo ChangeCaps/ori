@@ -202,7 +202,7 @@ impl App {
                             new_inner_size: &mut size,
                             ..
                         } => {
-                            ui.resize_window(window, size.width, size.height);
+                            ui.window_resized(window, size.width, size.height);
                         }
                         WindowEvent::CloseRequested => {
                             ui.close_window(window);

@@ -27,7 +27,7 @@ impl Element for CustomElement {
         // use the "custom-radius" style property
         // here we use a style_range, because the attribute is a Length,
         // this means we can have percentage values and other units
-        *radius = cx.style_range("custom-radius", 5.0..100.0);
+        *radius = cx.style_length("custom-radius", 5.0..100.0);
 
         // this view will take up a rectangular space with the size of the radius
         Vec2::splat(*radius * 2.0)

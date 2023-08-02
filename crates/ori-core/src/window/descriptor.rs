@@ -21,6 +21,10 @@ pub struct Window {
     pub scale: f32,
     /// The size of the window.
     pub size: UVec2,
+    /// Whether the window is minimized.
+    pub minimized: bool,
+    /// Whether the window is maximized.
+    pub maximized: bool,
     /// Whether the window is visible.
     pub visible: bool,
     /// The cursor of the window.
@@ -38,6 +42,8 @@ impl Default for Window {
             icon: None,
             scale: 1.0,
             size: UVec2::new(800, 600),
+            minimized: false,
+            maximized: false,
             visible: true,
             cursor: Cursor::default(),
         }

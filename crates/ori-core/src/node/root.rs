@@ -1,6 +1,6 @@
 use glam::Vec2;
 use ori_graphics::{Fonts, Frame, ImageCache, Rect, Renderer};
-use ori_reactive::{Event, EventSink};
+use ori_reactive::{Event, EventSink, Signal};
 use ori_style::{StyleCache, StyleTree, Stylesheet};
 
 use crate::{
@@ -15,7 +15,7 @@ impl Node {
         stylesheet: &Stylesheet,
         style_cache: &mut StyleCache,
         renderer: &dyn Renderer,
-        window: &mut Window,
+        window: Signal<Window>,
         fonts: &mut Fonts,
         event_sink: &EventSink,
         event: &Event,
@@ -60,7 +60,7 @@ impl Node {
         stylesheet: &Stylesheet,
         style_cache: &mut StyleCache,
         renderer: &dyn Renderer,
-        window: &mut Window,
+        window: Signal<Window>,
         fonts: &mut Fonts,
         event_sink: &EventSink,
         image_cache: &mut ImageCache,
@@ -69,7 +69,7 @@ impl Node {
         element_state.style = self.element().style();
         element_state.needs_layout = false;
 
-        let space = AvailableSpace::new(Vec2::ZERO, window.size.as_vec2());
+        let space = AvailableSpace::new(Vec2::ZERO, window.get().size.as_vec2());
 
         let mut style_tree = StyleTree::new(element_state.style.clone());
         let mut cx = LayoutContext {
@@ -108,7 +108,7 @@ impl Node {
         style_cache: &mut StyleCache,
         frame: &mut Frame,
         renderer: &dyn Renderer,
-        window: &mut Window,
+        window: Signal<Window>,
         fonts: &mut Fonts,
         event_sink: &EventSink,
         image_cache: &mut ImageCache,
@@ -116,7 +116,7 @@ impl Node {
         let element_state = &mut self.node_state();
         element_state.style = self.element().style();
 
-        let parent_size = window.size.as_vec2();
+        let parent_size = window.get().size.as_vec2();
         let mut style_tree = StyleTree::new(element_state.style.clone());
         let mut cx = DrawContext {
             node: element_state,

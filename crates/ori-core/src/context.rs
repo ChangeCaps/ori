@@ -8,7 +8,7 @@ use glam::Vec2;
 use ori_graphics::{
     Fonts, Frame, Glyphs, ImageCache, ImageHandle, ImageSource, Quad, Rect, Renderer, TextSection,
 };
-use ori_reactive::EventSink;
+use ori_reactive::{EventSink, Signal};
 use ori_style::{
     FromStyleAttribute, Length, StyleAttribute, StyleCache, StyleSpec, StyleTree, Stylesheet,
 };
@@ -20,7 +20,7 @@ use crate::{AvailableSpace, Margin, NodeState, Padding, RequestRedrawEvent, Wind
 pub struct EventContext<'a> {
     pub node: &'a mut NodeState,
     pub renderer: &'a dyn Renderer,
-    pub window: &'a mut Window,
+    pub window: Signal<Window>,
     pub fonts: &'a mut Fonts,
     pub stylesheet: &'a Stylesheet,
     pub style_tree: &'a mut StyleTree,
@@ -34,7 +34,7 @@ pub struct EventContext<'a> {
 pub struct LayoutContext<'a> {
     pub node: &'a mut NodeState,
     pub renderer: &'a dyn Renderer,
-    pub window: &'a mut Window,
+    pub window: Signal<Window>,
     pub fonts: &'a mut Fonts,
     pub stylesheet: &'a Stylesheet,
     pub style_tree: &'a mut StyleTree,
@@ -54,11 +54,11 @@ impl<'a> LayoutContext<'a> {
         let max_height_group = &["max-height", "height", "size"];
 
         let parent = self.parent_space;
-        let min_width = self.style_range_group(min_width_group, parent.x_axis());
-        let max_width = self.style_range_group(max_width_group, parent.x_axis());
+        let min_width = self.style_length_group(min_width_group, parent.x_axis());
+        let max_width = self.style_length_group(max_width_group, parent.x_axis());
 
-        let min_height = self.style_range_group(min_height_group, parent.y_axis());
-        let max_height = self.style_range_group(max_height_group, parent.y_axis());
+        let min_height = self.style_length_group(min_height_group, parent.y_axis());
+        let max_height = self.style_length_group(max_height_group, parent.y_axis());
 
         let min_size = space.constrain(Vec2::new(min_width, min_height));
         let max_size = space.constrain(Vec2::new(max_width, max_height));
@@ -135,7 +135,7 @@ pub struct DrawContext<'a> {
     pub node: &'a mut NodeState,
     pub frame: &'a mut Frame,
     pub renderer: &'a dyn Renderer,
-    pub window: &'a mut Window,
+    pub window: Signal<Window>,
     pub fonts: &'a mut Fonts,
     pub parent_size: Vec2,
     pub stylesheet: &'a Stylesheet,
@@ -193,10 +193,10 @@ impl<'a> DrawContext<'a> {
         let br: &[&str] = &[&br, &border_radius];
 
         let range = 0.0..parent_size.min_element();
-        let tl = self.style_range_group(tl, range.clone());
-        let tr = self.style_range_group(tr, range.clone());
-        let bl = self.style_range_group(bl, range.clone());
-        let br = self.style_range_group(br, range);
+        let tl = self.style_length_group(tl, range.clone());
+        let tr = self.style_length_group(tr, range.clone());
+        let bl = self.style_length_group(bl, range.clone());
+        let br = self.style_length_group(br, range);
 
         [tl, tr, br, bl]
     }
@@ -219,7 +219,7 @@ impl<'a> DrawContext<'a> {
             rect: self.rect(),
             background: self.style_group(&["background-color", "background"]),
             border_radius: self.style_border_radius("border", self.parent_size),
-            border_width: self.style_range("border-width", range),
+            border_width: self.style_length("border-width", range),
             border_color: self.style("border-color"),
         };
 
@@ -270,10 +270,7 @@ pub trait Context {
     fn renderer(&self) -> &dyn Renderer;
 
     /// Returns the [`Window`] of the application.
-    fn window(&self) -> &Window;
-
-    /// Returns the [`Window`] of the application.
-    fn window_mut(&mut self) -> &mut Window;
+    fn window(&self) -> Signal<Window>;
 
     /// Returns the [`Fonts`] of the application.
     fn fonts(&self) -> &Fonts;
@@ -356,21 +353,22 @@ pub trait Context {
     /// `range` is the range from 0% to 100% of the desired value.
     ///
     /// This will also transition the value if the attribute has a transition.
-    fn get_style_range(&mut self, key: &str, range: Range<f32>) -> Option<f32> {
+    fn get_style_length(&mut self, key: &str, range: Range<f32>) -> Option<f32> {
         let attribute = self.get_style_attribute(key)?;
         let value = Length::from_attribute(attribute.value().clone())?;
         let transition = attribute.transition();
 
-        let scale = self.window().scale;
-        let width = self.window().size.x as f32;
-        let height = self.window().size.y as f32;
+        let window = self.window().get();
+        let scale = window.scale;
+        let width = window.size.x as f32;
+        let height = window.size.y as f32;
         let pixels = value.pixels(range, scale, width, height);
 
         Some((self.node_mut()).transition(key, pixels, transition))
     }
 
     /// Gets the value of a style attribute in pixels and [`StyleSpec`] for the given `key`.
-    fn get_style_range_specificity(
+    fn get_style_length_specificity(
         &mut self,
         key: &str,
         range: Range<f32>,
@@ -379,9 +377,10 @@ pub trait Context {
         let value = Length::from_attribute(attribute.value().clone())?;
         let transition = attribute.transition();
 
-        let scale = self.window().scale;
-        let width = self.window().size.x as f32;
-        let height = self.window().size.y as f32;
+        let window = self.window().get();
+        let scale = window.scale;
+        let width = window.size.x as f32;
+        let height = window.size.y as f32;
         let pixels = value.pixels(range, scale, width, height);
 
         Some((
@@ -395,8 +394,8 @@ pub trait Context {
     ///
     /// This will also transition the value if the attribute has a transition.
     #[track_caller]
-    fn style_range(&mut self, key: &str, range: Range<f32>) -> f32 {
-        self.get_style_range(key, range).unwrap_or_default()
+    fn style_length(&mut self, key: &str, range: Range<f32>) -> f32 {
+        self.get_style_length(key, range).unwrap_or_default()
     }
 
     /// Takes a `primary_key` and a `secondary_key` and returns the value of the attribute with the highest specificity in pixels.
@@ -404,12 +403,12 @@ pub trait Context {
     /// `range` is the range from 0% to 100% of the desired value.
     ///
     /// This will also transition the value if the attribute has a transition.
-    fn style_range_group(&mut self, keys: &[&str], range: Range<f32>) -> f32 {
+    fn style_length_group(&mut self, keys: &[&str], range: Range<f32>) -> f32 {
         let mut specificity = None;
         let mut result = None;
 
         for key in keys {
-            if let Some((v, s)) = self.get_style_range_specificity(key, range.clone()) {
+            if let Some((v, s)) = self.get_style_length_specificity(key, range.clone()) {
                 if specificity.is_none() || s > specificity.unwrap() {
                     specificity = Some(s);
                     result = Some(v);
@@ -614,11 +613,7 @@ macro_rules! context {
                 self.renderer
             }
 
-            fn window(&self) -> &Window {
-                self.window
-            }
-
-            fn window_mut(&mut self) -> &mut Window {
+            fn window(&self) -> Signal<Window> {
                 self.window
             }
 

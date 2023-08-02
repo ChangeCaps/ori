@@ -306,7 +306,7 @@ impl Node {
         };
 
         if cx.hovered() || cx.active() {
-            cx.window_mut().cursor = cursor;
+            cx.window().modify().cursor = cursor;
         }
     }
 

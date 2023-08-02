@@ -410,6 +410,24 @@ fn handle_keyboard_event(
     });
 }
 
+fn top_bar(cx: Scope) -> View {
+    let minimize = move |_: &PointerEvent| {
+        let mut window = cx.window().modify();
+        window.minimized = !window.minimized;
+    };
+
+    view! {
+        <Div class="top-bar" on:click=move |_| cx.emit(DragWindow::new())>
+            <Button class="minimize" on:click=minimize>
+                "\u{e931}"
+            </Button>
+            <Button class="exit" on:click=move |_| cx.close_window()>
+                "\u{e5cd}"
+            </Button>
+        </Div>
+    }
+}
+
 fn ui(cx: Scope) -> View {
     let operator = cx.signal(Operator::None);
     let result = cx.signal(Number::new(0.0));
@@ -418,6 +436,7 @@ fn ui(cx: Scope) -> View {
     handle_keyboard_event(cx, operator, result, rhs);
 
     view! {
+        { top_bar(cx) }
         { result_bar(cx, operator, result, rhs) }
         { buttons(cx, operator, result, rhs) }
     }
@@ -428,7 +447,8 @@ fn main() {
         .title("Calculator (examples/calculator.rs)")
         .style(style!("examples/style/calculator.css"))
         .resizable(false)
+        .decorations(false)
         .transparent()
-        .size(300, 400)
+        .size(300, 432)
         .run();
 }

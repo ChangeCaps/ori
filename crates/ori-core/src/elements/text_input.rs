@@ -315,7 +315,7 @@ impl Element for TextInput {
         cx: &mut LayoutContext,
         space: AvailableSpace,
     ) -> Vec2 {
-        state.font_size = cx.style_range("font-size", 0.0..cx.parent_space.max.y);
+        state.font_size = cx.style_length("font-size", 0.0..cx.parent_space.max.y);
 
         let section = TextSection {
             text: &self.text(),

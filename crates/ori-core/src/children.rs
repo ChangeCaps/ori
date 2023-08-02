@@ -7,7 +7,7 @@ use ori_reactive::Event;
 use smallvec::{smallvec, SmallVec};
 
 use crate::{
-    AlignItem, AvailableSpace, Axis, Context, DrawContext, EventContext, JustifyContent,
+    AlignItem, AvailableSpace, Axis, Context, DrawContext, EventContext, IntoView, JustifyContent,
     LayoutContext, Node, Padding, Parent, View,
 };
 
@@ -76,7 +76,7 @@ impl FlexLayout {
         let axis = cx.style::<Axis>("direction");
         let justify_content = cx.style("justify-content");
         let align_items = cx.style("align-items");
-        let gap = cx.style_range("gap", 0.0..axis.major(cx.parent_space.max));
+        let gap = cx.style_length("gap", 0.0..axis.major(cx.parent_space.max));
 
         Self {
             padding,
@@ -94,10 +94,10 @@ pub struct Children {
     elements: SmallVec<[View; 1]>,
 }
 
-impl<T: Into<View>> From<T> for Children {
+impl<T: IntoView> From<T> for Children {
     fn from(value: T) -> Self {
         Self {
-            elements: smallvec![value.into()],
+            elements: smallvec![value.into_view()],
         }
     }
 }

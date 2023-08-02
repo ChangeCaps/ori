@@ -6,10 +6,10 @@ use ori_reactive::{Emitter, Event, EventSink, Scope, Task};
 use ori_style::{StyleCache, StyleLoader};
 
 use crate::{
-    Body, BoxedBuildUi, CloseWindow, Cursor, ForceLayoutEvent, Key, KeyboardEvent, Modifiers, Node,
-    OpenWindow, Parent, PointerButton, PointerEvent, PrepareLayoutEvent, RequestRedrawEvent,
-    ScopeViewExt, ScopeWindowExt, Window, WindowBackend, WindowClosedEvent, WindowId,
-    WindowResizedEvent,
+    Body, BoxedBuildUi, CloseWindow, Cursor, DragWindow, ForceLayoutEvent, Key, KeyboardEvent,
+    Modifiers, Node, OpenWindow, Parent, PointerButton, PointerEvent, PrepareLayoutEvent,
+    RequestRedrawEvent, ScopeViewExt, ScopeWindowExt, Window, WindowBackend, WindowClosedEvent,
+    WindowId, WindowResizedEvent,
 };
 
 const TEXT_FONT: &[u8] = include_bytes!("../fonts/NotoSans-Medium.ttf");
@@ -27,6 +27,14 @@ struct WindowUi<R: Renderer> {
 }
 
 impl<R: Renderer> WindowUi<R> {
+    /// Queries information about the window that won't be provided by events.
+    fn query_window(&mut self, window_backend: &mut impl WindowBackend) {
+        let mut window = self.scope.window().modify();
+
+        window.minimized = window_backend.get_minimized(self.window.id());
+        window.maximized = window_backend.get_maximized(self.window.id());
+    }
+
     fn update_window(&mut self, window_backend: &mut impl WindowBackend, window: &Window) {
         if self.window.title != window.title {
             self.window.title = window.title.clone();
@@ -76,6 +84,26 @@ impl<R: Renderer> WindowUi<R> {
             tracing::debug!("Window {} size set to {}", window.id(), window.size);
         }
 
+        if self.window.minimized != window.minimized {
+            self.window.minimized = window.minimized;
+            window_backend.set_minimized(window.id(), window.minimized);
+            tracing::debug!(
+                "Window {} minimized set to {}",
+                window.id(),
+                window.minimized
+            );
+        }
+
+        if self.window.maximized != window.maximized {
+            self.window.maximized = window.maximized;
+            window_backend.set_maximized(window.id(), window.maximized);
+            tracing::debug!(
+                "Window {} maximized set to {}",
+                window.id(),
+                window.maximized
+            );
+        }
+
         if self.window.visible != window.visible {
             self.window.visible = window.visible;
             window_backend.set_visible(window.id(), window.visible);
@@ -91,8 +119,6 @@ impl<R: Renderer> WindowUi<R> {
             window_backend.set_cursor(window.id(), window.cursor);
             tracing::trace!("Window {} cursor set to {:?}", window.id(), window.cursor);
         }
-
-        self.scope.window().set(window.clone());
     }
 }
 
@@ -292,8 +318,8 @@ where
         }
     }
 
-    /// Resize a window.
-    pub fn resize_window(&mut self, id: WindowId, width: u32, height: u32) {
+    /// Window has been resized.
+    pub fn window_resized(&mut self, id: WindowId, width: u32, height: u32) {
         if let Some(ui) = self.window_ui.get_mut(&id) {
             ui.scope.window().modify().size = UVec2::new(width, height);
             ui.renderer.resize(width, height);
@@ -453,6 +479,15 @@ where
             return;
         }
 
+        if let Some(event) = event.get::<DragWindow>() {
+            match event.window {
+                Some(id) => self.window_backend.drag_window(id),
+                None => self.window_backend.drag_window(id),
+            }
+
+            return;
+        }
+
         if event.is::<RequestRedrawEvent>() {
             self.window_backend.request_redraw(id);
             return;
@@ -468,16 +503,17 @@ where
 
         if let Some(ui) = self.window_ui.get_mut(&id) {
             ui.event_emitter.emit(event);
+            ui.query_window(&mut self.window_backend);
 
-            let mut window = ui.scope.window().get();
-            window.cursor = Cursor::default();
+            let window = ui.scope.window();
+            window.modify().cursor = Cursor::default();
 
             ori_reactive::effect::delay_effects(|| {
                 ui.root.event_root_inner(
                     self.style_loader.stylesheet(),
                     &mut self.style_cache,
                     &ui.renderer,
-                    &mut window,
+                    window,
                     &mut self.fonts,
                     &ui.event_sink,
                     event,
@@ -485,7 +521,7 @@ where
                 );
             });
 
-            ui.update_window(&mut self.window_backend, &window);
+            ui.update_window(&mut self.window_backend, &window.get());
         }
     }
 
@@ -496,21 +532,22 @@ where
         self.event_inner(id, &Event::new(PrepareLayoutEvent));
 
         if let Some(ui) = self.window_ui.get_mut(&id) {
-            let mut window = ui.scope.window().get();
+            ui.query_window(&mut self.window_backend);
+            let window = ui.scope.window();
 
             ori_reactive::effect::delay_effects(|| {
                 ui.root.layout_root_inner(
                     self.style_loader.stylesheet(),
                     &mut self.style_cache,
                     &ui.renderer,
-                    &mut window,
+                    window,
                     &mut self.fonts,
                     &ui.event_sink,
                     &mut self.image_cache,
                 );
             });
 
-            ui.update_window(&mut self.window_backend, &window);
+            ui.update_window(&mut self.window_backend, &window.get());
         }
     }
 
@@ -523,8 +560,8 @@ where
         if let Some(ui) = self.window_ui.get_mut(&id) {
             self.frame.clear();
 
-            let mut window = ui.scope.window().get();
-            window.cursor = Cursor::default();
+            let window = ui.scope.window();
+            window.modify().cursor = Cursor::default();
 
             ori_reactive::effect::delay_effects(|| {
                 ui.root.draw_root_inner(
@@ -532,13 +569,14 @@ where
                     &mut self.style_cache,
                     &mut self.frame,
                     &ui.renderer,
-                    &mut window,
+                    window,
                     &mut self.fonts,
                     &ui.event_sink,
                     &mut self.image_cache,
                 );
             });
 
+            let window = window.get();
             ui.update_window(&mut self.window_backend, &window);
 
             let clear_color = window.clear_color;

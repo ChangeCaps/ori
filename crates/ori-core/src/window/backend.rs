@@ -42,6 +42,9 @@ pub trait WindowBackend {
     /// Requests a redraw for a window with `id`.
     fn request_redraw(&mut self, id: WindowId);
 
+    /// Begins a drag operation for a window with `id`.
+    fn drag_window(&mut self, id: WindowId);
+
     /// Returns the title of a window with `id`.
     fn get_title(&self, id: WindowId) -> String;
 
@@ -71,6 +74,18 @@ pub trait WindowBackend {
 
     /// Sets the `size` of a window with `id`.
     fn set_size(&mut self, id: WindowId, size: UVec2);
+
+    /// Returns whether a window with `id` is minimized.
+    fn get_minimized(&self, id: WindowId) -> bool;
+
+    /// Sets whether a window with `id` is `minimized`.
+    fn set_minimized(&mut self, id: WindowId, minimized: bool);
+
+    /// Returns whether a window with `id` is maximized.
+    fn get_maximized(&self, id: WindowId) -> bool;
+
+    /// Sets whether a window with `id` is `maximized`.
+    fn set_maximized(&mut self, id: WindowId, maximized: bool);
 
     /// Returns whether a window with `id` is visible.
     fn get_visible(&self, id: WindowId) -> bool;

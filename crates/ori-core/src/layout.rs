@@ -130,10 +130,10 @@ impl Padding {
         let top = &[&format!("{}-top", name), name];
         let bottom = &[&format!("{}-bottom", name), name];
 
-        let left = context.style_range_group(left, 0.0..space.max.x);
-        let right = context.style_range_group(right, 0.0..space.max.x);
-        let top = context.style_range_group(top, 0.0..space.max.y);
-        let bottom = context.style_range_group(bottom, 0.0..space.max.y);
+        let left = context.style_length_group(left, 0.0..space.max.x);
+        let right = context.style_length_group(right, 0.0..space.max.x);
+        let top = context.style_length_group(top, 0.0..space.max.y);
+        let bottom = context.style_length_group(bottom, 0.0..space.max.y);
 
         Self {
             left,
@@ -201,10 +201,10 @@ impl Margin {
 
     /// Create a new [`Margin`] from the style of the element.
     pub fn from_style(context: &mut impl Context, space: AvailableSpace) -> Self {
-        let left = context.style_range_group(&["margin-left", "margin"], 0.0..space.max.x);
-        let right = context.style_range_group(&["margin-right", "margin"], 0.0..space.max.x);
-        let top = context.style_range_group(&["margin-top", "margin"], 0.0..space.max.y);
-        let bottom = context.style_range_group(&["margin-bottom", "margin"], 0.0..space.max.y);
+        let left = context.style_length_group(&["margin-left", "margin"], 0.0..space.max.x);
+        let right = context.style_length_group(&["margin-right", "margin"], 0.0..space.max.x);
+        let top = context.style_length_group(&["margin-top", "margin"], 0.0..space.max.y);
+        let bottom = context.style_length_group(&["margin-bottom", "margin"], 0.0..space.max.y);
 
         Self {
             left,

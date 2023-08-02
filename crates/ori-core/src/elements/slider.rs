@@ -51,7 +51,7 @@ impl Slider {
         let axis = cx.style::<Axis>("direction");
 
         let length = axis.major(cx.rect().size());
-        let size = cx.style_range("track-size", 0.0..length);
+        let size = cx.style_length("track-size", 0.0..length);
 
         Rect::center_size(cx.rect().center(), axis.pack(length, size))
     }
@@ -65,7 +65,7 @@ impl Slider {
 
         let track_rect = Self::track_rect(cx);
         let track_size = axis.minor(track_rect.size());
-        let knob_size = cx.style_range("knob-size", 0.0..track_size);
+        let knob_size = cx.style_length("knob-size", 0.0..track_size);
 
         let padding = f32::max(knob_size - track_size, 0.0);
         let length = (axis.major(cx.rect().size()) - padding * 2.0) * t + padding;
@@ -82,7 +82,7 @@ impl Slider {
         let track_rect = Self::track_rect(cx);
         let fill_rect = self.fill_rect(cx);
 
-        let size = cx.style_range("knob-size", 0.0..axis.minor(track_rect.size()));
+        let size = cx.style_length("knob-size", 0.0..axis.minor(track_rect.size()));
         let size = axis.pack(size, size);
 
         let center = axis.pack(axis.major(fill_rect.max), axis.minor(track_rect.center()));
@@ -113,7 +113,7 @@ impl Element for Slider {
                 let track_rect = Self::track_rect(cx);
 
                 let track_size = axis.minor(track_rect.size());
-                let knob_size = cx.style_range("knob-size", 0.0..track_size);
+                let knob_size = cx.style_length("knob-size", 0.0..track_size);
                 let padding = f32::max(knob_size - track_size, 0.0);
 
                 let length = axis.major(track_rect.size()) - padding * 2.0;
@@ -138,9 +138,9 @@ impl Element for Slider {
 
     fn layout(&self, _: &mut Self::State, cx: &mut LayoutContext, space: AvailableSpace) -> Vec2 {
         let axis = cx.style::<Axis>("direction");
-        let track_size = cx.style_range("track-size", 0.0..axis.minor(space.max));
-        let knob_size = cx.style_range("knob-size", 0.0..axis.minor(space.max));
-        let length = cx.style_range("length", 0.0..axis.major(space.max));
+        let track_size = cx.style_length("track-size", 0.0..axis.minor(space.max));
+        let knob_size = cx.style_length("knob-size", 0.0..axis.minor(space.max));
+        let length = cx.style_length("length", 0.0..axis.major(space.max));
 
         let size = f32::max(track_size, knob_size);
         space.constrain(axis.pack(length, size))
@@ -154,16 +154,16 @@ impl Element for Slider {
         let br = "border-bottom-right-radius";
         let bl = "border-bottom-left-radius";
 
-        let tl = cx.style_range_group(&[tl, "border-radius"], range.clone());
-        let tr = cx.style_range_group(&[tr, "border-radius"], range.clone());
-        let br = cx.style_range_group(&[br, "border-radius"], range.clone());
-        let bl = cx.style_range_group(&[bl, "border-radius"], range.clone());
+        let tl = cx.style_length_group(&[tl, "border-radius"], range.clone());
+        let tr = cx.style_length_group(&[tr, "border-radius"], range.clone());
+        let br = cx.style_length_group(&[br, "border-radius"], range.clone());
+        let bl = cx.style_length_group(&[bl, "border-radius"], range.clone());
 
         let track_quad = Quad {
             rect: Self::track_rect(cx),
             background: cx.style_group(&["background-color", "background"]),
             border_radius: [tl, tr, br, bl],
-            border_width: cx.style_range("border-width", range.clone()),
+            border_width: cx.style_length("border-width", range.clone()),
             border_color: cx.style("border-color"),
         };
         cx.draw(track_quad);
@@ -172,7 +172,7 @@ impl Element for Slider {
             rect: self.fill_rect(cx),
             background: cx.style("color"),
             border_radius: [tl, tr, br, bl],
-            border_width: cx.style_range("border-width", range.clone()),
+            border_width: cx.style_length("border-width", range.clone()),
             border_color: cx.style("border-color"),
         };
         cx.draw(fill_quad);
@@ -182,17 +182,17 @@ impl Element for Slider {
         let br = "knob-border-bottom-right-radius";
         let bl = "knob-border-bottom-left-radius";
 
-        let tl = cx.style_range_group(&[tl, "knob-border-radius"], range.clone());
-        let tr = cx.style_range_group(&[tr, "knob-border-radius"], range.clone());
-        let br = cx.style_range_group(&[br, "knob-border-radius"], range.clone());
-        let bl = cx.style_range_group(&[bl, "knob-border-radius"], range.clone());
+        let tl = cx.style_length_group(&[tl, "knob-border-radius"], range.clone());
+        let tr = cx.style_length_group(&[tr, "knob-border-radius"], range.clone());
+        let br = cx.style_length_group(&[br, "knob-border-radius"], range.clone());
+        let bl = cx.style_length_group(&[bl, "knob-border-radius"], range.clone());
 
         let knob_rect = self.knob_rect(cx);
         let knob_quad = Quad {
             rect: knob_rect,
             background: cx.style_group(&["color", "knob-color"]),
             border_radius: [tl, tr, br, bl],
-            border_width: cx.style_range("knob-border-width", range),
+            border_width: cx.style_length("knob-border-width", range),
             border_color: cx.style("knob-border-color"),
         };
         cx.draw(knob_quad);

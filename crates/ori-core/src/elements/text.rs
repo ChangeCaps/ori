@@ -62,7 +62,7 @@ impl Element for Text {
         cx: &mut LayoutContext,
         space: AvailableSpace,
     ) -> Vec2 {
-        let font_size = cx.style_range("font-size", 0.0..cx.parent_space.max.y);
+        let font_size = cx.style_length("font-size", 0.0..cx.parent_space.max.y);
 
         let section = TextSection {
             text: &self.text,

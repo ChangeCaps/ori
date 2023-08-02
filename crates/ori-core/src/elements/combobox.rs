@@ -95,7 +95,7 @@ impl Element for ComboBox {
         // calculate the space for the content
         let content_space = AvailableSpace {
             min: Vec2::new(title_size.x, 0.0),
-            max: cx.window.size.as_vec2(),
+            max: cx.window().get().size.as_vec2(),
         };
 
         // get the flex layout for the content
@@ -128,7 +128,7 @@ impl Element for ComboBox {
             rect: cx.rect(),
             background: cx.style_group(&["title-background-color", "title-background"]),
             border_radius: cx.style_border_radius("title-border", cx.parent_size),
-            border_width: cx.style_range("title-border-width", 0.0..cx.parent_size.min_element()),
+            border_width: cx.style_length("title-border-width", 0.0..cx.parent_size.min_element()),
             border_color: cx.style("title-border-color"),
         };
 
@@ -147,7 +147,7 @@ impl Element for ComboBox {
                 rect: content_rect,
                 background: cx.style_group(&["background-color", "background"]),
                 border_radius: cx.style_border_radius("border", content_rect.size()),
-                border_width: cx.style_range("border-width", range),
+                border_width: cx.style_length("border-width", range),
                 border_color: cx.style("border-color"),
             };
 

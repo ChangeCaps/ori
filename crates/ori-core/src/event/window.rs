@@ -76,7 +76,28 @@ impl CloseWindow {
     }
 
     /// Create a new close window event, that will close the given `window`.
-    pub fn window(window: WindowId) -> Self {
+    pub const fn window(window: WindowId) -> Self {
+        Self {
+            window: Some(window),
+        }
+    }
+}
+
+/// An event that drags a window, when emitted.
+///
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
+pub struct DragWindow {
+    pub window: Option<WindowId>,
+}
+
+impl DragWindow {
+    /// Create a new drag window event, that will drag the current window.
+    pub const fn new() -> Self {
+        Self { window: None }
+    }
+
+    /// Create a new drag window event, that will drag the given `window`.
+    pub const fn window(window: WindowId) -> Self {
         Self {
             window: Some(window),
         }

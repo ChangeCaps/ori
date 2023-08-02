@@ -74,7 +74,7 @@ impl Element for Knob {
     }
 
     fn layout(&self, _: &mut Self::State, cx: &mut LayoutContext, space: AvailableSpace) -> Vec2 {
-        let size = cx.style_range("size", space.min.max_element()..space.max.min_element());
+        let size = cx.style_length("size", space.min.max_element()..space.max.min_element());
         space.constrain(Vec2::splat(size))
     }
 
@@ -89,7 +89,7 @@ impl Element for Knob {
             rect: Rect::center_size(cx.rect().center(), Vec2::splat(diameter)),
             background,
             border_radius: [diameter * 0.5; 4],
-            border_width: cx.style_range("border-width", 0.0..diameter * 0.5),
+            border_width: cx.style_length("border-width", 0.0..diameter * 0.5),
             border_color: cx.style("border-color"),
         };
         cx.draw(center);

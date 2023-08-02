@@ -70,11 +70,11 @@ impl Element for Image {
         cx: &mut LayoutContext,
         space: AvailableSpace,
     ) -> Vec2 {
-        let min_width = cx.style_range_group(&["min-width", "width"], space.x_axis());
-        let max_width = cx.style_range_group(&["max-width", "width"], space.x_axis());
+        let min_width = cx.style_length_group(&["min-width", "width"], space.x_axis());
+        let max_width = cx.style_length_group(&["max-width", "width"], space.x_axis());
 
-        let min_height = cx.style_range_group(&["min-width", "height"], space.y_axis());
-        let max_height = cx.style_range_group(&["min-height", "height"], space.y_axis());
+        let min_height = cx.style_length_group(&["min-width", "height"], space.y_axis());
+        let max_height = cx.style_length_group(&["min-height", "height"], space.y_axis());
 
         let min_size = space.constrain(Vec2::new(min_width, min_height));
         let max_size = space.constrain(Vec2::new(max_width, max_height));
