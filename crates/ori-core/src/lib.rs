@@ -45,7 +45,7 @@ pub mod prelude {
     pub use crate::layout::{AlignItem, AvailableSpace, Axis, JustifyContent, Margin, Padding};
     pub use crate::node::{Node, NodeRef, ScopeNodeRefExt};
     pub use crate::view::{IntoView, ScopeViewExt, View};
-    pub use crate::window::{ScopeWindowExt, Window, WindowId};
+    pub use crate::window::{ScopeWindowExt, Window, WindowBuilder, WindowId};
 
     pub use glam::*;
     pub use tracing::{debug, error, info, trace, warn};

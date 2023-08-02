@@ -74,6 +74,7 @@ impl WindowBackend for WinitBackend {
         let winit_window = WindowBuilder::new()
             .with_title(window.title.clone())
             .with_resizable(window.resizable)
+            .with_decorations(window.decorations)
             .with_window_icon(icon)
             .with_inner_size(PhysicalSize::new(
                 window.size.x as f64,
@@ -103,14 +104,14 @@ impl WindowBackend for WinitBackend {
         Ok(EventSink::new(sender))
     }
 
+    fn close_window(&mut self, id: WindowId) {
+        self.windows.remove(&id);
+    }
+
     fn request_redraw(&mut self, id: WindowId) {
         if let Some(window) = self.windows.get(&id) {
             window.request_redraw();
         }
-    }
-
-    fn close_window(&mut self, id: WindowId) {
-        self.windows.remove(&id);
     }
 
     fn get_title(&self, id: WindowId) -> String {
@@ -127,6 +128,14 @@ impl WindowBackend for WinitBackend {
 
     fn set_resizable(&mut self, id: WindowId, resizable: bool) {
         self.windows[&id].set_resizable(resizable);
+    }
+
+    fn get_decorations(&self, id: WindowId) -> bool {
+        self.windows[&id].is_decorated()
+    }
+
+    fn set_decorations(&mut self, id: WindowId, decorations: bool) {
+        self.windows[&id].set_decorations(decorations);
     }
 
     fn set_transparent(&mut self, id: WindowId, transparent: bool) {

@@ -44,6 +44,16 @@ impl<R: Renderer> WindowUi<R> {
             );
         }
 
+        if self.window.decorations != window.decorations {
+            self.window.decorations = window.decorations;
+            window_backend.set_decorations(window.id(), window.decorations);
+            tracing::debug!(
+                "Window {} decorations set to '{}'",
+                window.id(),
+                window.decorations
+            );
+        }
+
         if self.window.clear_color != window.clear_color {
             self.window.clear_color = window.clear_color;
             window_backend.set_transparent(window.id(), window.clear_color.is_translucent());

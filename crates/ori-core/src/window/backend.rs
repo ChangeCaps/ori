@@ -23,7 +23,7 @@ pub trait WindowBackend {
 
     /// Creates a window on the backend.
     ///
-    /// All subsequent functions assume that `window.id()` is a valid for this backend.
+    /// All functions below assume that `window.id()` is a valid for this backend.
     fn create_window(
         &mut self,
         target: Self::Target<'_>,
@@ -36,11 +36,11 @@ pub trait WindowBackend {
     /// Creates an event sink for a window with `id`.
     fn create_event_sink(&self, id: WindowId) -> Result<EventSink, Self::Error>;
 
-    /// Requests a redraw for a window with `id`.
-    fn request_redraw(&mut self, id: WindowId);
-
     /// Closes a window with `id`.
     fn close_window(&mut self, id: WindowId);
+
+    /// Requests a redraw for a window with `id`.
+    fn request_redraw(&mut self, id: WindowId);
 
     /// Returns the title of a window with `id`.
     fn get_title(&self, id: WindowId) -> String;
@@ -53,6 +53,12 @@ pub trait WindowBackend {
 
     /// Sets whether a window with `id` is `resizable`.
     fn set_resizable(&mut self, id: WindowId, resizable: bool);
+
+    /// Returns whether a window with `id` has decorations.
+    fn get_decorations(&self, id: WindowId) -> bool;
+
+    /// Sets whether a window with `id` has `decorations`.
+    fn set_decorations(&mut self, id: WindowId, decorations: bool);
 
     /// Sets whether a window with `id` is `transparent`.
     fn set_transparent(&mut self, id: WindowId, transparent: bool);

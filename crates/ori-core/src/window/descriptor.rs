@@ -1,5 +1,5 @@
 use glam::UVec2;
-use ori_graphics::{Color, ImageData};
+use ori_graphics::{Color, ImageData, ImageSource};
 
 use crate::{Cursor, WindowId};
 
@@ -11,6 +11,8 @@ pub struct Window {
     pub title: String,
     /// Whether the window is resizable.
     pub resizable: bool,
+    /// Whether the window has decorations.
+    pub decorations: bool,
     /// The clear color of the window.
     pub clear_color: Color,
     /// The icon of the window.
@@ -31,6 +33,7 @@ impl Default for Window {
             id: WindowId::new(),
             title: String::from("Ori App"),
             resizable: true,
+            decorations: true,
             clear_color: Color::WHITE,
             icon: None,
             scale: 1.0,
@@ -97,6 +100,70 @@ impl Window {
     /// Set the `cursor` of the window.
     pub fn cursor(mut self, cursor: Cursor) -> Self {
         self.cursor = cursor;
+        self
+    }
+}
+
+pub trait WindowBuilder: Sized {
+    fn window_mut(&mut self) -> &mut Window;
+
+    fn title(mut self, title: impl Into<String>) -> Self {
+        self.window_mut().title = title.into();
+        self
+    }
+
+    fn resizable(mut self, resizable: bool) -> Self {
+        self.window_mut().resizable = resizable;
+        self
+    }
+
+    fn decorations(mut self, decorations: bool) -> Self {
+        self.window_mut().decorations = decorations;
+        self
+    }
+
+    fn size(mut self, width: u32, height: u32) -> Self {
+        self.window_mut().size = UVec2::new(width, height);
+        self
+    }
+
+    fn width(mut self, width: u32) -> Self {
+        self.window_mut().size.x = width;
+        self
+    }
+
+    fn height(mut self, height: u32) -> Self {
+        self.window_mut().size.y = height;
+        self
+    }
+
+    fn clear_color(mut self, clear_color: Color) -> Self {
+        self.window_mut().clear_color = clear_color;
+        self
+    }
+
+    fn transparent(mut self) -> Self {
+        self.window_mut().clear_color = Color::TRANSPARENT;
+        self
+    }
+
+    fn icon(mut self, icon: impl Into<ImageSource>) -> Self {
+        self.window_mut().icon = Some(icon.into().load());
+        self
+    }
+
+    fn scale(mut self, scale: f32) -> Self {
+        self.window_mut().scale = scale;
+        self
+    }
+
+    fn visible(mut self, visible: bool) -> Self {
+        self.window_mut().visible = visible;
+        self
+    }
+
+    fn cursor(mut self, cursor: Cursor) -> Self {
+        self.window_mut().cursor = cursor;
         self
     }
 }

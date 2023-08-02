@@ -4,8 +4,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use ori_core::{math::Vec2, BoxedBuildUi, BuildUi, Modifiers, Ui, Window};
-use ori_graphics::{prelude::UVec2, Color, ImageSource};
+use ori_core::{math::Vec2, BoxedBuildUi, BuildUi, Modifiers, Ui, Window, WindowBuilder};
 use ori_reactive::Event;
 use ori_style::{LoadedStyleKind, StyleLoader, Stylesheet};
 use winit::{
@@ -47,6 +46,12 @@ pub struct App {
     style_loader: StyleLoader,
     event_loop: EventLoop<(WinitWindowId, Event)>,
     builder: Option<BoxedBuildUi>,
+}
+
+impl WindowBuilder for App {
+    fn window_mut(&mut self) -> &mut Window {
+        &mut self.window
+    }
 }
 
 impl App {
@@ -96,12 +101,6 @@ impl App {
         self
     }
 
-    /// Set the title of the window.
-    pub fn title(mut self, title: impl Into<String>) -> Self {
-        self.window.title = title.into();
-        self
-    }
-
     /// Add a style to the app, this can be called multiple times to add
     /// multiple styles.
     pub fn style<T>(mut self, style: T) -> Self
@@ -115,47 +114,6 @@ impl App {
             _ => {}
         };
 
-        self
-    }
-
-    /// Set the size of the window.
-    pub fn size(mut self, width: u32, height: u32) -> Self {
-        self.window.size = UVec2::new(width, height);
-        self
-    }
-
-    /// Set the width of the window.
-    pub fn width(mut self, width: u32) -> Self {
-        self.window.size.x = width;
-        self
-    }
-
-    /// Set the height of the window.
-    pub fn height(mut self, height: u32) -> Self {
-        self.window.size.y = height;
-        self
-    }
-
-    /// Set the window to be resizable or not.
-    pub fn resizable(mut self, resizable: bool) -> Self {
-        self.window.resizable = resizable;
-        self
-    }
-
-    /// Set the clear color of the window.
-    pub fn clear_color(mut self, color: Color) -> Self {
-        self.window.clear_color = color;
-        self
-    }
-
-    /// Set the clear color of the window to transparent.
-    pub fn transparent(self) -> Self {
-        self.clear_color(Color::TRANSPARENT)
-    }
-
-    /// Set the icon of the window.
-    pub fn icon(mut self, icon: impl Into<ImageSource>) -> Self {
-        self.window.icon = Some(icon.into().load());
         self
     }
 }
