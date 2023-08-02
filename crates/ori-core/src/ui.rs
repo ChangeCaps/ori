@@ -36,6 +36,7 @@ impl<R: Renderer> WindowUi<R> {
         window.size = window_backend.get_size(self.window.id());
 
         if window != self.scope.window().get_untracked() {
+            self.window = window.clone();
             self.scope.window().set(window);
         }
     }
