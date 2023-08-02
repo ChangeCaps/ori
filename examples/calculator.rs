@@ -447,7 +447,7 @@ fn main() {
         .title("Calculator (examples/calculator.rs)")
         .style(style!("examples/style/calculator.css"))
         .resizable(false)
-        .decorations(false)
+        .decorated(false)
         .transparent()
         .size(300, 432)
         .run();
