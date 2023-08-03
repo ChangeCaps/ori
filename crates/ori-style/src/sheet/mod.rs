@@ -121,6 +121,12 @@ impl Stylesheet {
                 }
 
                 let attribute = self.query_variable(cache, tree, &var)?;
+
+                let key = attribute.key().clone();
+                let value = attribute.value().clone();
+                let transition = attr.transition;
+                let attribute = StyleAttribute::new(key, value, transition);
+
                 Some((attribute, spec))
             }
             StyleRuleAttributeValue::Inherit => {

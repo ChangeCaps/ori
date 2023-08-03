@@ -1,5 +1,5 @@
 select {
-	color: var(--text-color-very-bright);
+	color: var(--text-color-brighter);
 }
 
 select:hover {

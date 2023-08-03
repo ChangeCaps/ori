@@ -1,9 +1,9 @@
 body {
 	size: 100%;
 
-	background: #f9fbff;
+	background: var(--background);
 
-	color: #444444;
+	color: var(--text-color);
 	font-size: 1em;
 	font-family: sans-serif;
 	line-height: 0.8;

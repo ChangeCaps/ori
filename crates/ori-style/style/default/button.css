@@ -8,7 +8,7 @@ button {
 	align-items: center;
 
 	font-size: 1.5em;
-	color: var(--text-color);
+	color: #444444;
 	text-align: center;
 	text-valign: center;
 }
