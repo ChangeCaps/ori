@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use ori_reactive::{OwnedSignal, Scope};
+use ori_reactive::OwnedSignal;
 
-use crate::{BuildUi, Element, Node};
+use crate::{Element, Node};
 
 #[derive(Clone, Debug)]
 enum ViewKind {
@@ -208,15 +208,5 @@ impl<T: IntoView> IntoView for Option<T> {
             Some(view) => view.into_view(),
             None => View::empty(),
         }
-    }
-}
-
-pub trait ScopeViewExt {
-    fn dynamic<I: IntoView>(self, f: impl BuildUi<I>) -> View;
-}
-
-impl ScopeViewExt for Scope {
-    fn dynamic<I: IntoView>(self, mut f: impl BuildUi<I>) -> View {
-        View::dynamic(self.owned_memo_scoped(move |cx| f.ui(cx)))
     }
 }

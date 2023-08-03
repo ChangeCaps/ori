@@ -4,7 +4,7 @@ use ori::prelude::*;
 // define the ui
 fn ui(cx: Scope) -> View {
     // create a signal that will hold the state of the counter
-    let counter = cx.signal(0);
+    let counter = signal(cx, 0);
 
     // render the ui using the view! macro
     view! {

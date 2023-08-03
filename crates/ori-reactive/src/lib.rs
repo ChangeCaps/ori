@@ -14,6 +14,7 @@ mod callback;
 mod context;
 pub mod effect;
 mod event;
+pub mod function;
 mod resource;
 mod runtime;
 mod scope;
@@ -38,6 +39,7 @@ pub mod prelude {
     pub use crate::callback::{Callback, Emitter};
     pub use crate::effect;
     pub use crate::event::Event;
+    pub use crate::function::*;
     pub use crate::scope::Scope;
     pub use crate::signal::{OwnedSignal, ReadSignal, Signal};
 }

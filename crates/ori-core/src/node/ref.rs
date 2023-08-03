@@ -50,13 +50,3 @@ impl NodeRef {
         self.node.set(None);
     }
 }
-
-pub trait ScopeNodeRefExt {
-    fn node_ref(self) -> NodeRef;
-}
-
-impl ScopeNodeRefExt for Scope {
-    fn node_ref(self) -> NodeRef {
-        NodeRef::new(self)
-    }
-}

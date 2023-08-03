@@ -412,16 +412,15 @@ fn handle_keyboard_event(
 
 fn top_bar(cx: Scope) -> View {
     let minimize = move |_: &PointerEvent| {
-        let mut window = cx.window().modify();
-        window.minimized = !window.minimized;
+        minimize_window(cx);
     };
 
     view! {
-        <Div class="top-bar" on:click=move |_| cx.emit(DragWindow::new())>
+        <Div class="top-bar" on:click=move |_| drag_window(cx)>
             <Button class="minimize" on:click=minimize>
                 "\u{e931}"
             </Button>
-            <Button class="exit" on:click=move |_| cx.close_window()>
+            <Button class="exit" on:click=move |_| close_window(cx)>
                 "\u{e5cd}"
             </Button>
         </Div>
@@ -429,9 +428,9 @@ fn top_bar(cx: Scope) -> View {
 }
 
 fn ui(cx: Scope) -> View {
-    let operator = cx.signal(Operator::None);
-    let result = cx.signal(Number::new(0.0));
-    let rhs = cx.signal(Number::new(0.0));
+    let operator = signal(cx, Operator::None);
+    let result = signal(cx, Number::new(0.0));
+    let rhs = signal(cx, Number::new(0.0));
 
     handle_keyboard_event(cx, operator, result, rhs);
 

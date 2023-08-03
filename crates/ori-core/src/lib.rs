@@ -8,6 +8,7 @@ mod debug;
 mod element;
 mod elements;
 mod event;
+pub mod function;
 mod layout;
 mod node;
 mod ui;
@@ -42,10 +43,11 @@ pub mod prelude {
         CloseWindow, Cursor, DragWindow, Key, KeyboardEvent, Modifiers, OpenWindow, PointerButton,
         PointerEvent, RequestRedrawEvent, WindowClosedEvent, WindowResizedEvent,
     };
+    pub use crate::function::*;
     pub use crate::layout::{AlignItem, AvailableSpace, Axis, JustifyContent, Margin, Padding};
-    pub use crate::node::{Node, NodeRef, ScopeNodeRefExt};
-    pub use crate::view::{IntoView, ScopeViewExt, View};
-    pub use crate::window::{ScopeWindowExt, Window, WindowBuilder, WindowId};
+    pub use crate::node::{Node, NodeRef};
+    pub use crate::view::{IntoView, View};
+    pub use crate::window::{Window, WindowBuilder, WindowId};
 
     pub use glam::*;
     pub use tracing::{debug, error, info, trace, warn};

@@ -24,7 +24,7 @@ impl Contexts {
         self.contexts.iter().rev().any(|context| context.is::<T>())
     }
 
-    pub fn push(&mut self, context: impl Any + Send + Sync + 'static) {
+    pub fn push(&mut self, context: impl Any + Send + Sync) {
         self.contexts.push(Arc::new(context));
     }
 

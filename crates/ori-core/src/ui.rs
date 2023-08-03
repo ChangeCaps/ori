@@ -6,10 +6,10 @@ use ori_reactive::{Emitter, Event, EventSink, Scope, Task};
 use ori_style::{StyleCache, StyleLoader};
 
 use crate::{
+    function::{current_window, dynamic},
     Body, BoxedBuildUi, CloseWindow, DragWindow, ForceLayoutEvent, Key, KeyboardEvent, Modifiers,
     Node, OpenWindow, Parent, PointerButton, PointerEvent, PrepareLayoutEvent, RequestRedrawEvent,
-    ScopeViewExt, ScopeWindowExt, Window, WindowBackend, WindowClosedEvent, WindowId,
-    WindowResizedEvent,
+    Window, WindowBackend, WindowClosedEvent, WindowId, WindowResizedEvent,
 };
 
 const TEXT_FONT: &[u8] = include_bytes!("../fonts/NotoSans-Medium.ttf");
@@ -29,18 +29,18 @@ struct WindowUi<R: Renderer> {
 impl<R: Renderer> WindowUi<R> {
     /// Queries information about the window that won't be provided by events.
     fn query_window(&mut self, window_backend: &mut impl WindowBackend) {
-        let mut window = self.scope.window().get_untracked();
+        let mut window = current_window(self.scope).get_untracked();
 
         window.minimized = window_backend.get_minimized(self.window.id());
         window.maximized = window_backend.get_maximized(self.window.id());
         window.size = window_backend.get_size(self.window.id());
 
-        if window != self.scope.window().get_untracked() {
+        if window != current_window(self.scope).get_untracked() {
             self.window.minimized = window.minimized;
             self.window.maximized = window.maximized;
             self.window.size = window.size;
 
-            self.scope.window().set(window);
+            current_window(self.scope).set(window);
         }
     }
 
@@ -280,7 +280,7 @@ where
     fn create_root_node(cx: Scope, ui: BoxedBuildUi) -> Node {
         // create the body element
         let mut body = Body::new();
-        body.add_child(cx.dynamic(ui));
+        body.add_child(dynamic(cx, ui));
 
         // create the root node
         Node::new(body)
@@ -330,7 +330,7 @@ where
     /// Window has been resized.
     pub fn window_resized(&mut self, id: WindowId, width: u32, height: u32) {
         if let Some(ui) = self.window_ui.get_mut(&id) {
-            ui.scope.window().modify().size = UVec2::new(width, height);
+            current_window(ui.scope).modify().size = UVec2::new(width, height);
             ui.renderer.resize(width, height);
         }
 
@@ -514,7 +514,7 @@ where
             ui.event_emitter.emit(event);
             ui.query_window(&mut self.window_backend);
 
-            let window = ui.scope.window();
+            let window = current_window(ui.scope);
 
             ori_reactive::effect::delay_effects(|| {
                 ui.root.event_root_inner(
@@ -542,7 +542,7 @@ where
 
         if let Some(ui) = self.window_ui.get_mut(&id) {
             ui.query_window(&mut self.window_backend);
-            let window = ui.scope.window();
+            let window = current_window(ui.scope);
 
             ori_reactive::effect::delay_effects(|| {
                 ui.root.layout_root_inner(
@@ -576,7 +576,7 @@ where
         if let Some(ui) = self.window_ui.get_mut(&id) {
             self.frame.clear();
 
-            let window = ui.scope.window();
+            let window = current_window(ui.scope);
 
             ori_reactive::effect::delay_effects(|| {
                 ui.root.draw_root_inner(

@@ -139,7 +139,7 @@ impl Scope {
     }
 
     /// Registers a callback to be called when an event of type `T` is emitted.
-    pub fn on<T: Any + Send + Sync + 'static>(self, mut callback: impl FnMut(&T) + Send + 'static) {
+    pub fn on<T: Any + Send + Sync>(self, mut callback: impl FnMut(&T) + Send + 'static) {
         self.on_event(move |event| {
             if let Some(event) = event.get::<T>() {
                 callback(event);
@@ -148,7 +148,7 @@ impl Scope {
     }
 
     /// Pushes a context to this scope.
-    pub fn with_context<C: Send + Sync + 'static>(self, context: C) -> Self {
+    pub fn with_context<C: Any + Send + Sync>(self, context: C) -> Self {
         self.contexts.with_mut(|contexts| {
             contexts.push(context);
         });
@@ -156,14 +156,14 @@ impl Scope {
     }
 
     /// Returns `true` if this scope has a context of type `C`.
-    pub fn has_context<C: Send + Sync + 'static>(self) -> bool {
+    pub fn has_context<C: Any + Send + Sync>(self) -> bool {
         self.contexts
             .with(|contexts| contexts.contains::<C>())
             .unwrap_or(false)
     }
 
     /// Gets a context from this scope.
-    pub fn get_context<C: Clone + Send + Sync + 'static>(self) -> Option<C> {
+    pub fn get_context<C: Any + Clone + Send + Sync>(self) -> Option<C> {
         let contexts = self.contexts.get()?;
         contexts.get()
     }
@@ -173,7 +173,7 @@ impl Scope {
     /// # Panics
     /// - If the context is not found.
     #[track_caller]
-    pub fn context<C: Clone + Send + Sync + 'static>(self) -> C {
+    pub fn context<C: Any + Clone + Send + Sync>(self) -> C {
         self.get_context().expect("context not found")
     }
 

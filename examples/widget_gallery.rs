@@ -19,16 +19,16 @@ fn popup_ui(cx: Scope) -> View {
 }
 
 fn ui(cx: Scope) -> View {
-    let counter = cx.signal(1);
-    let checked = cx.signal(false);
-    let combovalue = cx.signal("Item 1");
-    let knob_value = cx.signal(0.0);
-    let long_text = cx.signal(String::from(LONG_TEXT));
-    let text = cx.signal(String::new());
-    let radio_button = cx.signal(0);
+    let counter = signal(cx, 1);
+    let checked = signal(cx, false);
+    let combovalue = signal(cx, "Item 1");
+    let knob_value = signal(cx, 0.0);
+    let long_text = signal(cx, String::from(LONG_TEXT));
+    let text = signal(cx, String::new());
+    let radio_button = signal(cx, 0);
 
     // popup state
-    let popup_window = cx.signal(None);
+    let popup_window = signal(cx, None);
 
     // when popup_open changes, open or close the popup window
     let toggle_popup = move |_: &PointerEvent| {
