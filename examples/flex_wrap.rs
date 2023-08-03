@@ -14,6 +14,7 @@ fn ui(cx: Scope) -> View {
             style:height=Vh(100.0)
             style:gap=Px(10.0)
             style:direction=Axis::Horizontal
+            style:justify-content=JustifyContent::Center
             style:background=Color::BLACK
             style:flex-wrap=FlexWrap::WrapReverse>
             { (0..15).map(move |_| content(cx)).collect::<Vec<_>>() }

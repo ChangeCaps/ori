@@ -155,7 +155,9 @@ impl Element for Scroll {
 
     fn layout(&self, _: &mut Self::State, cx: &mut LayoutContext, space: AvailableSpace) -> Vec2 {
         let flex = FlexLayout::from_style(cx);
-        let child_space = AvailableSpace::new(space.min, Vec2::INFINITY);
+        let (_, minor) = flex.axis.unpack(space.max);
+        let max = flex.axis.pack(f32::INFINITY, minor);
+        let child_space = AvailableSpace::new(space.min, max);
         let size = self.children.flex_layout(cx, child_space, flex);
 
         space.constrain(size)
