@@ -14,7 +14,7 @@ button {
 }
 
 button:hover {
-	background: var(--primary-hover);
+	background: var(--primary-hover) 0.02s;
 }
 
 button:active {

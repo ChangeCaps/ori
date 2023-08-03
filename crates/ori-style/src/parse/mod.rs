@@ -39,6 +39,10 @@ fn parse_length(pair: Pair<'_, Rule>) -> Length {
     }
 }
 
+fn parse_f32(pair: Pair<'_, Rule>) -> f32 {
+    pair.as_str().parse().unwrap()
+}
+
 fn parse_color(pair: Pair<'_, Rule>) -> Color {
     let pair = pair.into_inner().next().unwrap();
 
@@ -47,21 +51,40 @@ fn parse_color(pair: Pair<'_, Rule>) -> Color {
         Rule::RgbColor => {
             let mut iter = pair.into_inner();
 
-            let r = iter.next().unwrap().as_str().parse().unwrap();
-            let g = iter.next().unwrap().as_str().parse().unwrap();
-            let b = iter.next().unwrap().as_str().parse().unwrap();
+            let r = parse_f32(iter.next().unwrap());
+            let g = parse_f32(iter.next().unwrap());
+            let b = parse_f32(iter.next().unwrap());
 
             Color::rgb(r, g, b)
         }
         Rule::RgbaColor => {
             let mut iter = pair.into_inner();
 
-            let r = iter.next().unwrap().as_str().parse().unwrap();
-            let g = iter.next().unwrap().as_str().parse().unwrap();
-            let b = iter.next().unwrap().as_str().parse().unwrap();
-            let a = iter.next().unwrap().as_str().parse().unwrap();
+            let r = parse_f32(iter.next().unwrap());
+            let g = parse_f32(iter.next().unwrap());
+            let b = parse_f32(iter.next().unwrap());
+            let a = parse_f32(iter.next().unwrap());
 
             Color::rgba(r, g, b, a)
+        }
+        Rule::HslColor => {
+            let mut iter = pair.into_inner();
+
+            let h = parse_f32(iter.next().unwrap());
+            let s = parse_f32(iter.next().unwrap());
+            let l = parse_f32(iter.next().unwrap());
+
+            Color::hsl(h, s / 100.0, l / 100.0)
+        }
+        Rule::HslaColor => {
+            let mut iter = pair.into_inner();
+
+            let h = parse_f32(iter.next().unwrap());
+            let s = parse_f32(iter.next().unwrap());
+            let l = parse_f32(iter.next().unwrap());
+            let a = parse_f32(iter.next().unwrap());
+
+            Color::hsla(h, s / 100.0, l / 100.0, a)
         }
         _ => unreachable!(),
     }

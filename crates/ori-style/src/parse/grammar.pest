@@ -19,7 +19,9 @@ Length = { Number ~ (Px | Pt | Pc | Vw | Vh | Em)? }
 HexColor = @{ "#" ~ (ASCII_HEX_DIGIT{8} | ASCII_HEX_DIGIT{6} | ASCII_HEX_DIGIT{3, 4}) }
 RgbColor = { "rgb(" ~ Number ~ "," ~ Number ~ "," ~ Number ~ ")" }
 RgbaColor = { "rgba(" ~ Number ~ "," ~ Number ~ "," ~ Number ~ "," ~ Number ~ ")" }
-Color = { HexColor | RgbColor | RgbaColor }
+HslColor = { "hsl(" ~ Number ~ "," ~ Number ~ "%"? ~ "," ~ Number ~ "%"? ~ ")" }
+HslaColor = { "hsla(" ~ Number ~ "," ~ Number ~ "%"? ~ "," ~ Number ~ "%"? ~ "," ~ Number ~ ")" }
+Color = { HexColor | RgbColor | RgbaColor | HslColor | HslaColor }
 Enum = { Identifier }
 String = { "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
 

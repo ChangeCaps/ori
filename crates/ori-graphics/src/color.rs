@@ -116,6 +116,82 @@ impl Color {
         )
     }
 
+    /// Returns a new color with the given hue, saturation, lightness and alpha components.
+    ///
+    /// See <https://en.wikipedia.org/wiki/HSL_and_HSV>.
+    pub fn hsla(h: f32, s: f32, l: f32, a: f32) -> Self {
+        let c = (1.0 - (2.0 * l - 1.0).abs()) * s;
+        let x = c * (1.0 - ((h / 60.0) % 2.0 - 1.0).abs());
+        let m = l - c / 2.0;
+
+        let (r, g, b) = match h {
+            hue if (0.0..60.0).contains(&hue) => (c, x, 0.0),
+            hue if (60.0..120.0).contains(&hue) => (x, c, 0.0),
+            hue if (120.0..180.0).contains(&hue) => (0.0, c, x),
+            hue if (180.0..240.0).contains(&hue) => (0.0, x, c),
+            hue if (240.0..300.0).contains(&hue) => (x, 0.0, c),
+            _ => (c, 0.0, x),
+        };
+
+        Self::rgba(r + m, g + m, b + m, a)
+    }
+
+    /// Returns a new color with the given hue, saturation, lightness and alpha components.
+    ///
+    /// See <https://en.wikipedia.org/wiki/HSL_and_HSV>.
+    pub fn hsl(h: f32, s: f32, l: f32) -> Self {
+        Self::hsla(h, s, l, 1.0)
+    }
+
+    /// Convert the color to a hue, saturation, lightness and alpha tuple.
+    ///
+    /// See <https://en.wikipedia.org/wiki/HSL_and_HSV>.
+    pub fn to_hsla(self) -> (f32, f32, f32, f32) {
+        let max = self.r.max(self.g).max(self.b);
+        let min = self.r.min(self.g).min(self.b);
+        let delta = max - min;
+
+        let h = if delta == 0.0 {
+            0.0
+        } else if max == self.r {
+            60.0 * (((self.g - self.b) / delta) % 6.0)
+        } else if max == self.g {
+            60.0 * ((self.b - self.r) / delta + 2.0)
+        } else {
+            60.0 * ((self.r - self.g) / delta + 4.0)
+        };
+
+        let l = (max + min) / 2.0;
+
+        let s = if delta == 0.0 {
+            0.0
+        } else {
+            delta / (1.0 - (2.0 * l - 1.0).abs())
+        };
+
+        (h, s, l, self.a)
+    }
+
+    /// Convert the color to a hue, saturation, lightness tuple.
+    ///
+    /// See <https://en.wikipedia.org/wiki/HSL_and_HSV>.
+    pub fn to_hsl(self) -> (f32, f32, f32) {
+        let (h, s, l, _) = self.to_hsla();
+        (h, s, l)
+    }
+
+    /// Brighten the color by the given amount.
+    pub fn brighten(self, amount: f32) -> Self {
+        let (h, s, l, a) = self.to_hsla();
+        Self::hsla(h, s, l + amount, a)
+    }
+
+    /// Darken the color by the given amount.
+    pub fn darken(self, amount: f32) -> Self {
+        let (h, s, l, a) = self.to_hsla();
+        Self::hsla(h, s, l - amount, a)
+    }
+
     /// Returns true if the color is translucent.
     pub fn is_translucent(self) -> bool {
         self.a < 1.0
@@ -216,5 +292,40 @@ impl AddAssign for Color {
 impl Display for Color {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "rgba({}, {}, {}, {})", self.r, self.g, self.b, self.a)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn assert_color_eq(a: Color, b: Color) {
+        const EPSILON: f32 = 0.00001;
+
+        assert!((a.r - b.r).abs() < EPSILON);
+        assert!((a.g - b.g).abs() < EPSILON);
+        assert!((a.b - b.b).abs() < EPSILON);
+        assert!((a.a - b.a).abs() < EPSILON);
+    }
+
+    #[test]
+    fn hsla() {
+        macro_rules! test {
+            ($(($h:expr, $s:expr, $l:expr, $a:expr) == ($r:expr, $g:expr, $b:expr, $a2:expr),)*) => {
+                $(
+                    assert_color_eq(
+                        Color::hsla($h, $s, $l, $a),
+                        Color::rgba($r, $g, $b, $a2),
+                    );
+                )*
+            };
+        }
+
+        test! {
+            (0.0, 0.0, 0.0, 0.0)   == (0.0, 0.0, 0.0, 0.0),
+            (0.0, 0.0, 1.0, 1.0)   == (1.0, 1.0, 1.0, 1.0),
+            (0.0, 1.0, 0.5, 1.0)   == (1.0, 0.0, 0.0, 1.0),
+            (120.0, 1.0, 0.5, 1.0) == (0.0, 1.0, 0.0, 1.0),
+        }
     }
 }

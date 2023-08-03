@@ -1,9 +1,9 @@
 knob {
 	size: 3em;
 	background: var(--track);
-	border-width: 1px;
-	border-color: var(--track);
+	border-width: 0;
 	color: var(--primary);
+
 
 	cursor: grab;
 }

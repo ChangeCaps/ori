@@ -1,7 +1,7 @@
 :root {
-	--primary: #ffaebc;
-	--primary-hover: #f4a4b2;
-	--primary-active: #e89aa8;
+	--primary: hsl(350, 100%, 84%);
+	--primary-hover: hsl(350, 100%, 79%);
+	--primary-active: hsl(350, 100%, 74%);
 
 	--background: #212121;
 
