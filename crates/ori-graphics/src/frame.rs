@@ -124,9 +124,19 @@ impl<'a> Layer<'a> {
         self.frame.z_index += self.z_index;
 
         if let Some(clip) = self.clip {
+            // save the old clip
             let old_clip = self.frame.clip;
-            self.frame.clip = Some(clip);
+
+            // set the new clip intersected with the old clip
+            self.frame.clip = match old_clip {
+                Some(old_clip) => Some(old_clip.intersect(clip)),
+                None => Some(clip),
+            };
+
+            // draw to the frame
             f(self.frame);
+
+            // restore the old clip
             self.frame.clip = old_clip;
         } else {
             f(self.frame);

@@ -4,7 +4,7 @@ use etagere::{size2, AtlasAllocator};
 use fontdue::{layout::GlyphRasterConfig, Font};
 use glam::{UVec2, Vec2};
 
-use crate::{ImageData, ImageHandle, Rect, Renderer};
+use crate::{ImageData, ImageFilter, ImageHandle, Rect, Renderer};
 
 /// A font atlas managing a texture of rasterized glyphs.
 #[derive(Clone)]
@@ -63,7 +63,8 @@ impl FontAtlas {
 
         // resize the image
         let image_size = size.x as usize * size.y as usize * 4;
-        let image_data = ImageData::new(size.x, size.y, vec![0; image_size]);
+        let mut image_data = ImageData::new(size.x, size.y, vec![0; image_size]);
+        image_data.set_filter(ImageFilter::Nearest);
         self.image = Some(renderer.create_image(&image_data));
 
         // clear the glyph cache
@@ -77,11 +78,8 @@ impl FontAtlas {
         &mut self,
         renderer: &dyn Renderer,
         font: &Font,
-        mut config: GlyphRasterConfig,
+        config: GlyphRasterConfig,
     ) -> Option<Rect> {
-        // super sample the glyph, because it makes it sharper
-        config.px *= 2.0;
-
         if let Some(&glyph) = self.glyphs.get(&config) {
             return Some(glyph);
         }

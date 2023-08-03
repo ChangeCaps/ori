@@ -239,6 +239,7 @@ impl Children {
         &self,
         cx: &mut LayoutContext,
         axis: Axis,
+        min_major: f32,
         max_major: f32,
         max_minor: f32,
         lines: &mut [WrapLine],
@@ -246,26 +247,27 @@ impl Children {
         child_flexes: &[(Option<f32>, Option<f32>)],
     ) {
         for line in lines {
-            // now we need to measure the flex-sized children to determine their size
-            let remaining_major = max_major - line.major;
-            let should_grow = remaining_major > 0.0;
+            let overflow = line.major - max_major;
+            let underflow = min_major - line.major;
 
             // calculate the amount of pixels per flex
-            let px_per_flex = if should_grow {
-                remaining_major / line.flex_grow_sum
+            let px_per_flex = if overflow > 0.0 {
+                overflow / line.flex_grow_sum
+            } else if underflow > 0.0 {
+                underflow / line.flex_shrink_sum
             } else {
-                remaining_major / line.flex_shrink_sum
+                break;
             };
 
             for (i, child) in line.nodes_enumerate(self) {
                 // if the child has a flex property, now is the time
                 let (flex_grow, flex_shrink) = child_flexes[i];
-                if flex_grow.is_none() && should_grow || flex_shrink.is_none() && !should_grow {
+                if flex_grow.is_none() || flex_shrink.is_none() {
                     continue;
                 }
 
                 // calculate the desired size of the child
-                let desired_major = if should_grow {
+                let desired_major = if underflow > 0.0 {
                     child_majors[i] + px_per_flex * flex_grow.unwrap()
                 } else {
                     child_majors[i] + px_per_flex * flex_shrink.unwrap()
@@ -373,6 +375,7 @@ impl Children {
         self.measure_flex(
             cx,
             axis,
+            min_major,
             max_major,
             max_minor,
             &mut lines,

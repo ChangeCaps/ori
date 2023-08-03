@@ -1,6 +1,9 @@
 body {
 	size: 100%;
 
+	max-width: 100vw;
+	max-height: 100vh;
+
 	background: var(--background);
 
 	color: var(--text-color);

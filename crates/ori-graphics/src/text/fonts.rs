@@ -441,7 +441,7 @@ impl Fonts {
         let mut mesh = Mesh::new();
 
         for (glyph, uv) in glyphs.iter().zip(uvs) {
-            let rect = glyph.rect.translate(rect.min + offset);
+            let rect = glyph.rect.translate(rect.min + offset).round();
             let index = mesh.vertices.len() as u32;
 
             mesh.vertices.push(Vertex {

@@ -29,6 +29,10 @@ div.column {
 	align-items: stretch;
 }
 
+image {
+	max-height: 6em;
+}
+
 text-input {
 	font-size: 1.2em;
 }

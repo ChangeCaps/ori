@@ -70,43 +70,20 @@ impl Element for Image {
         cx: &mut LayoutContext,
         space: AvailableSpace,
     ) -> Vec2 {
-        let min_width = cx.style_length_group(&["min-width", "width"], space.x_axis());
-        let max_width = cx.style_length_group(&["max-width", "width"], space.x_axis());
-
-        let min_height = cx.style_length_group(&["min-width", "height"], space.y_axis());
-        let max_height = cx.style_length_group(&["min-height", "height"], space.y_axis());
-
-        let min_size = space.constrain(Vec2::new(min_width, min_height));
-        let max_size = space.constrain(Vec2::new(max_width, max_height));
-
         let handle = state.update(cx, &self.src, self.filter);
+        let size = handle.size();
 
-        // try to fit the image in the min/max size
-        // while maintaining the aspect ratio
-        let mut size = handle.size();
-        let aspect = size.x / size.y;
+        let min = space.min / size;
+        let max = space.max / size;
 
-        if size.x > max_size.x {
-            size.x = max_size.x;
-            size.y = size.x / aspect;
+        let min = min.max_element();
+        let max = max.min_element();
+
+        if min > max {
+            return space.constrain(size);
         }
 
-        if size.y > max_size.y {
-            size.y = max_size.y;
-            size.x = size.y * aspect;
-        }
-
-        if size.x < min_size.x {
-            size.x = min_size.x;
-            size.y = size.x / aspect;
-        }
-
-        if size.y < min_size.y {
-            size.y = min_size.y;
-            size.x = size.y * aspect;
-        }
-
-        size
+        size * max.min(1.0) * min.max(1.0)
     }
 
     fn draw(&self, state: &mut Self::State, cx: &mut DrawContext) {

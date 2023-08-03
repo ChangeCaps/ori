@@ -59,6 +59,7 @@ impl Default for Length {
 
 impl Length {
     pub const ZERO: Self = Px(0.0);
+    pub const INFINITY: Self = Px(f32::INFINITY);
 
     pub fn pixels(
         self,

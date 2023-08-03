@@ -53,12 +53,24 @@ impl<'a> LayoutContext<'a> {
         let min_height_group = &["min-height", "height", "size"];
         let max_height_group = &["max-height", "height", "size"];
 
-        let parent = self.parent_space;
-        let min_width = self.style_length_group(min_width_group, 0.0..parent.max.x);
-        let max_width = self.style_length_group(max_width_group, 0.0..parent.max.x);
+        let min_width: Option<Length> = self.style_group(min_width_group);
+        let max_width: Option<Length> = self.style_group(max_width_group);
+        let min_height: Option<Length> = self.style_group(min_height_group);
+        let max_height: Option<Length> = self.style_group(max_height_group);
 
-        let min_height = self.style_length_group(min_height_group, 0.0..parent.max.y);
-        let max_height = self.style_length_group(max_height_group, 0.0..parent.max.y);
+        let min_width = min_width.unwrap_or(Length::ZERO);
+        let max_width = max_width.unwrap_or(Length::INFINITY);
+        let min_height = min_height.unwrap_or(Length::ZERO);
+        let max_height = max_height.unwrap_or(Length::INFINITY);
+
+        let parent = self.parent_space;
+        let scale = self.window().get().scale;
+        let vw = self.window().get().size.x as f32;
+        let vh = self.window().get().size.y as f32;
+        let min_width = min_width.pixels(0.0..parent.max.x, scale, vw, vh);
+        let max_width = max_width.pixels(0.0..parent.max.x, scale, vw, vh);
+        let min_height = min_height.pixels(0.0..parent.max.y, scale, vw, vh);
+        let max_height = max_height.pixels(0.0..parent.max.y, scale, vw, vh);
 
         let min_size = space.constrain(Vec2::new(min_width, min_height));
         let max_size = space.constrain(Vec2::new(max_width, max_height));
