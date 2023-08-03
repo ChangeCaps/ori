@@ -10,15 +10,16 @@ fn content(cx: Scope) -> View {
 
 fn ui(cx: Scope) -> View {
     view! {
-        <Div style:width=Vw(100.0)
-            style:height=Vh(100.0)
-            style:gap=Px(10.0)
-            style:direction=Axis::Horizontal
-            style:justify-content=JustifyContent::Center
-            style:background=Color::BLACK
-            style:flex-wrap=FlexWrap::WrapReverse>
-            { (0..15).map(move |_| content(cx)).collect::<Vec<_>>() }
-        </Div>
+        <Scroll style:width=Pc(100.0)
+            style:align-items=AlignItem::End
+            style:background=Color::CYAN>
+            <Div style:gap=Px(10.0)
+                style:direction=Axis::Horizontal
+                style:background=Color::BLACK
+                style:flex-wrap=FlexWrap::WrapReverse>
+                { (0..15).map(move |_| content(cx)).collect::<Vec<_>>() }
+            </Div>
+        </Scroll>
     }
 }
 

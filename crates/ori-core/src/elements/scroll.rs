@@ -129,6 +129,7 @@ impl Scroll {
 /// The state of a scroll element.
 #[derive(Default)]
 pub struct ScrollState {
+    offset: Vec2,
     scroll: Vec2,
 }
 
@@ -153,12 +154,18 @@ impl Element for Scroll {
         self.children.event(cx, event);
     }
 
-    fn layout(&self, _: &mut Self::State, cx: &mut LayoutContext, space: AvailableSpace) -> Vec2 {
+    fn layout(
+        &self,
+        state: &mut Self::State,
+        cx: &mut LayoutContext,
+        space: AvailableSpace,
+    ) -> Vec2 {
         let flex = FlexLayout::from_style(cx);
         let (_, minor) = flex.axis.unpack(space.max);
         let max = flex.axis.pack(f32::INFINITY, minor);
         let child_space = AvailableSpace::new(space.min, max);
         let size = self.children.flex_layout(cx, child_space, flex);
+        state.offset = self.children.local_rect().min;
 
         space.constrain(size)
     }
@@ -167,10 +174,10 @@ impl Element for Scroll {
         cx.draw_background();
 
         let overflow = self.overflow(cx);
-        let padding = cx.padding().top_left();
-        self.children.set_offset(-state.scroll * overflow + padding);
+        let offset = state.offset;
+        self.children.set_offset(-state.scroll * overflow + offset);
 
-        let container_rect = cx.rect().translate(padding);
+        let container_rect = cx.rect().translate(offset);
         cx.layer().clip(container_rect).draw(|cx| {
             self.children.draw(cx);
         });
