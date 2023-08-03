@@ -1,12 +1,17 @@
-use ori_reactive::{Scope, Signal};
+use ori_reactive::{Modify, Scope, Signal};
 
 use crate::{
     BuildUi, CloseWindow, DragWindow, IntoView, NodeRef, OpenWindow, View, Window, WindowId,
 };
 
-/// Returns a signal that with the current window.
-pub fn current_window(cx: Scope) -> Signal<Window> {
+/// Returns a signal with the current window.
+pub fn window(cx: Scope) -> Signal<Window> {
     cx.context()
+}
+
+/// Returns a modify with the current window.
+pub fn window_mut(cx: Scope) -> Modify<Window> {
+    window(cx).modify()
 }
 
 /// Open a new window, see [`OpenWindow`] for more information.
@@ -25,14 +30,14 @@ pub fn close_window(cx: Scope) {
 ///
 /// This will also unminimize the window, if it's already minimized.
 pub fn minimize_window(cx: Scope) {
-    current_window(cx).modify().minimize();
+    window(cx).modify().minimize();
 }
 
 /// Maximize the current window.
 ///
 /// This will also unmaximize the window, if it's already maximized.
 pub fn maximize_window(cx: Scope) {
-    current_window(cx).modify().maximize();
+    window(cx).modify().maximize();
 }
 
 /// Drag the current window, see [`DragWindow`] for more information.
