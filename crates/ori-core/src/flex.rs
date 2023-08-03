@@ -396,6 +396,10 @@ impl Children {
         major = major.max(min_major);
         minor = minor.max(min_minor);
 
+        if !wrap.is_wrap() {
+            lines[0].minor = minor;
+        }
+
         let line_minors: SmallVec<[_; 2]> = lines.iter().map(|wrap| wrap.minor).collect();
         let line_minors = align_content.layout(&line_minors, minor, gap_minor);
 
