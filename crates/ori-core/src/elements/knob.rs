@@ -89,7 +89,7 @@ impl Element for Knob {
             rect: Rect::center_size(cx.rect().center(), Vec2::splat(diameter)),
             background,
             border_radius: [diameter * 0.5; 4],
-            border_width: cx.style_length("border-width", 0.0..diameter * 0.5),
+            border_width: cx.style_border_width("border", cx.parent_size),
             border_color: cx.style("border-color"),
         };
         cx.draw(center);

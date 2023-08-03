@@ -1,4 +1,4 @@
-checkbox {
+check-box {
 	color: var(--text-color);
 	background: var(--secondary);
 	border-radius: 5px;
@@ -8,10 +8,10 @@ checkbox {
 	size: 1.5em;
 }
 
-checkbox:hover {
+check-box:hover {
 	border-color: var(--border-hover) 0.05s;
 }
 
-checkbox:active {
+check-box:active {
 	border-color: var(--border-active) 0.05s;
 }

@@ -201,6 +201,39 @@ impl<'a> DrawContext<'a> {
         [tl, tr, br, bl]
     }
 
+    /// Gets the border width for the given element.
+    pub fn style_border_width(&mut self, name: &str, parent_size: Vec2) -> [f32; 4] {
+        let t = format!("{}-top-width", name);
+        let r = format!("{}-right-width", name);
+        let b = format!("{}-bottom-width", name);
+        let l = format!("{}-left-width", name);
+
+        let width = format!("{}-width", name);
+
+        let t: &[&str] = &[&t, &width];
+        let r: &[&str] = &[&r, &width];
+        let b: &[&str] = &[&b, &width];
+        let l: &[&str] = &[&l, &width];
+
+        let range = 0.0..parent_size.min_element();
+        let t = self.style_length_group(t, range.clone());
+        let r = self.style_length_group(r, range.clone());
+        let b = self.style_length_group(b, range.clone());
+        let l = self.style_length_group(l, range);
+
+        [t, r, b, l]
+    }
+
+    pub fn style_background(&mut self) -> Quad {
+        Quad {
+            rect: self.rect(),
+            background: self.style_group(&["background-color", "background"]),
+            border_radius: self.style_border_radius("border", self.parent_size),
+            border_width: self.style_border_width("border", self.parent_size),
+            border_color: self.style("border-color"),
+        }
+    }
+
     /// Draws the quad at the current layout rect.
     ///
     /// This will use the following style attributes:
@@ -213,16 +246,7 @@ impl<'a> DrawContext<'a> {
     /// - `border-bottom-left-radius`: The bottom left border radius of the quad.
     /// - `border-width`: The border width of the quad.
     pub fn draw_background(&mut self) {
-        let range = 0.0..self.rect().size().min_element();
-
-        let quad = Quad {
-            rect: self.rect(),
-            background: self.style_group(&["background-color", "background"]),
-            border_radius: self.style_border_radius("border", self.parent_size),
-            border_width: self.style_length("border-width", range),
-            border_color: self.style("border-color"),
-        };
-
+        let quad = self.style_background();
         self.draw(quad);
     }
 }

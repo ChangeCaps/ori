@@ -28,7 +28,7 @@ struct QuadVertex {
     color: Color,
     border_color: Color,
     border_radius: [f32; 4],
-    border_width: f32,
+    border_width: [f32; 4],
 }
 
 #[derive(Debug)]
@@ -147,7 +147,7 @@ impl QuadPipeline {
                         3 => Float32x4,
                         4 => Float32x4,
                         5 => Float32x4,
-                        6 => Float32,
+                        6 => Float32x4,
                     ],
                 }],
             },

@@ -66,7 +66,7 @@ impl Element for Radio {
                 rect,
                 background: cx.style("color"),
                 border_radius: [rect.size().min_element() / 2.0; 4],
-                border_width: 0.0,
+                border_width: [0.0; 4],
                 border_color: Color::TRANSPARENT,
             };
 

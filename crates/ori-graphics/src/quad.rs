@@ -12,8 +12,11 @@ pub struct Quad {
     /// The radius of each corner is specified in the following order:
     /// top-left, top-right, bottom-right, bottom-left.
     pub border_radius: [f32; 4],
-    /// The width of the quad's border.
-    pub border_width: f32,
+    /// The width of the quad's borders.
+    ///
+    /// The width of each border is specified in the following order:
+    /// top, right, bottom, left.
+    pub border_width: [f32; 4],
     /// The color of the quad's border.
     pub border_color: Color,
 }
@@ -24,7 +27,7 @@ impl Default for Quad {
             rect: Rect::default(),
             background: Color::WHITE,
             border_radius: [0.0; 4],
-            border_width: 0.0,
+            border_width: [0.0; 4],
             border_color: Color::BLACK,
         }
     }

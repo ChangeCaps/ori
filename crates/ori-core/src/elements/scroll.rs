@@ -186,7 +186,7 @@ impl Element for Scroll {
             rect,
             background: cx.style("scrollbar-track-color"),
             border_radius: [radius; 4],
-            border_width: cx.style_length("scrollbar-track-border-width", 0.0..max_radius),
+            border_width: cx.style_border_width("scrollbar-track-border", cx.parent_size),
             border_color: cx.style("scrollbar-track-border-color"),
         };
 
@@ -201,7 +201,7 @@ impl Element for Scroll {
             rect,
             background: cx.style("scrollbar-color"),
             border_radius: [radius; 4],
-            border_width: cx.style_length("scrollbar-border-width", 0.0..max_radius),
+            border_width: cx.style_border_width("scrollbar-border", cx.parent_size),
             border_color: cx.style("scrollbar-border-color"),
         };
 

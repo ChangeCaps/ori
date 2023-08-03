@@ -41,7 +41,7 @@ impl Element for ComboBox {
     }
 
     fn style(&self) -> Style {
-        Style::new("combobox")
+        Style::new("combo-box")
     }
 
     fn event(&self, _state: &mut Self::State, cx: &mut EventContext, event: &Event) {
@@ -130,7 +130,7 @@ impl Element for ComboBox {
             rect: cx.rect(),
             background: cx.style_group(&["title-background-color", "title-background"]),
             border_radius: cx.style_border_radius("title-border", cx.parent_size),
-            border_width: cx.style_length("title-border-width", 0.0..cx.parent_size.min_element()),
+            border_width: cx.style_border_width("title-border", cx.parent_size),
             border_color: cx.style("title-border-color"),
         };
 
@@ -143,13 +143,12 @@ impl Element for ComboBox {
 
         if cx.active() {
             let content_rect = Rect::min_size(cx.rect().bottom_left(), *state);
-            let range = 0.0..content_rect.size().min_element();
 
             let content_quad = Quad {
                 rect: content_rect,
                 background: cx.style_group(&["background-color", "background"]),
                 border_radius: cx.style_border_radius("border", content_rect.size()),
-                border_width: cx.style_length("border-width", range),
+                border_width: cx.style_border_width("border", content_rect.size()),
                 border_color: cx.style("border-color"),
             };
 

@@ -147,52 +147,25 @@ impl Element for Slider {
     }
 
     fn draw(&self, _: &mut Self::State, cx: &mut DrawContext) {
-        let range = 0.0..cx.rect().size().min_element();
-
-        let tl = "border-top-left-radius";
-        let tr = "border-top-right-radius";
-        let br = "border-bottom-right-radius";
-        let bl = "border-bottom-left-radius";
-
-        let tl = cx.style_length_group(&[tl, "border-radius"], range.clone());
-        let tr = cx.style_length_group(&[tr, "border-radius"], range.clone());
-        let br = cx.style_length_group(&[br, "border-radius"], range.clone());
-        let bl = cx.style_length_group(&[bl, "border-radius"], range.clone());
-
         let track_quad = Quad {
             rect: Self::track_rect(cx),
-            background: cx.style_group(&["background-color", "background"]),
-            border_radius: [tl, tr, br, bl],
-            border_width: cx.style_length("border-width", range.clone()),
-            border_color: cx.style("border-color"),
+            ..cx.style_background()
         };
         cx.draw(track_quad);
 
         let fill_quad = Quad {
             rect: self.fill_rect(cx),
             background: cx.style("color"),
-            border_radius: [tl, tr, br, bl],
-            border_width: cx.style_length("border-width", range.clone()),
-            border_color: cx.style("border-color"),
+            ..cx.style_background()
         };
         cx.draw(fill_quad);
-
-        let tl = "knob-border-top-left-radius";
-        let tr = "knob-border-top-right-radius";
-        let br = "knob-border-bottom-right-radius";
-        let bl = "knob-border-bottom-left-radius";
-
-        let tl = cx.style_length_group(&[tl, "knob-border-radius"], range.clone());
-        let tr = cx.style_length_group(&[tr, "knob-border-radius"], range.clone());
-        let br = cx.style_length_group(&[br, "knob-border-radius"], range.clone());
-        let bl = cx.style_length_group(&[bl, "knob-border-radius"], range.clone());
 
         let knob_rect = self.knob_rect(cx);
         let knob_quad = Quad {
             rect: knob_rect,
-            background: cx.style_group(&["color", "knob-color"]),
-            border_radius: [tl, tr, br, bl],
-            border_width: cx.style_length("knob-border-width", range),
+            background: cx.style_group(&["knob-color", "color"]),
+            border_radius: cx.style_border_radius("knob-border", cx.parent_size),
+            border_width: cx.style_border_width("knob-border", cx.parent_size),
             border_color: cx.style("knob-border-color"),
         };
         cx.draw(knob_quad);

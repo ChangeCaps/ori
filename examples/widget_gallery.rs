@@ -57,12 +57,12 @@ fn ui(cx: Scope) -> View {
             <Div class="column">
                 <Div class="row">
                     <Text text="Toggle me" style:font-size=trans(text_size.get(), 0.25) />
-                    <Checkbox bind:checked=checked />
+                    <CheckBox bind:checked=checked />
                 </Div>
 
                 <Div class="row" style:justify-content=JustifyContent::End>
                     "Popup"
-                    <Checkbox checked=popup_window.get().is_some() on:click=toggle_popup />
+                    <CheckBox checked=popup_window.get().is_some() on:click=toggle_popup />
                 </Div>
 
                 <HSpacer/>

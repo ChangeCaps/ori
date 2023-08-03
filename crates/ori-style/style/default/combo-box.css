@@ -1,4 +1,4 @@
-combobox {
+combo-box {
 	border-width: 1.5px;
 	border-radius: 5px;
 	border-color: var(--border);
@@ -17,10 +17,10 @@ combobox {
 	title-padding: 0.5em;
 }
 
-combobox:hover {
+combo-box:hover {
 	title-background-color: var(--secondary) 0.05s;
 }
 
-combobox:active {
+combo-box:active {
 	title-background-color: var(--secondary) 0.05s;
 }

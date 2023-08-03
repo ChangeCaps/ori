@@ -12,7 +12,7 @@ struct VertexInput {
 	@location(3) color: vec4<f32>,
 	@location(4) border_color: vec4<f32>,
 	@location(5) border_radius: vec4<f32>,
-	@location(6) border_width: f32,
+	@location(6) border_width: vec4<f32>,
 }
 
 struct VertexOutput {
@@ -22,7 +22,7 @@ struct VertexOutput {
 	@location(2) color: vec4<f32>,
 	@location(3) border_color: vec4<f32>,
 	@location(4) border_radius: vec4<f32>,
-	@location(5) border_width: f32,
+	@location(5) border_width: vec4<f32>,
 }
 
 @vertex
@@ -71,6 +71,31 @@ fn select_border_radius(
 	return select(rx, ry, position.y > center.y);
 }
 
+fn select_border_width(
+	position: vec2<f32>, 
+	top_left: vec2<f32>, 
+	bottom_right: vec2<f32>,
+	width: vec4<f32>,
+	radius: f32,
+) -> f32 {
+	let center = (top_left + bottom_right) / 2.0;
+	let diff = position - center;
+	var dx = select(
+		position.x - top_left.x - max(width.w, radius), 
+		bottom_right.x - position.x - max(width.y, radius),
+		diff.x > 0.0
+	);
+	var dy = select(
+		position.y - top_left.y - max(width.x, radius),
+		bottom_right.y - position.y - max(width.z, radius),
+		diff.y > 0.0
+	);
+
+	let wx = select(width.w, width.y, diff.x > 0.0);
+	let wy = select(width.x, width.z, diff.y > 0.0);
+	return max(select(0.0, wx, dx < 0.0), select(0.0, wy, dy < 0.0));
+}
+
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
 	var color = in.color;
@@ -82,13 +107,21 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
 		in.border_radius,
 	);
 
-	if in.border_width > 0.0 {
-		let internal_border = max(border_radius - in.border_width, 0.0);
+	let border_width = select_border_width(
+		in.clip.xy,
+		in.top_left,
+		in.bottom_right,
+		in.border_width,
+		border_radius,
+	);
+
+	if border_width > 0.0 {
+		let internal_border = max(border_radius - border_width, 0.0);
 
 		let internal_dist = quad_distance(
 			in.clip.xy,
-			in.top_left + vec2<f32>(in.border_width),
-			in.bottom_right - vec2<f32>(in.border_width),
+			in.top_left + vec2<f32>(border_width),
+			in.bottom_right - vec2<f32>(border_width),
 			internal_border,
 		);
 

@@ -10,7 +10,7 @@ use crate::{
 
 /// A checkbox element.
 #[derive(Default, Build)]
-pub struct Checkbox {
+pub struct CheckBox {
     /// Whether the checkbox is checked.
     #[prop]
     #[bind]
@@ -20,7 +20,7 @@ pub struct Checkbox {
     pub on_click: Emitter<PointerEvent>,
 }
 
-impl Checkbox {
+impl CheckBox {
     const CHECKMARK: &'static str = "\u{e876}";
 
     /// Create a new checkbox.
@@ -41,13 +41,13 @@ impl Checkbox {
     }
 }
 
-impl Element for Checkbox {
+impl Element for CheckBox {
     type State = ();
 
     fn build(&self) -> Self::State {}
 
     fn style(&self) -> Style {
-        Style::new("checkbox")
+        Style::new("check-box")
     }
 
     fn event(&self, _: &mut Self::State, cx: &mut EventContext, event: &Event) {
