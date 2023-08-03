@@ -70,6 +70,8 @@ pub struct NodeState {
     pub available_space: AvailableSpace,
     /// The style transition states of the element.
     pub transitions: StyleTransitionStates,
+    /// The style attributes that are inherited from the parent.
+    pub inheriting: Vec<StyleAttribute>,
 }
 
 impl Default for NodeState {
@@ -89,6 +91,7 @@ impl Default for NodeState {
             needs_layout: true,
             available_space: AvailableSpace::ZERO,
             transitions: StyleTransitionStates::new(),
+            inheriting: Vec::new(),
         }
     }
 }
@@ -145,6 +148,11 @@ impl NodeState {
         self.last_draw.elapsed().as_secs_f32()
     }
 
+    /// Returns true if the element is inheriting the given key.
+    pub fn is_inheriting(&self, key: &str) -> bool {
+        self.inheriting.iter().any(|a| a.key() == key)
+    }
+
     /// Gets the style attribute for the given key.
     pub fn get_style_attribute(
         &mut self,
@@ -165,7 +173,13 @@ impl NodeState {
         style_tree.push(self.style.clone());
 
         let (sheet, cache) = cx.stylesheet_and_cache_mut();
-        sheet.query_cached(cache, None, &style_tree, key)
+        let query = sheet.query_cached(cache, None, &style_tree, key)?;
+
+        if query.inherited && !self.is_inheriting(query.attribute.key()) {
+            self.inheriting.push(query.attribute.clone());
+        }
+
+        Some((query.attribute, query.specificity))
     }
 
     /// Gets the style attribute for the given key, and converts it to the given type.

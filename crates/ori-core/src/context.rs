@@ -622,7 +622,13 @@ macro_rules! context {
             fn query_style_attribute(&mut self, key: &str) -> Option<(StyleAttribute, StyleSpec)> {
                 let cache = &mut self.style_cache;
                 let tree = &self.style_tree;
-                self.stylesheet.query_cached(cache, None, tree, key)
+                let query = self.stylesheet.query_cached(cache, None, tree, key)?;
+
+                if query.inherited && !self.node.is_inheriting(query.attribute.key()) {
+                    self.node.inheriting.push(query.attribute.clone());
+                }
+
+                Some((query.attribute, query.specificity))
             }
 
             fn node(&self) -> &NodeState {

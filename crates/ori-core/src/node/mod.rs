@@ -353,6 +353,14 @@ impl Node {
             image_cache: cx.image_cache,
         };
 
+        for attr in cx.node.inheriting.clone() {
+            let query = cx.get_style_attribute(attr.key());
+            if Some(&attr) != query.as_ref() {
+                cx.node.needs_layout = true;
+                break;
+            }
+        }
+
         if let Some(event) = event.get::<DebugEvent>() {
             event.with_element(&mut cx, self);
             return;
@@ -384,6 +392,7 @@ impl Node {
         cx: &mut LayoutContext,
         space: AvailableSpace,
     ) -> Vec2 {
+        state.inheriting.clear();
         state.needs_layout = false;
 
         let mut cx = LayoutContext {

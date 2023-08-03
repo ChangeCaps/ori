@@ -6,7 +6,7 @@ use ori_style::Style;
 
 use crate::{
     AvailableSpace, Children, Context, DrawContext, Element, EventContext, FlexLayout,
-    LayoutContext, Padding, PointerEvent,
+    LayoutContext, Padding, PointerEvent, PrepareLayoutEvent,
 };
 
 /// A combo box element.
@@ -49,7 +49,7 @@ impl Element for ComboBox {
 
         self.title.event(cx, event);
 
-        if cx.active() {
+        if cx.active() || event.is::<PrepareLayoutEvent>() {
             self.children.event(cx, event);
         }
 

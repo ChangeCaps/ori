@@ -40,6 +40,13 @@ impl Display for StyleLoadError {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct StyleQuery {
+    pub attribute: StyleAttribute,
+    pub specificity: StyleSpec,
+    pub inherited: bool,
+}
+
 /// A stylesheet is a list of rules.
 #[derive(Clone, Debug, Default, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -116,13 +123,17 @@ impl Stylesheet {
         cache_key: Option<StyleCacheKey>,
         tree: &StyleTree,
         key: &str,
-    ) -> Option<(StyleAttribute, StyleSpec)> {
+    ) -> Option<StyleQuery> {
         let (attr, spec) = self.query_cached_recurse_inner(cache, cache_key, tree, key)?;
 
         match attr.value {
             StyleRuleAttributeValue::Value(value) => {
                 let attribute = StyleAttribute::new(attr.key, value, attr.transition);
-                Some((attribute, spec))
+                Some(StyleQuery {
+                    attribute,
+                    specificity: spec,
+                    inherited: false,
+                })
             }
             StyleRuleAttributeValue::Variable(var) => {
                 if key == var {
@@ -130,18 +141,24 @@ impl Stylesheet {
                 }
 
                 let attribute = self.query_variable(cache, tree, &var)?;
-
-                let key = attribute.key().clone();
                 let value = attribute.value().clone();
                 let transition = attr.transition;
-                let attribute = StyleAttribute::new(key, value, transition);
+                let attribute = StyleAttribute::new(key.into(), value, transition);
 
-                Some((attribute, spec))
+                Some(StyleQuery {
+                    attribute,
+                    specificity: spec,
+                    inherited: false,
+                })
             }
             StyleRuleAttributeValue::Inherit => {
                 let parent = tree.parent()?;
-                let (attr, _) = self.query_cached(cache, None, &parent, key)?;
-                Some((attr, spec))
+                let query = self.query_cached(cache, None, &parent, key)?;
+                Some(StyleQuery {
+                    attribute: query.attribute,
+                    specificity: spec,
+                    inherited: true,
+                })
             }
         }
     }
@@ -155,8 +172,8 @@ impl Stylesheet {
         let mut tree = tree.clone();
 
         loop {
-            if let Some((attr, _)) = self.query_cached(cache, None, &tree, key) {
-                return Some(attr);
+            if let Some(query) = self.query_cached(cache, None, &tree, key) {
+                return Some(query.attribute);
             }
 
             tree = tree.parent()?;
