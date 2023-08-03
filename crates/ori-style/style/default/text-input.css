@@ -11,7 +11,7 @@ text-input {
 	border-radius: 5px;
 	border-width: 1px;
 	border-color: var(--border);
-	placeholder-color: var(--text-color-very-bright);
+	placeholder-color: var(--text-color-brighter);
 
 	text-align: start;
 	text-valign: center;

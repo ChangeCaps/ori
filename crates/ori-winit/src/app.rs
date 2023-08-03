@@ -1,10 +1,12 @@
 use std::{
     error::Error,
     fmt::Display,
+    path::Path,
     time::{Duration, Instant},
 };
 
 use ori_core::{math::Vec2, BoxedBuildUi, BuildUi, Modifiers, Ui, Window, WindowBuilder};
+use ori_graphics::Fonts;
 use ori_reactive::Event;
 use ori_style::{LoadedStyleKind, StyleLoader, Stylesheet};
 use winit::{
@@ -44,6 +46,7 @@ fn init_tracing() -> Result<(), Box<dyn Error>> {
 pub struct App {
     window: Window,
     style_loader: StyleLoader,
+    fonts: Fonts,
     event_loop: EventLoop<(WinitWindowId, Event)>,
     builder: Option<BoxedBuildUi>,
 }
@@ -74,9 +77,31 @@ impl App {
         Self {
             window: Window::default(),
             style_loader,
+            fonts: Fonts::default(),
             event_loop,
             builder: Some(content.boxed()),
         }
+    }
+
+    /// Loads a font from the given data.
+    pub fn font_data(mut self, data: Vec<u8>) -> Self {
+        self.fonts.load_font_data(data);
+        self
+    }
+
+    /// Loads a font from the given file.
+    pub fn font(mut self, font: impl AsRef<Path>) -> Self {
+        if let Err(err) = self.fonts.load_font_file(font) {
+            tracing::error!("failed to load font: {:?}", err);
+        }
+
+        self
+    }
+
+    /// Loads all fonts from the given directory.
+    pub fn font_dir(mut self, dir: impl AsRef<Path>) -> Self {
+        self.fonts.load_fonts_dir(dir);
+        self
     }
 
     /// Set the default theme to night theme, this will clear all the styles
@@ -160,7 +185,10 @@ impl App {
         let render_backend = ori_wgpu::WgpuBackend::new();
 
         let mut ui = Ui::new(window_backend, render_backend);
+        ui.fonts = self.fonts;
         ui.style_loader = self.style_loader;
+
+        ui.load_default_fonts();
 
         let root = self.builder.take().unwrap();
         (ui.create_window(&self.event_loop, &self.window, root)).unwrap();

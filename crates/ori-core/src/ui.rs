@@ -181,10 +181,7 @@ where
     ///
     /// **Note** that `W` and `R` need to have the same `Surface` type.
     pub fn new(window_backend: W, render_backend: R) -> Self {
-        let mut fonts = Fonts::new();
-        fonts.load_system_fonts();
-        fonts.load_font_data(TEXT_FONT.to_vec());
-        fonts.load_font_data(ICON_FONT.to_vec());
+        let fonts = Fonts::new();
 
         Self {
             window_backend,
@@ -196,6 +193,13 @@ where
             style_loader: StyleLoader::new(),
             window_ui: HashMap::new(),
         }
+    }
+
+    /// Loads the default fonts.
+    pub fn load_default_fonts(&mut self) {
+        self.fonts.load_system_fonts();
+        self.fonts.load_font_data(TEXT_FONT.to_vec());
+        self.fonts.load_font_data(ICON_FONT.to_vec());
     }
 
     /// Returns the number of windows.
