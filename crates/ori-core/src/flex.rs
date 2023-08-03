@@ -435,6 +435,6 @@ impl Children {
         }
 
         // return the size of the flex container
-        axis.pack(major, minor).max(space.min)
+        space.constrain(axis.pack(major, minor))
     }
 }
