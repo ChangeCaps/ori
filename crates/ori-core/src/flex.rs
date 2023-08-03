@@ -252,22 +252,24 @@ impl Children {
 
             // calculate the amount of pixels per flex
             let px_per_flex = if overflow > 0.0 {
-                overflow / line.flex_grow_sum
+                -overflow / line.flex_grow_sum
             } else if underflow > 0.0 {
                 underflow / line.flex_shrink_sum
             } else {
                 break;
             };
 
+            let grow = overflow > 0.0;
+
             for (i, child) in line.nodes_enumerate(self) {
                 // if the child has a flex property, now is the time
                 let (flex_grow, flex_shrink) = child_flexes[i];
-                if flex_grow.is_none() || flex_shrink.is_none() {
+                if flex_grow.is_none() && grow || flex_shrink.is_none() && !grow {
                     continue;
                 }
 
                 // calculate the desired size of the child
-                let desired_major = if underflow > 0.0 {
+                let desired_major = if grow {
                     child_majors[i] + px_per_flex * flex_grow.unwrap()
                 } else {
                     child_majors[i] + px_per_flex * flex_shrink.unwrap()
