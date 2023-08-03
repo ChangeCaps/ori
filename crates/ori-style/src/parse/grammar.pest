@@ -27,7 +27,8 @@ String = { "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
 Transition = _{ Number ~ "s" }
 
 // attribute
-Transitionable = _{ Length | Color }
+Variable = { "var" ~ "(" ~ Identifier ~ ")" }
+Transitionable = _{ Length | Color | Variable }
 AttributeValue = { Transitionable ~ Transition? | Inherit | Enum | String }
 Attribute = { Identifier ~ ":" ~ AttributeValue ~ ";" }
 

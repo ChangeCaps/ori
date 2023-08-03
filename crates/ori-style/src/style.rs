@@ -81,6 +81,12 @@ impl Style {
         self
     }
 
+    /// Adds a tag to the style.
+    pub fn with_tag(mut self, tag: &str) -> Self {
+        self.tags.push(tag);
+        self
+    }
+
     /// Gets the attribute with the given `key`.
     pub fn get_attribute(&self, key: &str) -> Option<&StyleAttribute> {
         self.inline.get(key)

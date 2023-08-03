@@ -63,11 +63,6 @@ impl StyleAttribute {
         &self.inner.value
     }
 
-    /// Check if the attribute is inherit.
-    pub fn is_inherit(&self) -> bool {
-        matches!(self.inner.value, StyleAttributeValue::Inherit)
-    }
-
     /// Get the transition of the attribute.
     pub fn transition(&self) -> Option<StyleTransition> {
         self.inner.transition

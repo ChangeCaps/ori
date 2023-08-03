@@ -66,32 +66,37 @@ macro_rules! style {
 #[derive(Clone, Debug, Default, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Stylesheet {
-    pub rules: Vec<StylesheetRule>,
+    pub rules: Vec<StyleRule>,
 }
 
 impl Stylesheet {
-    /// Create a new stylesheet.
-    pub fn new() -> Self {
+    /// Creates a new empty stylesheet.
+    pub fn empty() -> Self {
         Self { rules: Vec::new() }
     }
 
-    /// Loads the default day theme.
-    pub fn day_theme() -> Self {
-        Self::from_str(theme::DAY_THEME).unwrap()
+    /// Create a new stylesheet.
+    pub fn new() -> Self {
+        Self::from_str(theme::DEFAULT).unwrap()
     }
 
-    /// Loads the default night theme.
+    /// The default day theme.
+    pub fn day_theme() -> Self {
+        Self::from_str(theme::DAY).unwrap()
+    }
+
+    /// The default night theme.
     pub fn night_theme() -> Self {
-        Self::from_str(theme::NIGHT_THEME).unwrap()
+        Self::from_str(theme::NIGHT).unwrap()
     }
 
     /// Add a rule to the stylesheet.
-    pub fn add_rule(&mut self, rule: StylesheetRule) {
+    pub fn add_rule(&mut self, rule: StyleRule) {
         self.rules.push(rule);
     }
 
     /// Extend the stylesheet with a list of rules.
-    pub fn extend(&mut self, rules: impl IntoIterator<Item = StylesheetRule>) {
+    pub fn extend(&mut self, rules: impl IntoIterator<Item = StyleRule>) {
         self.rules.extend(rules);
     }
 
@@ -105,13 +110,42 @@ impl Stylesheet {
     ) -> Option<(StyleAttribute, StyleSpec)> {
         let (attr, spec) = self.query_cached_recurse_inner(cache, cache_key, tree, key)?;
 
-        if attr.is_inherit() {
-            let parent = tree.parent()?;
-            let (attr, _) = self.query_cached(cache, cache_key, &parent, key)?;
-            return Some((attr, spec));
-        }
+        match attr.value {
+            StyleRuleAttributeValue::Value(value) => {
+                let attribute = StyleAttribute::new(attr.key, value, attr.transition);
+                Some((attribute, spec))
+            }
+            StyleRuleAttributeValue::Variable(var) => {
+                if key == var {
+                    return None;
+                }
 
-        Some((attr, spec))
+                let attribute = self.query_variable(cache, tree, &var)?;
+                Some((attribute, spec))
+            }
+            StyleRuleAttributeValue::Inherit => {
+                let parent = tree.parent()?;
+                let (attr, _) = self.query_cached(cache, None, &parent, key)?;
+                Some((attr, spec))
+            }
+        }
+    }
+
+    fn query_variable(
+        &self,
+        cache: &mut StyleCache,
+        tree: &StyleTree,
+        key: &str,
+    ) -> Option<StyleAttribute> {
+        let mut tree = tree.clone();
+
+        loop {
+            if let Some((attr, _)) = self.query_cached(cache, None, &tree, key) {
+                return Some(attr);
+            }
+
+            tree = tree.parent()?;
+        }
     }
 
     fn query_cached_recurse_inner(
@@ -120,10 +154,16 @@ impl Stylesheet {
         cache_key: Option<StyleCacheKey>,
         tree: &StyleTree,
         key: &str,
-    ) -> Option<(StyleAttribute, StyleSpec)> {
+    ) -> Option<(StyleRuleAttribute, StyleSpec)> {
         // first check if the attribute is inline, in that case return early
         if let Some(attribute) = tree.element.inline.get(key) {
-            return Some((attribute.clone(), StyleSpec::INLINE));
+            let attribute = StyleRuleAttribute {
+                key: attribute.key().clone(),
+                value: StyleRuleAttributeValue::Value(attribute.value().clone()),
+                transition: attribute.transition(),
+            };
+
+            return Some((attribute, StyleSpec::INLINE));
         }
 
         let cache_key = match cache_key {
@@ -159,7 +199,7 @@ impl Stylesheet {
         &self,
         tree: &StyleTree,
         name: &str,
-    ) -> Option<(StyleAttribute, StyleSpec)> {
+    ) -> Option<(StyleRuleAttribute, StyleSpec)> {
         let mut specificity = StyleSpec::default();
         let mut result = None;
 
@@ -192,7 +232,7 @@ impl Stylesheet {
 }
 
 impl IntoIterator for Stylesheet {
-    type Item = StylesheetRule;
+    type Item = StyleRule;
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {

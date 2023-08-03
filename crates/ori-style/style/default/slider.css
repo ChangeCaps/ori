@@ -1,7 +1,7 @@
 slider {
 	direction: horizontal;
-	background: #f0f0f0;
-	color: #ffaebc;
+	background: var(--track);
+	color: var(--primary);
 	border-radius: 0.25em;
 	length: 5em;
 	track-size: 0.5em;
@@ -12,5 +12,5 @@ slider {
 }
 
 slider:hover {
-	background: #e8e8e8;
+	background: var(--track-hover);
 }

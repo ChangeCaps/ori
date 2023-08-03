@@ -36,7 +36,7 @@ fn ui(cx: Scope) -> View {
 
         if popup_window.get().is_none() {
             let window = Window::new().title("Widget Gallery Popup").size(300, 300);
-            let id = cx.open_window(window, popup_ui);
+            let id = open_window(cx, window, popup_ui);
 
             popup_window.set(Some(id));
         } else if let Some(id) = popup_window.get() {

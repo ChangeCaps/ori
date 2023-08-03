@@ -5,9 +5,9 @@ use pest::{error::Error, iterators::Pair, Parser};
 use pest_derive::Parser;
 
 use crate::{
-    Length, StyleAttribute, StyleAttributeKey, StyleAttributeValue, StyleClasses, StyleElement,
-    StyleElementSelector, StyleSelector, StyleSelectorCombinator, StyleTags, StyleTransition,
-    Stylesheet, StylesheetRule,
+    Length, StyleAttributeKey, StyleAttributeValue, StyleClasses, StyleElement,
+    StyleElementSelector, StyleRule, StyleRuleAttribute, StyleRuleAttributeValue, StyleSelector,
+    StyleSelectorCombinator, StyleTags, StyleTransition, Stylesheet,
 };
 
 /// A parser for [`Stylesheet`]s.
@@ -71,7 +71,7 @@ fn parse_transition(pair: Option<Pair<'_, Rule>>) -> Option<StyleTransition> {
     Some(StyleTransition::new(parse_number(pair?)))
 }
 
-fn parse_value(pair: Pair<'_, Rule>) -> (StyleAttributeValue, Option<StyleTransition>) {
+fn parse_value(pair: Pair<'_, Rule>) -> (StyleRuleAttributeValue, Option<StyleTransition>) {
     let mut pairs = pair.into_inner();
 
     let value = pairs.next().unwrap();
@@ -79,13 +79,27 @@ fn parse_value(pair: Pair<'_, Rule>) -> (StyleAttributeValue, Option<StyleTransi
     let value = match value.as_rule() {
         Rule::String => {
             let value = &value.as_str()[1..value.as_str().len() - 1];
-            StyleAttributeValue::String(value.to_string())
+            let value = StyleAttributeValue::String(value.to_string());
+            StyleRuleAttributeValue::Value(value)
         }
-        Rule::Inherit => StyleAttributeValue::Inherit,
-        Rule::Enum => StyleAttributeValue::Enum(value.as_str().to_string()),
-        Rule::Length => StyleAttributeValue::Length(parse_length(value)),
-        Rule::Color => StyleAttributeValue::Color(parse_color(value)),
-        _ => unreachable!(),
+        Rule::Enum => {
+            let value = StyleAttributeValue::Enum(value.as_str().to_string());
+            StyleRuleAttributeValue::Value(value)
+        }
+        Rule::Length => {
+            let value = StyleAttributeValue::Length(parse_length(value));
+            StyleRuleAttributeValue::Value(value)
+        }
+        Rule::Color => {
+            let value = StyleAttributeValue::Color(parse_color(value));
+            StyleRuleAttributeValue::Value(value)
+        }
+        Rule::Inherit => StyleRuleAttributeValue::Inherit,
+        Rule::Variable => {
+            let key = value.into_inner().as_str().to_string();
+            StyleRuleAttributeValue::Variable(key)
+        }
+        _ => unreachable!("{:?} is not a value", value),
     };
 
     (value, transition)
@@ -178,17 +192,22 @@ fn parse_selectors(pair: Pair<'_, Rule>) -> Vec<StyleSelector> {
     selectors
 }
 
-fn parse_attribute(pair: Pair<'_, Rule>) -> StyleAttribute {
+fn parse_attribute(pair: Pair<'_, Rule>) -> StyleRuleAttribute {
     let mut iter = pair.into_inner();
 
     let key = iter.next().unwrap().as_str();
+    let key = StyleAttributeKey::new(key);
+
     let (value, transition) = parse_value(iter.next().unwrap());
 
-    let key = StyleAttributeKey::new(key);
-    StyleAttribute::new(key, value, transition)
+    StyleRuleAttribute {
+        key,
+        value,
+        transition,
+    }
 }
 
-fn parse_style_rule(pair: Pair<'_, Rule>) -> StylesheetRule {
+fn parse_style_rule(pair: Pair<'_, Rule>) -> StyleRule {
     let mut iter = pair.into_inner();
 
     let selector = parse_selectors(iter.next().unwrap());
@@ -203,7 +222,7 @@ fn parse_style_rule(pair: Pair<'_, Rule>) -> StylesheetRule {
         }
     }
 
-    StylesheetRule {
+    StyleRule {
         selectors: selector.into(),
         attributes: rules.into(),
     }
@@ -211,7 +230,7 @@ fn parse_style_rule(pair: Pair<'_, Rule>) -> StylesheetRule {
 
 fn parse_style(input: &str) -> Result<Stylesheet, StyleheetParseError> {
     let pairs = StyleParser::parse(Rule::Style, input)?.next().unwrap();
-    let mut style = Stylesheet::new();
+    let mut style = Stylesheet::empty();
 
     for pair in pairs.into_inner() {
         match pair.as_rule() {

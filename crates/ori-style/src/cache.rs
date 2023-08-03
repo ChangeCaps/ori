@@ -4,7 +4,7 @@ use std::{
     mem::MaybeUninit,
 };
 
-use crate::{StyleAttribute, StyleSpec};
+use crate::{StyleRuleAttribute, StyleSpec};
 
 /// A hash of a [`StyleTree`](crate::StyleTree).
 ///
@@ -16,6 +16,7 @@ pub struct StyleCacheKey {
 }
 
 impl StyleCacheKey {
+    /// Creates a new [`StyleCacheKey`] from a hash.
     pub const fn from_hash(hash: u64) -> Self {
         Self { hash }
     }
@@ -79,7 +80,7 @@ impl BuildHasher for StyleCacheHasher {
 #[derive(Clone, Debug)]
 pub struct StyleCacheEntry {
     /// The location of the attribute.
-    pub attribute: StyleAttribute,
+    pub attribute: StyleRuleAttribute,
     /// The specifity of the attribute.
     pub specificity: StyleSpec,
 }

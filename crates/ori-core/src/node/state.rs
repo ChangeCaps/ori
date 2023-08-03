@@ -122,15 +122,21 @@ impl NodeState {
         self.style.tags.clear();
 
         if self.active {
-            self.style.tags.push("active");
+            self.style.tags.insert("active");
+        } else {
+            self.style.tags.remove("active");
         }
 
         if self.focused {
-            self.style.tags.push("focus");
+            self.style.tags.insert("focus");
+        } else {
+            self.style.tags.remove("focus");
         }
 
         if self.hovered {
-            self.style.tags.push("hover");
+            self.style.tags.insert("hover");
+        } else {
+            self.style.tags.remove("hover");
         }
     }
 

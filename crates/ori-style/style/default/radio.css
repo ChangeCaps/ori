@@ -1,0 +1,17 @@
+radio {
+	color: var(--text-color);
+	background: var(--secondary);
+	border-radius: 0.5em;
+	border-width: 1.5px;
+	border-color: var(--border);
+
+	size: 1em;
+}
+
+radio:hover {
+	border-color: var(--border-hover) 0.05s;
+}
+
+radio:active {
+	border-color: var(--border-active) 0.05s;
+}

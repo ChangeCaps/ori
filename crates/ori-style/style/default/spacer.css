@@ -1,5 +1,5 @@
 hspacer {
-	background: #606060;
+	background: var(--border);
 
 	height: 1px;
 	width: 0px;
@@ -11,7 +11,7 @@ hspacer {
 }
 
 vspacer {
-	background: #606060;
+	background: var(--border);
 
 	height: 0px;
 	width: 1px;

@@ -1,0 +1,11 @@
+select {
+	color: var(--text-color-very-bright);
+}
+
+select:hover {
+	color: var(--text-color-bright) 0.05s;
+}
+
+select:active {
+	color: var(--text-color);
+}

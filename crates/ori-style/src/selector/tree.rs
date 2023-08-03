@@ -25,6 +25,12 @@ impl StyleTree {
         }
     }
 
+    /// Creates a new [`StyleTree`] with a default root element.
+    pub fn root() -> Self {
+        let element = Style::default().with_tag("root");
+        Self::new(element)
+    }
+
     /// Pushes an ancestor to the tree.
     pub fn push(&mut self, element: Style) {
         let ancestor = mem::replace(&mut self.element, element);

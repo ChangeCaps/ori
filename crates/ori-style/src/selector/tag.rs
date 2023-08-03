@@ -36,9 +36,27 @@ impl StyleTags {
         self.tags.clear();
     }
 
+    fn position(&self, tag: impl AsRef<str>) -> Option<usize> {
+        self.tags.iter().position(|e| e == tag.as_ref())
+    }
+
     /// Adds a tag to the list.
     pub fn push(&mut self, element: impl Into<StyleTag>) {
         self.tags.push(element.into());
+    }
+
+    /// Pushes a tag if it is not already in the list.
+    pub fn insert(&mut self, element: impl AsRef<str>) {
+        if !self.contains(element.as_ref()) {
+            self.tags.push(element.as_ref().into());
+        }
+    }
+
+    /// Removes a tag from the list.
+    pub fn remove(&mut self, element: impl AsRef<str>) {
+        if let Some(position) = self.position(element) {
+            self.tags.swap_remove(position);
+        }
     }
 
     /// Extends the list with the given tags.

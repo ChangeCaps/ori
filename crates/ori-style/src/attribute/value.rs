@@ -16,8 +16,6 @@ pub enum StyleAttributeValue {
     Length(Length),
     /// A color value, eg. `#ff0000`.
     Color(Color),
-    /// An inherited value.
-    Inherit,
 }
 
 impl StyleAttributeValue {
@@ -34,7 +32,6 @@ impl Display for StyleAttributeValue {
             Self::Enum(value) => write!(f, "{}", value),
             Self::Length(value) => write!(f, "{}", value),
             Self::Color(value) => write!(f, "{}", value),
-            Self::Inherit => write!(f, "inherit"),
         }
     }
 }

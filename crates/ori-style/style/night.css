@@ -1,0 +1,23 @@
+:root {
+	--primary: #ffaebc;
+	--primary-hover: #f4a4b2;
+	--primary-active: #e89aa8;
+
+	--background: #212121;
+
+	--secondary: #363636;
+	--secondary-hover: #606060;
+	--secondary-active: #606060;
+
+	--track: #363636;
+	--track-hover: #404040;
+	--scrollbar-track: #;
+
+	--border: #404040;
+	--border-hover: #606060;
+	--border-active: #606060;
+
+	--text-color-very-bright: #808080;
+	--text-color-bright: #b8b8b8;
+	--text-color: #d8d8d8;
+}

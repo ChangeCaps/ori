@@ -1,0 +1,17 @@
+checkbox {
+	color: var(--text-color);
+	background: var(--secondary);
+	border-radius: 5px;
+	border-width: 1.5px;
+	border-color: var(--border);
+
+	size: 1.5em;
+}
+
+checkbox:hover {
+	border-color: var(--border-hover) 0.05s;
+}
+
+checkbox:active {
+	border-color: var(--border-active) 0.05s;
+}

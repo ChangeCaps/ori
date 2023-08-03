@@ -1,0 +1,22 @@
+scroll {
+	direction: column;
+
+	scrollbar-color: #00000000;
+	scrollbar-border-radius: 100%;
+	scrollbar-width: 0.5em;
+	scrollbar-height: 2em;
+	scrollbar-padding: 0.25em;
+	scrollbar-track-color: #00000000;
+}
+
+scroll:hover {
+	scrollbar-color: var(--secondary-active) 0.05s;
+	scrollbar-track-color: var(--scrollbar-track) 0.05s;
+}
+
+scroll:active {
+	scrollbar-color: var(--secondary-active) 0.05s;
+	scrollbar-track-color: var(--scrollbar-track) 0.05s;
+
+	cursor: pointer;
+}

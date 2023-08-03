@@ -1,0 +1,19 @@
+knob {
+	size: 3em;
+	background: var(--track);
+	border-width: 1px;
+	border-color: var(--track);
+	color: var(--primary);
+
+	cursor: grab;
+}
+
+knob:hover {
+	background: var(--track-hover);
+}
+
+knob:active {
+	background: var(--track-active);
+
+	cursor: grabbing;
+}

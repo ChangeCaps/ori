@@ -28,7 +28,7 @@ impl Element for Body {
     fn build(&self) -> Self::State {}
 
     fn style(&self) -> Style {
-        Style::new("body")
+        Style::new("body").with_tag("root")
     }
 
     fn event(&self, _: &mut Self::State, cx: &mut EventContext, event: &Event) {

@@ -84,6 +84,7 @@ impl App {
     /// [`App::style`].
     pub fn night_theme(mut self) -> Self {
         self.style_loader.clear();
+        self.style_loader.add_style(Stylesheet::new()).unwrap();
         self.style_loader
             .add_style(Stylesheet::night_theme())
             .unwrap();
@@ -95,6 +96,7 @@ impl App {
     /// [`App::style`].
     pub fn day_theme(mut self) -> Self {
         self.style_loader.clear();
+        self.style_loader.add_style(Stylesheet::new()).unwrap();
         self.style_loader
             .add_style(Stylesheet::day_theme())
             .unwrap();

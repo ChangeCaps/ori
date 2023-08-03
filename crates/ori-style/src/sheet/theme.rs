@@ -7,9 +7,9 @@ macro_rules! theme {
     };
 }
 
-theme!(
-    DAY_THEME,
-    "day" =>
+theme! {
+    DEFAULT,
+    "default" =>
     "default.css",
     "body.css",
     "button.css",
@@ -24,23 +24,16 @@ theme!(
     "radio.css",
     "text-input.css",
     "text.css",
-);
+}
 
-theme!(
-    NIGHT_THEME,
-    "night" =>
-    "default.css",
-    "body.css",
-    "button.css",
-    "checkbox.css",
-    "combobox.css",
-    "div.css",
-    "knob.css",
-    "scroll.css",
-    "slider.css",
-    "select.css",
-    "spacer.css",
-    "radio.css",
-    "text-input.css",
-    "text.css",
-);
+theme! {
+    DAY,
+    "." =>
+    "day.css",
+}
+
+theme! {
+    NIGHT,
+    "." =>
+    "night.css",
+}
