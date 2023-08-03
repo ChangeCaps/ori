@@ -17,7 +17,7 @@ fn ui(cx: Scope) -> View {
                 style:direction=Axis::Horizontal
                 style:background=Color::BLACK
                 style:flex-wrap=FlexWrap::WrapReverse>
-                { (0..15).map(move |_| content(cx)).collect::<Vec<_>>() }
+                { (0..2).map(move |_| content(cx)).collect::<Vec<_>>() }
             </Div>
         </Scroll>
     }

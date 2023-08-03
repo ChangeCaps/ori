@@ -191,7 +191,11 @@ impl Children {
             // store the size
             child_majors[i] = child_major;
 
-            let gap = if i > start + 1 { gap_major } else { 0.0 };
+            let gap = if i > start + 1 || i == 1 {
+                gap_major
+            } else {
+                0.0
+            };
 
             if major + child_major + gap > max_major && wrap.is_wrap() {
                 let line = WrapLine {
