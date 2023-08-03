@@ -252,9 +252,9 @@ impl Children {
 
             // calculate the amount of pixels per flex
             let px_per_flex = if overflow > 0.0 {
-                -overflow / line.flex_grow_sum
+                -overflow / line.flex_shrink_sum
             } else if underflow > 0.0 {
-                underflow / line.flex_shrink_sum
+                underflow / line.flex_grow_sum
             } else {
                 break;
             };
