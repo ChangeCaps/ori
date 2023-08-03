@@ -259,7 +259,7 @@ impl Children {
                 break;
             };
 
-            let grow = overflow > 0.0;
+            let grow = underflow > 0.0;
 
             for (i, child) in line.nodes_enumerate(self) {
                 // if the child has a flex property, now is the time
