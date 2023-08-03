@@ -54,11 +54,11 @@ impl<'a> LayoutContext<'a> {
         let max_height_group = &["max-height", "height", "size"];
 
         let parent = self.parent_space;
-        let min_width = self.style_length_group(min_width_group, parent.x_axis());
-        let max_width = self.style_length_group(max_width_group, parent.x_axis());
+        let min_width = self.style_length_group(min_width_group, 0.0..parent.max.x);
+        let max_width = self.style_length_group(max_width_group, 0.0..parent.max.x);
 
-        let min_height = self.style_length_group(min_height_group, parent.y_axis());
-        let max_height = self.style_length_group(max_height_group, parent.y_axis());
+        let min_height = self.style_length_group(min_height_group, 0.0..parent.max.y);
+        let max_height = self.style_length_group(max_height_group, 0.0..parent.max.y);
 
         let min_size = space.constrain(Vec2::new(min_width, min_height));
         let max_size = space.constrain(Vec2::new(max_width, max_height));
@@ -562,7 +562,7 @@ pub trait Context {
     }
 
     /// Returns the padding of the element.
-    fn padding(&self) -> Padding {
+    fn padding(&self) -> Padding {:
         self.node().padding
     }
 
