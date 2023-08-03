@@ -76,9 +76,6 @@ impl Stylesheet {
     }
 
     fn load_dir(path: &Path) -> Result<Self, StyleLoadError> {
-        #[cfg(feature = "tracing")]
-        tracing::debug!("Loading style directory: {}", path.display());
-
         let mut sheet = Self::empty();
 
         for entry in path.read_dir()? {
@@ -90,9 +87,6 @@ impl Stylesheet {
     }
 
     fn load_file(path: &Path) -> Result<Self, StyleLoadError> {
-        #[cfg(feature = "tracing")]
-        tracing::debug!("Loading style: {}", path.display());
-
         let input = fs::read_to_string(path)?;
         Ok(Self::from_str(&input)?)
     }
