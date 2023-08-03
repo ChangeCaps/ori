@@ -94,13 +94,14 @@ impl Element for Div {
 
     fn layout(&self, _: &mut Self::State, cx: &mut LayoutContext, space: AvailableSpace) -> Vec2 {
         let flex = FlexLayout::from_style(cx);
-        self.children.flex_layout(cx, space, flex)
+        space.constrain(self.children.flex_layout(cx, space, flex))
     }
 
     fn draw(&self, _: &mut Self::State, cx: &mut DrawContext) {
         cx.draw_background();
 
-        cx.draw_layer(|cx| {
+        let clip_rect = cx.rect();
+        cx.layer().clip(clip_rect).draw(|cx| {
             self.children.draw(cx);
         });
     }
