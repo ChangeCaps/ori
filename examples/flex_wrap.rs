@@ -11,7 +11,7 @@ fn content(cx: Scope) -> View {
 fn ui(cx: Scope) -> View {
     view! {
         <Scroll style:width=Pc(100.0)
-            style:align-items=AlignItem::End
+            style:align-items=AlignItem::Center
             style:background=Color::CYAN>
             <Div style:gap=Px(10.0)
                 style:direction=Axis::Horizontal

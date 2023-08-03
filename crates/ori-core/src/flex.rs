@@ -191,11 +191,9 @@ impl Children {
             // store the size
             child_majors[i] = child_major;
 
-            if major > 0.0 {
-                major += gap_major;
-            }
+            let gap = if i > start + 1 { gap_major } else { 0.0 };
 
-            if major + child_major > max_major && wrap.is_wrap() {
+            if major + child_major + gap > max_major && wrap.is_wrap() {
                 let line = WrapLine {
                     start,
                     end: i,
@@ -207,14 +205,13 @@ impl Children {
                 wraps.push(line);
 
                 start = i;
-                major = 0.0;
+                major = child_major;
                 minor = child_minor;
                 flex_grow_sum = 0.0;
                 flex_shrink_sum = 0.0;
+            } else {
+                major += child_major + gap;
             }
-
-            // update the major and minor axis
-            major += child_major;
 
             if !is_flex {
                 minor = minor.max(child_minor);
