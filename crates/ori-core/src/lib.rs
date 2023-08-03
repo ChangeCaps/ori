@@ -51,6 +51,7 @@ pub mod prelude {
         AlignItem, AvailableSpace, Axis, FlexWrap, JustifyContent, Margin, Padding,
     };
     pub use crate::node::{Node, NodeRef};
+    pub use crate::ui::UiBuilder;
     pub use crate::view::{IntoView, View};
     pub use crate::window::{Window, WindowBuilder, WindowId};
 

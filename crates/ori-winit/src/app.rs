@@ -1,13 +1,14 @@
 use std::{
     error::Error,
-    fmt::Display,
     time::{Duration, Instant},
 };
 
-use ori_core::{math::Vec2, BoxedBuildUi, BuildUi, Modifiers, Ui, Window, WindowBuilder};
-use ori_graphics::{FontSource, Fonts};
+use ori_core::{
+    math::Vec2, BoxedBuildUi, BuildUi, Modifiers, Ui, UiBuilder, Window, WindowBuilder,
+};
 use ori_reactive::Event;
-use ori_style::{LoadedStyleKind, StyleLoader, Stylesheet};
+use ori_style::Stylesheet;
+use ori_wgpu::WgpuBackend;
 use winit::{
     event::{Event as WinitEvent, KeyboardInput, MouseScrollDelta, StartCause, WindowEvent},
     event_loop::{ControlFlow, EventLoop, EventLoopBuilder},
@@ -44,10 +45,15 @@ fn init_tracing() -> Result<(), Box<dyn Error>> {
 /// A app using [`winit`] as the windowing backend.
 pub struct App {
     window: Window,
-    style_loader: StyleLoader,
-    fonts: Fonts,
     event_loop: EventLoop<(WinitWindowId, Event)>,
+    ui: Ui<WinitBackend, WgpuBackend>,
     builder: Option<BoxedBuildUi>,
+}
+
+impl UiBuilder<WinitBackend, WgpuBackend> for App {
+    fn ui(&mut self) -> &mut Ui<WinitBackend, WgpuBackend> {
+        &mut self.ui
+    }
 }
 
 impl WindowBuilder for App {
@@ -69,35 +75,28 @@ impl App {
     ) -> Self {
         init_tracing().unwrap();
 
-        let mut style_loader = StyleLoader::new();
+        let window_backend = WinitBackend::new(event_loop.create_proxy());
+        let wgpu_backend = WgpuBackend::new();
+        let mut ui = Ui::new(window_backend, wgpu_backend);
 
-        style_loader.add_style(Stylesheet::day_theme()).unwrap();
+        ui.style_loader.add_style(Stylesheet::day_theme()).unwrap();
 
         Self {
             window: Window::default(),
-            style_loader,
-            fonts: Fonts::default(),
+            ui,
             event_loop,
             builder: Some(content.boxed()),
         }
-    }
-
-    /// Loads a font from `source`, see [`font`](ori_graphics::font).
-    pub fn font(mut self, font: impl Into<FontSource>) -> Self {
-        if let Err(err) = self.fonts.load_font(font) {
-            tracing::error!("failed to load font: {:?}", err);
-        }
-
-        self
     }
 
     /// Set the default theme to night theme, this will clear all the styles
     /// that have been added before, and should therefore be called before
     /// [`App::style`].
     pub fn night_theme(mut self) -> Self {
-        self.style_loader.clear();
-        self.style_loader.add_style(Stylesheet::new()).unwrap();
-        self.style_loader
+        self.ui.style_loader.clear();
+        self.ui.style_loader.add_style(Stylesheet::new()).unwrap();
+        self.ui
+            .style_loader
             .add_style(Stylesheet::night_theme())
             .unwrap();
         self
@@ -107,27 +106,12 @@ impl App {
     /// that have been added before, and should therefore be called before
     /// [`App::style`].
     pub fn day_theme(mut self) -> Self {
-        self.style_loader.clear();
-        self.style_loader.add_style(Stylesheet::new()).unwrap();
-        self.style_loader
+        self.ui.style_loader.clear();
+        self.ui.style_loader.add_style(Stylesheet::new()).unwrap();
+        self.ui
+            .style_loader
             .add_style(Stylesheet::day_theme())
             .unwrap();
-        self
-    }
-
-    /// Add a style to the app, this can be called multiple times to add
-    /// multiple styles.
-    pub fn style<T>(mut self, style: T) -> Self
-    where
-        T: TryInto<LoadedStyleKind>,
-        T::Error: Display,
-    {
-        #[allow(clippy::single_match)]
-        match self.style_loader.add_style(style) {
-            Err(err) => tracing::error!("failed to load style: {}", err),
-            _ => {}
-        };
-
         self
     }
 }
@@ -167,40 +151,32 @@ impl App {
 impl App {
     /// Run the app.
     pub fn run(mut self) -> ! {
-        let window_backend = WinitBackend::new(self.event_loop.create_proxy());
-        #[cfg(feature = "wgpu")]
-        let render_backend = ori_wgpu::WgpuBackend::new();
-
-        let mut ui = Ui::new(window_backend, render_backend);
-        ui.fonts = self.fonts;
-        ui.style_loader = self.style_loader;
-
-        ui.load_default_fonts();
+        self.ui.load_default_fonts();
 
         let root = self.builder.take().unwrap();
-        (ui.create_window(&self.event_loop, &self.window, root)).unwrap();
+        (self.ui.create_window(&self.event_loop, &self.window, root)).unwrap();
 
         self.event_loop.run(move |event, target, control_flow| {
             *control_flow = ControlFlow::WaitUntil(Instant::now() + Duration::from_millis(10));
 
             match event {
                 WinitEvent::RedrawRequested(window) => {
-                    if let Some(id) = ui.window_backend.id(window) {
-                        ui.draw(id);
+                    if let Some(id) = self.ui.window_backend.id(window) {
+                        self.ui.draw(id);
                     }
                 }
                 WinitEvent::MainEventsCleared
                 | WinitEvent::NewEvents(StartCause::ResumeTimeReached { .. }) => {
-                    ui.idle();
+                    self.ui.idle();
                 }
                 WinitEvent::UserEvent((window, event)) => {
-                    let Some(id) = ui.window_backend.id(window) else {
+                    let Some(id) = self.ui.window_backend.id(window) else {
                         return;
                     };
 
-                    ui.event(target, id, &event);
+                    self.ui.event(target, id, &event);
 
-                    if ui.is_empty() {
+                    if self.ui.is_empty() {
                         *control_flow = ControlFlow::Exit;
                     }
                 }
@@ -209,7 +185,7 @@ impl App {
                     window_id: window,
                     ..
                 } => {
-                    let Some(window) = ui.window_backend.id(window) else {
+                    let Some(window) = self.ui.window_backend.id(window) else {
                         return;
                     };
 
@@ -219,12 +195,12 @@ impl App {
                             new_inner_size: &mut size,
                             ..
                         } => {
-                            ui.window_resized(window, size.width, size.height);
+                            self.ui.window_resized(window, size.width, size.height);
                         }
                         WindowEvent::CloseRequested => {
-                            ui.close_window(window);
+                            self.ui.close_window(window);
 
-                            if ui.is_empty() {
+                            if self.ui.is_empty() {
                                 *control_flow = ControlFlow::Exit;
                             }
                         }
@@ -235,11 +211,11 @@ impl App {
                         } => {
                             let device = convert_device_id(device_id);
                             let position = Vec2::new(position.x as f32, position.y as f32);
-                            ui.pointer_moved(window, device, position);
+                            self.ui.pointer_moved(window, device, position);
                         }
                         WindowEvent::CursorLeft { device_id } => {
                             let device = convert_device_id(device_id);
-                            ui.pointer_left(window, device);
+                            self.ui.pointer_left(window, device);
                         }
                         WindowEvent::MouseInput {
                             button,
@@ -250,7 +226,7 @@ impl App {
                             let device = convert_device_id(device_id);
                             let button = convert_mouse_button(button);
                             let pressed = is_pressed(element_state);
-                            ui.pointer_button(window, device, button, pressed);
+                            self.ui.pointer_button(window, device, button, pressed);
                         }
                         WindowEvent::MouseWheel {
                             delta: MouseScrollDelta::LineDelta(x, y),
@@ -259,7 +235,7 @@ impl App {
                         } => {
                             let device = convert_device_id(device_id);
                             let delta = Vec2::new(x, y);
-                            ui.pointer_scroll(window, device, delta);
+                            self.ui.pointer_scroll(window, device, delta);
                         }
                         WindowEvent::KeyboardInput {
                             input:
@@ -274,11 +250,11 @@ impl App {
                             let pressed = is_pressed(element_state);
 
                             if let Some(key) = key {
-                                ui.key(window, key, pressed);
+                                self.ui.key(window, key, pressed);
                             }
                         }
                         WindowEvent::ReceivedCharacter(c) => {
-                            ui.text(window, String::from(c));
+                            self.ui.text(window, String::from(c));
                         }
                         WindowEvent::ModifiersChanged(new_modifiers) => {
                             let modifiers = Modifiers {
@@ -288,7 +264,7 @@ impl App {
                                 meta: new_modifiers.logo(),
                             };
 
-                            ui.modifiers_changed(window, modifiers);
+                            self.ui.modifiers_changed(window, modifiers);
                         }
                         _ => {}
                     }

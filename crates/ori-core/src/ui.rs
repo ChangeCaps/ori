@@ -1,9 +1,12 @@
-use std::{collections::HashMap, fmt::Debug};
+use std::{
+    collections::HashMap,
+    fmt::{Debug, Display},
+};
 
 use glam::{UVec2, Vec2};
-use ori_graphics::{Fonts, Frame, ImageCache, RenderBackend, Renderer};
+use ori_graphics::{FontSource, Fonts, Frame, ImageCache, RenderBackend, Renderer};
 use ori_reactive::{Emitter, Event, EventSink, Scope, Task};
-use ori_style::{StyleCache, StyleLoader};
+use ori_style::{LoadedStyleKind, StyleCache, StyleLoader};
 
 use crate::{
     function::{dynamic, window},
@@ -146,6 +149,9 @@ impl<W: WindowBackend, R: RenderBackend> Debug for WindowError<W, R> {
     }
 }
 
+/// A callback that is called when the application is idle.
+pub type IdleCallback<W, R> = dyn FnMut(&mut Ui<W, R>) + 'static;
+
 /// The main entry point for the UI system.
 ///
 /// When implementing a custom shell, this is primarily the type that you will interact with.
@@ -168,6 +174,8 @@ where
     pub image_cache: ImageCache,
     /// The style loader, see [`StyleLoader`] for more information.
     pub style_loader: StyleLoader,
+    /// The idle callback, see [`idle`] for more information.
+    pub idle_callback: Option<Box<IdleCallback<W, R>>>,
 
     window_ui: HashMap<WindowId, WindowUi<R::Renderer>>,
 }
@@ -191,6 +199,7 @@ where
             style_cache: StyleCache::new(),
             image_cache: ImageCache::new(),
             style_loader: StyleLoader::new(),
+            idle_callback: None,
             window_ui: HashMap::new(),
         }
     }
@@ -310,6 +319,11 @@ where
     /// This will reload styles if necessary, among other things.
     pub fn idle(&mut self) {
         self.image_cache.clean();
+
+        if let Some(mut idle) = self.idle_callback.take() {
+            idle(self);
+            self.idle_callback = Some(idle);
+        }
 
         match self.style_loader.reload() {
             Ok(true) => {
@@ -605,5 +619,36 @@ where
 
     pub fn style_loader(&self) -> &StyleLoader {
         &self.style_loader
+    }
+}
+
+pub trait UiBuilder<W, R>: Sized
+where
+    W: WindowBackend,
+    R: RenderBackend<Surface = <W as WindowBackend>::Surface>,
+{
+    fn ui(&mut self) -> &mut Ui<W, R>;
+
+    /// Loads a font from `source`, see [`font`](ori_graphics::font).
+    fn font(mut self, font: impl Into<FontSource>) -> Self {
+        if let Err(err) = self.ui().fonts.load_font(font) {
+            tracing::error!("failed to load font: {:?}", err);
+        }
+
+        self
+    }
+
+    /// Add a style to the app, this can be called multiple times to add
+    /// multiple styles.
+    fn style<T>(mut self, style: T) -> Self
+    where
+        T: TryInto<LoadedStyleKind>,
+        T::Error: Display,
+    {
+        if let Err(err) = self.ui().style_loader.add_style(style) {
+            tracing::error!("failed to load style: {}", err);
+        }
+
+        self
     }
 }

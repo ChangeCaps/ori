@@ -141,6 +141,7 @@ impl Children {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn measure_fixed(
         &self,
         cx: &mut LayoutContext,
@@ -233,6 +234,7 @@ impl Children {
         wraps
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn measure_flex(
         &self,
         cx: &mut LayoutContext,
