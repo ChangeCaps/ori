@@ -562,7 +562,7 @@ pub trait Context {
     }
 
     /// Returns the padding of the element.
-    fn padding(&self) -> Padding {:
+    fn padding(&self) -> Padding {
         self.node().padding
     }
 
