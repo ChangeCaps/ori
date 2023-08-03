@@ -41,6 +41,11 @@ impl StyleClasses {
         self.classes.push(class.into());
     }
 
+    /// Checks if the list contains the given class.
+    pub fn contains(&self, class: impl AsRef<str>) -> bool {
+        self.iter().any(|c| c == class.as_ref())
+    }
+
     /// Extends the list with the given classes.
     pub fn extend(&mut self, classes: impl IntoIterator<Item = impl Into<StyleClass>>) {
         self.classes.extend(classes.into_iter().map(Into::into));

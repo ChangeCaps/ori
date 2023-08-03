@@ -102,7 +102,7 @@ impl FlexLayout {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 struct WrapLine {
     start: usize,
     end: usize,
@@ -156,7 +156,6 @@ impl Children {
         let needs_layout = self.needs_layout();
         let loosend_space = space.loosen();
 
-        let mut minor = 0.0;
         let mut major = 0.0;
         let mut flex_grow_sum = 0.0;
         let mut flex_shrink_sum = 0.0;
@@ -167,7 +166,6 @@ impl Children {
         // first we need to measure the fixed-sized children to determine their size
         for (i, child) in self.nodes().enumerate() {
             let (flex_grow, flex_shrink) = Self::child_flex(cx, &child);
-            let is_flex = flex_grow.is_some() || flex_shrink.is_some();
 
             // add the flex grow and shrink factors to the sum
             flex_grow_sum += flex_grow.unwrap_or(0.0);
@@ -186,7 +184,7 @@ impl Children {
                 child.size()
             };
 
-            let (child_major, child_minor) = axis.unpack(size);
+            let child_major = axis.major(size);
 
             // store the size
             child_majors[i] = child_major;
@@ -202,7 +200,7 @@ impl Children {
                     start,
                     end: i,
                     major,
-                    minor,
+                    minor: 0.0,
                     flex_grow_sum,
                     flex_shrink_sum,
                 };
@@ -210,15 +208,10 @@ impl Children {
 
                 start = i;
                 major = child_major;
-                minor = child_minor;
                 flex_grow_sum = 0.0;
                 flex_shrink_sum = 0.0;
             } else {
                 major += child_major + gap;
-            }
-
-            if !is_flex {
-                minor = minor.max(child_minor);
             }
         }
 
@@ -226,7 +219,7 @@ impl Children {
             start,
             end: self.len(),
             major,
-            minor,
+            minor: 0.0,
             flex_grow_sum,
             flex_shrink_sum,
         };
@@ -286,14 +279,22 @@ impl Children {
                 };
 
                 let size = child.relayout(cx, child_space);
-                let (child_major, child_minor) = axis.unpack(size);
+                let child_major = axis.major(size);
 
                 // update the major and minor axis
-                line.minor = line.minor.max(child_minor);
                 line.major += child_major - child_majors[i];
 
                 // store the size
                 child_majors[i] = child_major;
+            }
+        }
+    }
+
+    fn compute_minor(&self, axis: Axis, lines: &mut [WrapLine]) {
+        for line in lines {
+            for child in line.nodes(self) {
+                let child_minor = axis.minor(child.size());
+                line.minor = line.minor.max(child_minor);
             }
         }
     }
@@ -364,6 +365,8 @@ impl Children {
         let mut child_majors: SmallVec<[f32; 4]> = smallvec![0.0; self.len()];
         let mut child_flexes: SmallVec<[_; 4]> = smallvec![(None, None); self.len()];
 
+        // we start by measuring the children with a fixed size,
+        // while keeping track of the flex sums
         let mut lines = self.measure_fixed(
             cx,
             axis,
@@ -375,6 +378,7 @@ impl Children {
             space,
         );
 
+        // then we measure the children with a flexible size
         self.measure_flex(
             cx,
             axis,
@@ -386,6 +390,10 @@ impl Children {
             &child_flexes,
         );
 
+        // we calculate the minor axis of each line
+        self.compute_minor(axis, &mut lines);
+
+        // we stretch the items if necessary
         self.stretch_items(cx, axis, align_items, &lines, &mut child_majors);
 
         let mut major: f32 = 0.0;
