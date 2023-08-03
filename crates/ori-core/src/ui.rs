@@ -651,4 +651,12 @@ where
 
         self
     }
+
+    /// Set the idle callback, this is called when the app is idle.
+    ///
+    /// See [`Ui::idle`] for more information.
+    fn idle(mut self, idle: impl FnMut(&mut Ui<W, R>) + 'static) -> Self {
+        self.ui().idle_callback = Some(Box::new(idle));
+        self
+    }
 }
