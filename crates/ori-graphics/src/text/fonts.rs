@@ -1,4 +1,9 @@
-use std::{collections::HashMap, io, path::Path, sync::Arc};
+use std::{
+    collections::HashMap,
+    io,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use fontdue::{
     layout::{CoordinateSystem, Layout, LayoutSettings, TextStyle},
@@ -32,6 +37,55 @@ impl From<&'static str> for FontsError {
     }
 }
 
+/// A source for a font.
+#[derive(Clone, Debug)]
+pub enum FontSource {
+    /// A font loaded from data.
+    Data(Vec<u8>),
+    /// A font loaded from a file.
+    Path(PathBuf),
+}
+
+impl From<Vec<u8>> for FontSource {
+    fn from(data: Vec<u8>) -> Self {
+        Self::Data(data)
+    }
+}
+
+impl From<&[u8]> for FontSource {
+    fn from(data: &[u8]) -> Self {
+        Self::Data(data.to_vec())
+    }
+}
+
+impl From<&str> for FontSource {
+    fn from(data: &str) -> Self {
+        Self::Data(data.as_bytes().to_vec())
+    }
+}
+
+impl From<&Path> for FontSource {
+    fn from(path: &Path) -> Self {
+        Self::Path(path.to_path_buf())
+    }
+}
+
+impl From<PathBuf> for FontSource {
+    fn from(path: PathBuf) -> Self {
+        Self::Path(path)
+    }
+}
+
+/// Includes a font from a file.
+#[macro_export]
+macro_rules! font {
+    ($path:literal) => {
+        $crate::FontSource::Data(
+            include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/", $path)).to_vec(),
+        )
+    };
+}
+
 /// A collection of loaded fonts.
 #[derive(Clone, Debug, Default)]
 pub struct Fonts {
@@ -45,6 +99,25 @@ impl Fonts {
     /// Creates a new font collection.
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Loads a font from `source`.
+    pub fn load_font(&mut self, source: impl Into<FontSource>) -> Result<(), FontsError> {
+        let source = source.into();
+        match source {
+            FontSource::Data(data) => {
+                self.load_font_data(data);
+                Ok(())
+            }
+            FontSource::Path(path) if path.is_dir() => {
+                self.load_fonts_dir(path);
+                Ok(())
+            }
+            FontSource::Path(path) => {
+                self.load_font_file(path)?;
+                Ok(())
+            }
+        }
     }
 
     /// Loads a font from `data`.

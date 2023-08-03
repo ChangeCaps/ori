@@ -1,12 +1,11 @@
 use std::{
     error::Error,
     fmt::Display,
-    path::Path,
     time::{Duration, Instant},
 };
 
 use ori_core::{math::Vec2, BoxedBuildUi, BuildUi, Modifiers, Ui, Window, WindowBuilder};
-use ori_graphics::Fonts;
+use ori_graphics::{FontSource, Fonts};
 use ori_reactive::Event;
 use ori_style::{LoadedStyleKind, StyleLoader, Stylesheet};
 use winit::{
@@ -83,24 +82,12 @@ impl App {
         }
     }
 
-    /// Loads a font from the given data.
-    pub fn font_data(mut self, data: Vec<u8>) -> Self {
-        self.fonts.load_font_data(data);
-        self
-    }
-
-    /// Loads a font from the given file.
-    pub fn font(mut self, font: impl AsRef<Path>) -> Self {
-        if let Err(err) = self.fonts.load_font_file(font) {
+    /// Loads a font from `source`, see [`font`](ori_graphics::font).
+    pub fn font(mut self, font: impl Into<FontSource>) -> Self {
+        if let Err(err) = self.fonts.load_font(font) {
             tracing::error!("failed to load font: {:?}", err);
         }
 
-        self
-    }
-
-    /// Loads all fonts from the given directory.
-    pub fn font_dir(mut self, dir: impl AsRef<Path>) -> Self {
-        self.fonts.load_fonts_dir(dir);
         self
     }
 
