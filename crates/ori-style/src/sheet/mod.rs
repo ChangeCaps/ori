@@ -40,28 +40,6 @@ impl Display for StyleLoadError {
     }
 }
 
-/// Includes a style sheet from a file.
-///
-/// This macro will load the style sheet from the given path if it exists, otherwise it will
-/// include the style sheet as a string literal. The path is relative to the `CARGO_MANIFEST_DIR`.
-///
-/// Returns a [`LoadedStyleKind`](crate::LoadedStyleKind).
-#[macro_export]
-macro_rules! style {
-    ($path:literal) => {
-        if ::std::path::Path::new($path).exists() {
-            let sheet = $crate::LoadedStyle::load($path).unwrap();
-            $crate::LoadedStyleKind::Loaded(sheet)
-        } else {
-            let sheet = <$crate::Stylesheet as ::std::str::FromStr>::from_str(include_str!(
-                concat!(env!("CARGO_MANIFEST_DIR"), "/", $path)
-            ))
-            .unwrap();
-            $crate::LoadedStyleKind::Inline(sheet)
-        }
-    };
-}
-
 /// A stylesheet is a list of rules.
 #[derive(Clone, Debug, Default, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -88,6 +66,37 @@ impl Stylesheet {
     /// The default night theme.
     pub fn night_theme() -> Self {
         Self::from_str(theme::NIGHT).unwrap()
+    }
+
+    fn load_dir(path: &Path) -> Result<Self, StyleLoadError> {
+        #[cfg(feature = "tracing")]
+        tracing::debug!("Loading style directory: {}", path.display());
+
+        let mut sheet = Self::empty();
+
+        for entry in path.read_dir()? {
+            let entry = entry?;
+            sheet.extend(Self::load(entry.path())?);
+        }
+
+        Ok(sheet)
+    }
+
+    fn load_file(path: &Path) -> Result<Self, StyleLoadError> {
+        #[cfg(feature = "tracing")]
+        tracing::debug!("Loading style: {}", path.display());
+
+        let input = fs::read_to_string(path)?;
+        Ok(Self::from_str(&input)?)
+    }
+
+    /// Loads a style sheet from a file.
+    pub fn load(path: impl AsRef<Path>) -> Result<Self, StyleLoadError> {
+        if path.as_ref().is_dir() {
+            Self::load_dir(path.as_ref())
+        } else {
+            Self::load_file(path.as_ref())
+        }
     }
 
     /// Add a rule to the stylesheet.
@@ -228,12 +237,6 @@ impl Stylesheet {
         }
 
         result.map(|(attribute, _)| (attribute.clone(), specificity))
-    }
-
-    /// Loads a style sheet from a file.
-    pub fn load(path: impl AsRef<Path>) -> Result<Self, StyleLoadError> {
-        let input = fs::read_to_string(path)?;
-        Ok(Self::from_str(&input)?)
     }
 }
 

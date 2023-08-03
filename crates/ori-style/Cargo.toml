@@ -13,6 +13,7 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 # Ori dependencies
 ori-graphics = { version = "0.1.0-alpha.1", path = "../ori-graphics", default-features = false }
+ori-macro = { version = "0.1.0-alpha.1", path = "../ori-macro" }
 
 # Other dependencies
 pest = "2.6"

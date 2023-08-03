@@ -20,6 +20,8 @@ pub use style::*;
 pub use styled::*;
 pub use transition::*;
 
+pub use ori_macro::style;
+
 pub mod prelude {
     //! A collection of commonly used types and traits.
 
@@ -28,5 +30,5 @@ pub mod prelude {
     pub use crate::style::Style;
     pub use crate::styled::{Stylable, Styled};
 
-    pub use crate::style;
+    pub use ori_macro::style;
 }

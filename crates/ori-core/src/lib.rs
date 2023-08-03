@@ -32,6 +32,7 @@ pub use view::*;
 pub use window::*;
 
 pub use glam as math;
+pub use tracing;
 
 pub mod prelude {
     //! A collection of commonly used types and traits.
