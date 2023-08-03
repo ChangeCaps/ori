@@ -399,6 +399,12 @@ impl Children {
         let line_minors: SmallVec<[_; 2]> = lines.iter().map(|wrap| wrap.minor).collect();
         let line_minors = align_content.layout(&line_minors, minor, gap_minor);
 
+        let lines: SmallVec<[_; 2]> = if wrap == FlexWrap::WrapReverse {
+            lines.into_iter().rev().collect()
+        } else {
+            lines
+        };
+
         for (i, wrap) in lines.into_iter().enumerate() {
             let child_majors = &child_majors[wrap.start..wrap.end];
             let child_offsets = justify_content.layout(child_majors, major, gap_major);

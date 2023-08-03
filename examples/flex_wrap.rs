@@ -2,7 +2,7 @@ use ori::prelude::*;
 
 fn content(cx: Scope) -> View {
     view! {
-        <Div style:width=Pc(10.0)
+        <Div style:width=Px(100.0)
             style:height=Px(100.0)
             style:background=Color::RED />
     }
@@ -10,12 +10,12 @@ fn content(cx: Scope) -> View {
 
 fn ui(cx: Scope) -> View {
     view! {
-        <Div style:width=Pc(100.0)
-            style:height=Pc(100.0)
+        <Div style:width=Vw(100.0)
+            style:height=Vh(100.0)
             style:gap=Px(10.0)
             style:direction=Axis::Horizontal
             style:background=Color::BLACK
-            style:flex-wrap=FlexWrap::Wrap>
+            style:flex-wrap=FlexWrap::WrapReverse>
             { (0..15).map(move |_| content(cx)).collect::<Vec<_>>() }
         </Div>
     }
