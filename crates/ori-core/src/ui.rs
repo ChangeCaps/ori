@@ -174,7 +174,7 @@ where
     pub image_cache: ImageCache,
     /// The style loader, see [`StyleLoader`] for more information.
     pub style_loader: StyleLoader,
-    /// The idle callback, see [`idle`] for more information.
+    /// The idle callback, see [`Ui::idle`] for more information.
     pub idle_callback: Option<Box<IdleCallback<W, R>>>,
 
     window_ui: HashMap<WindowId, WindowUi<R::Renderer>>,

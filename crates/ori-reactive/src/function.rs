@@ -71,7 +71,7 @@ pub fn effect(cx: Scope, f: impl FnMut() + Send + 'static) {
 
 /// Creates an effect that takes a child [`Scope`] and runs the given callback on it.
 ///
-/// See [`effect`](effect::effect) for more information.
+/// See [`effect`](effect()) for more information.
 #[track_caller]
 pub fn effect_scoped(cx: Scope, f: impl FnMut(Scope) + Send + 'static) {
     cx.effect_scoped(f)
