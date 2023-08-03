@@ -77,8 +77,11 @@ impl FontAtlas {
         &mut self,
         renderer: &dyn Renderer,
         font: &Font,
-        config: GlyphRasterConfig,
+        mut config: GlyphRasterConfig,
     ) -> Option<Rect> {
+        // super sample the glyph, because it makes it sharper
+        config.px *= 2.0;
+
         if let Some(&glyph) = self.glyphs.get(&config) {
             return Some(glyph);
         }
