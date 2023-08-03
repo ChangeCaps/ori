@@ -63,7 +63,8 @@ impl Scroll {
     }
 
     fn overflow(&self, cx: &mut impl Context) -> Vec2 {
-        self.children.size() - cx.size()
+        let overflow = self.children.size() - cx.size() + cx.padding().size();
+        overflow.max(Vec2::ZERO)
     }
 
     fn should_show_scrollbar(&self, cx: &mut impl Context) -> bool {
