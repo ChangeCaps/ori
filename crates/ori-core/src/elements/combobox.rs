@@ -84,9 +84,11 @@ impl Element for ComboBox {
         let title_flex = FlexLayout {
             padding: Padding::from_style_named(cx, space, "title-padding"),
             axis: cx.style("title-direction"),
+            wrap: cx.style("title-flex-wrap"),
             justify_content: cx.style("title-justify-content"),
+            align_content: cx.style("title-align-content"),
             align_items: cx.style("title-align-items"),
-            gap: cx.style("title-gap"),
+            ..Default::default()
         };
 
         // layout the title

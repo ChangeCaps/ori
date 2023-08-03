@@ -325,68 +325,68 @@ pub enum JustifyContent {
 }
 
 impl JustifyContent {
-    /// Justify the given children along the major axis.
-    pub fn justify(&self, children: &[f32], container_size: f32, gap: f32) -> Vec<f32> {
-        if children.is_empty() {
+    /// Layout the given children along the major axis.
+    pub fn layout(&self, content: &[f32], container_size: f32, gap: f32) -> Vec<f32> {
+        if content.is_empty() {
             return Vec::new();
         }
 
-        let mut positions = Vec::with_capacity(children.len());
+        let mut positions = Vec::with_capacity(content.len());
 
-        let total_gap = gap * (children.len() - 1) as f32;
-        let total_size = children.iter().sum::<f32>() + total_gap;
+        let total_gap = gap * (content.len() - 1) as f32;
+        let total_size = content.iter().sum::<f32>() + total_gap;
 
         match self {
             JustifyContent::Start => {
                 let mut position = 0.0;
 
-                for &child in children {
+                for &item in content {
                     positions.push(position);
-                    position += child + gap;
+                    position += item + gap;
                 }
             }
             JustifyContent::Center => {
                 let mut position = container_size / 2.0 - total_size / 2.0;
 
-                for &child in children {
+                for &item in content {
                     positions.push(position);
-                    position += child + gap;
+                    position += item + gap;
                 }
             }
             JustifyContent::End => {
                 let mut position = container_size - total_size;
 
-                for &child in children {
+                for &item in content {
                     positions.push(position);
-                    position += child + gap;
+                    position += item + gap;
                 }
             }
             JustifyContent::SpaceBetween => {
-                let gap = (container_size - total_size + total_gap) / (children.len() - 1) as f32;
+                let gap = (container_size - total_size + total_gap) / (content.len() - 1) as f32;
 
                 let mut position = 0.0;
 
-                for &child in children {
+                for &item in content {
                     positions.push(position);
-                    position += child + gap;
+                    position += item + gap;
                 }
             }
             JustifyContent::SpaceAround => {
-                let gap = (container_size - total_size) / children.len() as f32;
+                let gap = (container_size - total_size) / content.len() as f32;
 
                 let mut position = gap / 2.0;
 
-                for &child in children {
+                for &item in content {
                     positions.push(position);
-                    position += child + gap;
+                    position += item + gap;
                 }
             }
             JustifyContent::SpaceEvenly => {
-                let gap = container_size / children.len() as f32;
+                let gap = container_size / content.len() as f32;
 
                 let mut position = gap / 2.0;
 
-                for _ in children {
+                for _ in content {
                     positions.push(position);
                     position += gap;
                 }
@@ -476,6 +476,44 @@ impl StyleAttributeEnum for AlignItem {
             AlignItem::Center => "center",
             AlignItem::End => "end",
             AlignItem::Stretch => "stretch",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum FlexWrap {
+    NoWrap,
+    Wrap,
+    WrapReverse,
+}
+
+impl Default for FlexWrap {
+    fn default() -> Self {
+        Self::NoWrap
+    }
+}
+
+impl FlexWrap {
+    pub const fn is_wrap(&self) -> bool {
+        matches!(self, FlexWrap::Wrap | FlexWrap::WrapReverse)
+    }
+}
+
+impl StyleAttributeEnum for FlexWrap {
+    fn from_str(s: &str) -> Option<Self> {
+        match s {
+            "nowrap" => Some(FlexWrap::NoWrap),
+            "wrap" => Some(FlexWrap::Wrap),
+            "wrap-reverse" => Some(FlexWrap::WrapReverse),
+            _ => None,
+        }
+    }
+
+    fn to_str(&self) -> &str {
+        match self {
+            FlexWrap::NoWrap => "nowrap",
+            FlexWrap::Wrap => "wrap",
+            FlexWrap::WrapReverse => "wrap-reverse",
         }
     }
 }

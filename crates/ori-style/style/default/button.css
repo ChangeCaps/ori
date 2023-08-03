@@ -5,7 +5,7 @@ button {
 	padding: 6px;
 
 	justify-content: center;
-	align-items: center;
+	align-content: center;
 
 	font-size: 1.5em;
 	color: #444444;
@@ -14,9 +14,9 @@ button {
 }
 
 button:hover {
-	background: var(--primary-hover) 0.02s;
+	background: var(--primary-hover) 0.03s;
 }
 
 button:active {
-	background: var(--primary-active) 0.02s;
+	background: var(--primary-active) 0.03s;
 }

@@ -8,6 +8,7 @@ mod debug;
 mod element;
 mod elements;
 mod event;
+mod flex;
 pub mod function;
 mod layout;
 mod node;
@@ -23,6 +24,7 @@ pub use debug::*;
 pub use element::*;
 pub use elements::*;
 pub use event::*;
+pub use flex::*;
 pub use layout::*;
 pub use node::*;
 pub use ui::*;
@@ -35,7 +37,7 @@ pub mod prelude {
     //! A collection of commonly used types and traits.
 
     pub use crate::build::Parent;
-    pub use crate::children::{Children, FlexLayout};
+    pub use crate::children::Children;
     pub use crate::context::{Context, DrawContext, EventContext, LayoutContext};
     pub use crate::element::Element;
     pub use crate::elements::*;
@@ -43,8 +45,11 @@ pub mod prelude {
         CloseWindow, Cursor, DragWindow, Key, KeyboardEvent, Modifiers, OpenWindow, PointerButton,
         PointerEvent, RequestRedrawEvent, WindowClosedEvent, WindowResizedEvent,
     };
+    pub use crate::flex::FlexLayout;
     pub use crate::function::*;
-    pub use crate::layout::{AlignItem, AvailableSpace, Axis, JustifyContent, Margin, Padding};
+    pub use crate::layout::{
+        AlignItem, AvailableSpace, Axis, FlexWrap, JustifyContent, Margin, Padding,
+    };
     pub use crate::node::{Node, NodeRef};
     pub use crate::view::{IntoView, View};
     pub use crate::window::{Window, WindowBuilder, WindowId};
