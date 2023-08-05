@@ -17,32 +17,80 @@ use wgpu::{
 #[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
 struct QuadUniforms {
     resolution: Vec2,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
-struct QuadVertex {
-    position: Vec2,
     min: Vec2,
     max: Vec2,
+    _pad: [u8; 8],
     color: Color,
     border_color: Color,
     border_radius: [f32; 4],
     border_width: [f32; 4],
 }
 
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
+struct QuadVertex {
+    position: Vec2,
+}
+
 #[derive(Debug)]
 struct Instance {
+    uniform_buffer: Buffer,
     vertex_buffer: Buffer,
+    uniform_bind_group: BindGroup,
     clip: Rect,
 }
 
 impl Instance {
-    fn new(device: &Device) -> Self {
+    fn new(device: &Device, uniform_layout: &BindGroupLayout) -> Self {
+        let uniform_buffer = QuadPipeline::create_uniform_buffer(device);
+
+        let uniform_bind_group = device.create_bind_group(&BindGroupDescriptor {
+            label: Some("Ori Quad Pipeline Uniform Bind Group"),
+            layout: uniform_layout,
+            entries: &[BindGroupEntry {
+                binding: 0,
+                resource: uniform_buffer.as_entire_binding(),
+            }],
+        });
+
         Self {
+            uniform_buffer,
             vertex_buffer: QuadPipeline::create_vertex_buffer(device),
+            uniform_bind_group,
             clip: Rect::ZERO,
         }
+    }
+
+    fn write_uniform_buffer(
+        &self,
+        device: &Device,
+        encoder: &mut CommandEncoder,
+        staging_belt: &mut StagingBelt,
+        quad: &Quad,
+        width: u32,
+        height: u32,
+    ) {
+        let uniforms = QuadUniforms {
+            resolution: Vec2::new(width as f32, height as f32),
+            min: quad.rect.min,
+            max: quad.rect.max,
+            _pad: [0; 8],
+            color: quad.background,
+            border_color: quad.border_color,
+            border_radius: quad.border_radius,
+            border_width: quad.border_width,
+        };
+
+        let bytes = bytemuck::bytes_of(&uniforms);
+
+        let mut buffer = staging_belt.write_buffer(
+            encoder,
+            &self.uniform_buffer,
+            0,
+            NonZeroU64::new(bytes.len() as u64).unwrap(),
+            device,
+        );
+        buffer.copy_from_slice(bytes);
     }
 
     fn write_vertex_buffer(
@@ -82,10 +130,7 @@ impl Layer {
 }
 
 pub struct QuadPipeline {
-    #[allow(dead_code)]
-    bind_group_layout: BindGroupLayout,
-    uniform_buffer: Buffer,
-    uniform_bind_group: BindGroup,
+    uniform_layout: BindGroupLayout,
     pipeline: RenderPipeline,
     index_buffer: Buffer,
     layers: Vec<Layer>,
@@ -95,15 +140,8 @@ impl QuadPipeline {
     pub fn new(device: &Device, format: TextureFormat) -> Self {
         let shader = device.create_shader_module(include_wgsl!("shader/quad.wgsl"));
 
-        let uniform_buffer = device.create_buffer(&BufferDescriptor {
-            label: Some("Quad Uniform Buffer"),
-            size: mem::size_of::<QuadUniforms>() as u64,
-            usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-
-        let bind_group_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-            label: Some("Quad Bind Group Layout"),
+        let uniform_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+            label: Some("Ori Quad Bind Group Layout"),
             entries: &[BindGroupLayoutEntry {
                 binding: 0,
                 visibility: ShaderStages::VERTEX_FRAGMENT,
@@ -116,23 +154,14 @@ impl QuadPipeline {
             }],
         });
 
-        let uniform_bind_group = device.create_bind_group(&BindGroupDescriptor {
-            label: Some("Quad Uniform Bind Group"),
-            layout: &bind_group_layout,
-            entries: &[BindGroupEntry {
-                binding: 0,
-                resource: uniform_buffer.as_entire_binding(),
-            }],
-        });
-
         let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
-            label: Some("Quad Pipeline Layout"),
-            bind_group_layouts: &[&bind_group_layout],
+            label: Some("Ori Quad Pipeline Layout"),
+            bind_group_layouts: &[&uniform_layout],
             push_constant_ranges: &[],
         });
 
         let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
-            label: Some("Quad Pipeline"),
+            label: Some("Ori Quad Pipeline"),
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
@@ -140,15 +169,7 @@ impl QuadPipeline {
                 buffers: &[VertexBufferLayout {
                     array_stride: mem::size_of::<QuadVertex>() as u64,
                     step_mode: VertexStepMode::Vertex,
-                    attributes: &vertex_attr_array![
-                        0 => Float32x2,
-                        1 => Float32x2,
-                        2 => Float32x2,
-                        3 => Float32x4,
-                        4 => Float32x4,
-                        5 => Float32x4,
-                        6 => Float32x4,
-                    ],
+                    attributes: &vertex_attr_array![0 => Float32x2],
                 }],
             },
             fragment: Some(FragmentState {
@@ -172,18 +193,25 @@ impl QuadPipeline {
         let index_buffer = Self::create_index_buffer(device);
 
         Self {
-            bind_group_layout,
-            uniform_buffer,
+            uniform_layout,
             pipeline,
-            uniform_bind_group,
             index_buffer,
             layers: Vec::new(),
         }
     }
 
+    fn create_uniform_buffer(device: &Device) -> Buffer {
+        device.create_buffer(&BufferDescriptor {
+            label: Some("Ori Quad Uniform Buffer"),
+            size: mem::size_of::<QuadUniforms>() as u64,
+            usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        })
+    }
+
     fn create_vertex_buffer(device: &Device) -> Buffer {
         device.create_buffer(&BufferDescriptor {
-            label: Some("Quad Vertex Buffer"),
+            label: Some("Ori Quad Vertex Buffer"),
             size: mem::size_of::<QuadVertex>() as u64 * 4,
             usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
             mapped_at_creation: false,
@@ -194,7 +222,7 @@ impl QuadPipeline {
         let indices = [0, 1, 2, 2, 3, 0];
 
         device.create_buffer_init(&BufferInitDescriptor {
-            label: Some("Quad Index Buffer"),
+            label: Some("Ori Quad Index Buffer"),
             contents: bytemuck::cast_slice(&indices),
             usage: BufferUsages::INDEX,
         })
@@ -204,65 +232,17 @@ impl QuadPipeline {
         [
             QuadVertex {
                 position: quad.rect.top_left(),
-                min: quad.rect.min,
-                max: quad.rect.max,
-                color: quad.background,
-                border_color: quad.border_color,
-                border_radius: quad.border_radius,
-                border_width: quad.border_width,
             },
             QuadVertex {
                 position: quad.rect.top_right(),
-                min: quad.rect.min,
-                max: quad.rect.max,
-                color: quad.background,
-                border_color: quad.border_color,
-                border_radius: quad.border_radius,
-                border_width: quad.border_width,
             },
             QuadVertex {
                 position: quad.rect.bottom_right(),
-                min: quad.rect.min,
-                max: quad.rect.max,
-                color: quad.background,
-                border_color: quad.border_color,
-                border_radius: quad.border_radius,
-                border_width: quad.border_width,
             },
             QuadVertex {
                 position: quad.rect.bottom_left(),
-                min: quad.rect.min,
-                max: quad.rect.max,
-                color: quad.background,
-                border_color: quad.border_color,
-                border_radius: quad.border_radius,
-                border_width: quad.border_width,
             },
         ]
-    }
-
-    fn write_uniform_buffer(
-        &self,
-        device: &Device,
-        encoder: &mut CommandEncoder,
-        staging_belt: &mut StagingBelt,
-        width: u32,
-        height: u32,
-    ) {
-        let uniforms = QuadUniforms {
-            resolution: Vec2::new(width as f32, height as f32),
-        };
-
-        let bytes = bytemuck::bytes_of(&uniforms);
-
-        let mut buffer = staging_belt.write_buffer(
-            encoder,
-            &self.uniform_buffer,
-            0,
-            NonZeroU64::new(bytes.len() as u64).unwrap(),
-            device,
-        );
-        buffer.copy_from_slice(bytes);
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -276,8 +256,6 @@ impl QuadPipeline {
         layer: usize,
         quads: &[(&Quad, Option<Rect>)],
     ) {
-        self.write_uniform_buffer(device, encoder, staging_belt, width, height);
-
         if layer >= self.layers.len() {
             self.layers.resize_with(layer + 1, Layer::new);
         }
@@ -286,7 +264,8 @@ impl QuadPipeline {
         layer.instance_count = quads.len();
 
         if quads.len() > layer.instances.len() {
-            (layer.instances).resize_with(quads.len(), || Instance::new(device));
+            let layout = &self.uniform_layout;
+            (layer.instances).resize_with(quads.len(), || Instance::new(device, layout));
         }
 
         let screen_rect = Rect::new(Vec2::ZERO, Vec2::new(width as f32, height as f32));
@@ -298,6 +277,7 @@ impl QuadPipeline {
             };
 
             instance.write_vertex_buffer(device, encoder, staging_belt, quad);
+            instance.write_uniform_buffer(device, encoder, staging_belt, quad, width, height);
         }
     }
 
@@ -305,7 +285,6 @@ impl QuadPipeline {
         let layer = &self.layers[layer];
 
         pass.set_pipeline(&self.pipeline);
-        pass.set_bind_group(0, &self.uniform_bind_group, &[]);
         pass.set_index_buffer(self.index_buffer.slice(..), IndexFormat::Uint32);
 
         for instance in &layer.instances[..layer.instance_count] {
@@ -320,6 +299,7 @@ impl QuadPipeline {
                 instance.clip.height() as u32,
             );
 
+            pass.set_bind_group(0, &instance.uniform_bind_group, &[]);
             pass.set_vertex_buffer(0, instance.vertex_buffer.slice(..));
             pass.draw_indexed(0..6, 0, 0..1);
         }
