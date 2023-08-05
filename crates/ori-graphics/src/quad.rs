@@ -1,12 +1,14 @@
-use crate::{Color, Rect};
+use crate::{Color, ImageHandle, Rect};
 
 /// A rectangle with rounded corners, and an optional border.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Quad {
     /// The rectangle of the quad.
     pub rect: Rect,
     /// The background color of the quad.
-    pub background: Color,
+    pub background_color: Color,
+    /// The background image of the quad.
+    pub background_image: Option<ImageHandle>,
     /// The radius of the quad's corners.
     ///
     /// The radius of each corner is specified in the following order:
@@ -25,7 +27,8 @@ impl Default for Quad {
     fn default() -> Self {
         Self {
             rect: Rect::default(),
-            background: Color::WHITE,
+            background_color: Color::WHITE,
+            background_image: None,
             border_radius: [0.0; 4],
             border_width: [0.0; 4],
             border_color: Color::BLACK,

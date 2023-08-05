@@ -12,7 +12,7 @@ pub use value::*;
 
 use std::{fmt::Display, sync::Arc};
 
-use ori_graphics::{Color, FontFamily};
+use ori_graphics::{Color, FontFamily, ImageSource};
 use smol_str::SmolStr;
 
 use crate::StyleTransition;
@@ -137,6 +137,15 @@ impl FromStyleAttribute for f32 {
     fn from_attribute(value: StyleAttributeValue) -> Option<Self> {
         match value {
             StyleAttributeValue::Length(value) => Some(value.as_f32()),
+            _ => None,
+        }
+    }
+}
+
+impl FromStyleAttribute for ImageSource {
+    fn from_attribute(value: StyleAttributeValue) -> Option<Self> {
+        match value {
+            StyleAttributeValue::String(value) => Some(ImageSource::Path(value.into())),
             _ => None,
         }
     }

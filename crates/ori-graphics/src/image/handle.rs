@@ -16,6 +16,15 @@ pub struct ImageHandle {
     handle: Arc<dyn Any + Send + Sync>,
 }
 
+impl PartialEq for ImageHandle {
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(
+            Arc::as_ptr(&self.handle) as *const u8,
+            Arc::as_ptr(&other.handle) as *const u8,
+        )
+    }
+}
+
 impl ImageHandle {
     /// Creates a new image handle. This is called by [`Renderer::create_image`](crate::Renderer::create_image)
     /// and should usually not be called manually.
@@ -95,6 +104,12 @@ pub struct WeakImageHandle {
     height: u32,
     filter: ImageFilter,
     handle: Weak<dyn Any + Send + Sync>,
+}
+
+impl PartialEq for WeakImageHandle {
+    fn eq(&self, other: &Self) -> bool {
+        Weak::ptr_eq(&self.handle, &other.handle)
+    }
 }
 
 impl WeakImageHandle {

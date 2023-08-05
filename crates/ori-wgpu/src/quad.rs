@@ -1,7 +1,7 @@
 use std::{mem, num::NonZeroU64};
 
 use bytemuck::{Pod, Zeroable};
-use ori_graphics::{math::Vec2, Color, Quad, Rect};
+use ori_graphics::{math::Vec2, Color, ImageHandle, Quad, Rect};
 use wgpu::{
     include_wgsl,
     util::{BufferInitDescriptor, DeviceExt, StagingBelt},
@@ -12,6 +12,8 @@ use wgpu::{
     RenderPass, RenderPipeline, RenderPipelineDescriptor, ShaderStages, TextureFormat,
     VertexBufferLayout, VertexStepMode,
 };
+
+use crate::WgpuImage;
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
@@ -30,6 +32,7 @@ struct QuadUniforms {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
 struct QuadVertex {
     position: Vec2,
+    uv: Vec2,
 }
 
 #[derive(Debug)]
@@ -37,6 +40,7 @@ struct Instance {
     uniform_buffer: Buffer,
     vertex_buffer: Buffer,
     uniform_bind_group: BindGroup,
+    image: Option<ImageHandle>,
     clip: Rect,
 }
 
@@ -57,6 +61,7 @@ impl Instance {
             uniform_buffer,
             vertex_buffer: QuadPipeline::create_vertex_buffer(device),
             uniform_bind_group,
+            image: None,
             clip: Rect::ZERO,
         }
     }
@@ -75,7 +80,7 @@ impl Instance {
             min: quad.rect.min,
             max: quad.rect.max,
             _pad: [0; 8],
-            color: quad.background,
+            color: quad.background_color,
             border_color: quad.border_color,
             border_radius: quad.border_radius,
             border_width: quad.border_width,
@@ -137,7 +142,11 @@ pub struct QuadPipeline {
 }
 
 impl QuadPipeline {
-    pub fn new(device: &Device, format: TextureFormat) -> Self {
+    pub fn new(
+        device: &Device,
+        image_bind_group_layout: &BindGroupLayout,
+        format: TextureFormat,
+    ) -> Self {
         let shader = device.create_shader_module(include_wgsl!("shader/quad.wgsl"));
 
         let uniform_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
@@ -156,7 +165,7 @@ impl QuadPipeline {
 
         let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: Some("Ori Quad Pipeline Layout"),
-            bind_group_layouts: &[&uniform_layout],
+            bind_group_layouts: &[&uniform_layout, image_bind_group_layout],
             push_constant_ranges: &[],
         });
 
@@ -169,7 +178,7 @@ impl QuadPipeline {
                 buffers: &[VertexBufferLayout {
                     array_stride: mem::size_of::<QuadVertex>() as u64,
                     step_mode: VertexStepMode::Vertex,
-                    attributes: &vertex_attr_array![0 => Float32x2],
+                    attributes: &vertex_attr_array![0 => Float32x2, 1 => Float32x2],
                 }],
             },
             fragment: Some(FragmentState {
@@ -232,15 +241,19 @@ impl QuadPipeline {
         [
             QuadVertex {
                 position: quad.rect.top_left(),
+                uv: Vec2::ZERO,
             },
             QuadVertex {
                 position: quad.rect.top_right(),
+                uv: Vec2::X,
             },
             QuadVertex {
                 position: quad.rect.bottom_right(),
+                uv: Vec2::ONE,
             },
             QuadVertex {
                 position: quad.rect.bottom_left(),
+                uv: Vec2::Y,
             },
         ]
     }
@@ -278,17 +291,23 @@ impl QuadPipeline {
 
             instance.write_vertex_buffer(device, encoder, staging_belt, quad);
             instance.write_uniform_buffer(device, encoder, staging_belt, quad, width, height);
+            instance.image = quad.background_image.clone();
         }
     }
 
-    pub fn render<'a>(&'a self, pass: &mut RenderPass<'a>, layer: usize) {
+    pub fn render<'a>(
+        &'a self,
+        pass: &mut RenderPass<'a>,
+        layer: usize,
+        default_image: &'a WgpuImage,
+    ) {
         let layer = &self.layers[layer];
 
         pass.set_pipeline(&self.pipeline);
         pass.set_index_buffer(self.index_buffer.slice(..), IndexFormat::Uint32);
 
         for instance in &layer.instances[..layer.instance_count] {
-            if instance.clip.width() == 0.0 || instance.clip.height() == 0.0 {
+            if instance.clip.size().min_element() < 1.0 {
                 continue;
             }
 
@@ -298,6 +317,17 @@ impl QuadPipeline {
                 instance.clip.width() as u32,
                 instance.clip.height() as u32,
             );
+
+            let image = instance
+                .image
+                .as_ref()
+                .and_then(|image| image.downcast_ref::<WgpuImage>());
+
+            if let Some(image) = image {
+                pass.set_bind_group(1, &image.bind_group, &[]);
+            } else {
+                pass.set_bind_group(1, &default_image.bind_group, &[]);
+            }
 
             pass.set_bind_group(0, &instance.uniform_bind_group, &[]);
             pass.set_vertex_buffer(0, instance.vertex_buffer.slice(..));

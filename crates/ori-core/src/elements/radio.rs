@@ -1,5 +1,5 @@
 use glam::Vec2;
-use ori_graphics::{Color, Quad};
+use ori_graphics::Quad;
 use ori_macro::Build;
 use ori_reactive::{Emitter, Event};
 use ori_style::Style;
@@ -62,10 +62,9 @@ impl Element for Radio {
             let rect = cx.rect().shrink(4.0);
             let quad = Quad {
                 rect,
-                background: cx.style("color"),
+                background_color: cx.style("color"),
                 border_radius: [rect.size().min_element() / 2.0; 4],
-                border_width: [0.0; 4],
-                border_color: Color::TRANSPARENT,
+                ..Default::default()
             };
 
             cx.draw(quad);

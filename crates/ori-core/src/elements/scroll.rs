@@ -195,10 +195,11 @@ impl Element for Scroll {
 
         let quad = Quad {
             rect,
-            background: cx.style("scrollbar-track-color"),
+            background_color: cx.style("scrollbar-track-color"),
             border_radius: [radius; 4],
             border_width: cx.style_border_width("scrollbar-track-border", cx.parent_size),
             border_color: cx.style("scrollbar-track-border-color"),
+            ..Default::default()
         };
 
         cx.layer().z_index(100.0).draw(|cx| {
@@ -210,10 +211,11 @@ impl Element for Scroll {
 
         let quad = Quad {
             rect,
-            background: cx.style("scrollbar-color"),
+            background_color: cx.style("scrollbar-color"),
             border_radius: [radius; 4],
             border_width: cx.style_border_width("scrollbar-border", cx.parent_size),
             border_color: cx.style("scrollbar-border-color"),
+            ..Default::default()
         };
 
         cx.layer().z_index(100.0).draw(|cx| {

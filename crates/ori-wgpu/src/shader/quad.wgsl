@@ -11,12 +11,21 @@ struct Uniforms {
 @group(0) @binding(0)
 var<uniform> uniforms: Uniforms;
 
+@group(1) @binding(0)
+var image_texture: texture_2d<f32>;
+
+@group(1) @binding(1)
+var image_sampler: sampler;
+
+
 struct VertexInput {
 	@location(0) position: vec2<f32>,
+	@location(1) uv: vec2<f32>,
 }
 
 struct VertexOutput {
 	@builtin(position) clip: vec4<f32>,
+	@location(0) uv: vec2<f32>,
 }
 
 @vertex
@@ -25,6 +34,7 @@ fn vertex(in: VertexInput) -> VertexOutput {
 
 	let position = in.position / uniforms.resolution * vec2<f32>(2.0, -2.0) - vec2<f32>(1.0, -1.0);
 	out.clip = vec4<f32>(position, 0.0, 1.0);
+	out.uv = in.uv;
 
 	return out;
 }
@@ -86,7 +96,9 @@ fn select_border_width(
 
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
-	var color = uniforms.color;
+	let image_color = textureSample(image_texture, image_sampler, in.uv);
+
+	var color = uniforms.color * image_color;
 
 	let border_radius = select_border_radius(
 		in.clip.xy,

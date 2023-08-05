@@ -364,7 +364,7 @@ impl Element for TextInput {
 
         let quad = Quad {
             rect: cursor_rect,
-            background: color,
+            background_color: color,
             ..Quad::default()
         };
 

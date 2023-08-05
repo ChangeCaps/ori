@@ -155,7 +155,7 @@ impl Element for Slider {
 
         let fill_quad = Quad {
             rect: self.fill_rect(cx),
-            background: cx.style("color"),
+            background_color: cx.style("color"),
             ..cx.style_background()
         };
         cx.draw(fill_quad);
@@ -163,10 +163,11 @@ impl Element for Slider {
         let knob_rect = self.knob_rect(cx);
         let knob_quad = Quad {
             rect: knob_rect,
-            background: cx.style_group(&["knob-color", "color"]),
+            background_color: cx.style_group(&["knob-color", "color"]),
             border_radius: cx.style_border_radius("knob-border", cx.parent_size),
             border_width: cx.style_border_width("knob-border", cx.parent_size),
             border_color: cx.style("knob-border-color"),
+            ..Default::default()
         };
         cx.draw(knob_quad);
     }

@@ -6,7 +6,7 @@ use std::{
 
 use glam::Vec2;
 use ori_graphics::{
-    Fonts, Frame, Glyphs, ImageCache, ImageHandle, ImageSource, PrimitiveKind, Quad, Rect,
+    Color, Fonts, Frame, Glyphs, ImageCache, ImageHandle, ImageSource, PrimitiveKind, Quad, Rect,
     Renderer, TextSection,
 };
 use ori_reactive::{EventSink, Signal};
@@ -261,32 +261,53 @@ impl<'a> DrawContext<'a> {
         ]
     }
 
-    pub fn style_background(&mut self) -> Quad {
+    /// Gets a styled quad with the given background and border names.
+    pub fn style_quad_named(&mut self, background: &str, border: &str, parent_size: Vec2) -> Quad {
+        let background_image = format!("{}-image", background);
+        let background_color = format!("{}-color", background);
+        let border_color = format!("{}-color", border);
+
+        let background_image = self.get_style_image_group(&[&background_image, background]);
+
+        let background_color = if background_image.is_some() {
+            self.get_style(&background_color).unwrap_or(Color::WHITE)
+        } else {
+            self.style_group(&[&background_color, background])
+        };
+
+        let border_radius = self.style_border_radius(border, parent_size);
+        let border_width = self.style_border_width(border, parent_size);
+        let border_color = self.style(&border_color);
+
         Quad {
             rect: self.rect(),
-            background: self.style_group(&["background-color", "background"]),
-            border_radius: self.style_border_radius("border", self.parent_size),
-            border_width: self.style_border_width("border", self.parent_size),
-            border_color: self.style("border-color"),
+            background_color,
+            background_image,
+            border_radius,
+            border_width,
+            border_color,
         }
     }
 
-    /// Draws the quad at the current layout rect.
+    /// Gets the styled background quad.
     ///
     /// This will use the following style attributes:
-    /// - `background-color`: The background color of the quad.
-    /// - `border-radius`: The border radius of the quad overwritten by the more specific
-    /// attributes.
-    /// - `border-top-left-radius`: The top left border radius of the quad.
-    /// - `border-top-right-radius`: The top right border radius of the quad.
-    /// - `border-bottom-right-radius`: The bottom right border radius of the quad.
-    /// - `border-bottom-left-radius`: The bottom left border radius of the quad.
-    /// - `border-width`: The border width of the quad.
+    /// - `background[-color]`: The background color of the quad.
+    /// - `background[-image]`: The background image of the quad.
+    /// - `border[-top-left,-top-right,bottom-right,bottom-left]-radius`: The border radi of the quad.
+    /// - `border[-top,-right,-bottom,-left]-width`: The border width of the quad.
+    /// - `border-color`: The border color of the quad.
+    pub fn style_background(&mut self) -> Quad {
+        self.style_quad_named("background", "border", self.parent_size)
+    }
+
+    /// Draws the quad at the current layout rect, see [`Context::style_background`].
     pub fn draw_background(&mut self) {
         let quad = self.style_background();
         self.draw(quad);
     }
 
+    /// Draw a [`Primitive`].
     pub fn draw(&mut self, primitive: impl Into<PrimitiveKind>) {
         self.frame.draw(primitive);
     }
@@ -533,6 +554,20 @@ impl<'a> Context<'a> {
         }
 
         result.unwrap_or_default()
+    }
+
+    /// Gets an optional image handle for the given `key`.
+    #[inline(always)]
+    pub fn get_style_image(&mut self, key: &str) -> Option<ImageHandle> {
+        let image = self.style::<Option<ImageSource>>(key);
+        image.map(|image| self.load_image(image))
+    }
+
+    /// Gets an optional image handle for the given `keys`, prioritizing in order.
+    #[inline(always)]
+    pub fn get_style_image_group(&mut self, keys: &[&str]) -> Option<ImageHandle> {
+        let image = self.style_group::<Option<ImageSource>>(keys);
+        image.map(|image| self.load_image(image))
     }
 
     /// Layout a section of text.

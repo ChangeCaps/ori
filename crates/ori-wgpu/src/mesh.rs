@@ -26,7 +26,6 @@ struct Instance {
     index_count: u32,
     image: Option<ImageHandle>,
     clip: Rect,
-    draw: bool,
 }
 
 impl Instance {
@@ -37,7 +36,6 @@ impl Instance {
             index_count: 0,
             image: None,
             clip: Rect::default(),
-            draw: false,
         }
     }
 
@@ -284,10 +282,8 @@ impl MeshPipeline {
 
         for ((mesh, clip), instance) in meshes.iter().zip(&mut layer.instances) {
             if mesh.vertices.is_empty() || mesh.indices.is_empty() {
-                instance.draw = false;
+                instance.index_count = 0;
                 continue;
-            } else {
-                instance.draw = true;
             }
 
             instance.clip = match clip {
@@ -314,7 +310,7 @@ impl MeshPipeline {
         pass.set_bind_group(0, &self.uniform_bind_group, &[]);
 
         for instance in &layer.instances[..layer.instance_count] {
-            if !instance.draw || instance.clip.width() < 1.0 || instance.clip.height() < 1.0 {
+            if instance.index_count == 0 || instance.clip.size().min_element() < 1.0 {
                 continue;
             }
 
@@ -329,6 +325,7 @@ impl MeshPipeline {
                 .image
                 .as_ref()
                 .and_then(|image| image.downcast_ref::<WgpuImage>());
+
             if let Some(image) = image {
                 pass.set_bind_group(1, &image.bind_group, &[]);
             } else {

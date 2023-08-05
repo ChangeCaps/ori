@@ -128,7 +128,8 @@ impl Element for ComboBox {
         // draw the quad for the title
         let title_quad = Quad {
             rect: cx.rect(),
-            background: cx.style_group(&["title-background-color", "title-background"]),
+            background_color: cx.style_group(&["title-background-color", "title-background"]),
+            background_image: cx.get_style_image_group(&["title-background-image", "title-image"]),
             border_radius: cx.style_border_radius("title-border", cx.parent_size),
             border_width: cx.style_border_width("title-border", cx.parent_size),
             border_color: cx.style("title-border-color"),
@@ -146,7 +147,8 @@ impl Element for ComboBox {
 
             let content_quad = Quad {
                 rect: content_rect,
-                background: cx.style_group(&["background-color", "background"]),
+                background_color: cx.style_group(&["background-color", "background"]),
+                background_image: cx.get_style_image_group(&["background-image", "image"]),
                 border_radius: cx.style_border_radius("border", content_rect.size()),
                 border_width: cx.style_border_width("border", content_rect.size()),
                 border_color: cx.style("border-color"),

@@ -56,7 +56,7 @@ impl WgpuRenderer {
 
         let blit_pipeline = BlitPipeline::new(&device, config.format);
         let mesh_pipeline = MeshPipeline::new(&device, &image_bind_group_layout, config.format);
-        let quad_pipeline = QuadPipeline::new(&device, config.format);
+        let quad_pipeline = QuadPipeline::new(&device, &image_bind_group_layout, config.format);
 
         let staging_belt = StagingBelt::new(1024);
 
@@ -318,7 +318,7 @@ impl WgpuRenderer {
         });
 
         for layer in 0..=layers {
-            (self.quad_pipeline).render(&mut pass, layer);
+            (self.quad_pipeline).render(&mut pass, layer, &self.default_image);
             (self.mesh_pipeline).render(&mut pass, layer, &self.default_image);
         }
     }
