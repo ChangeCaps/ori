@@ -9,6 +9,7 @@ use ori_core::{
 use ori_reactive::Event;
 use ori_style::Stylesheet;
 use ori_wgpu::WgpuBackend;
+use tracing_subscriber::Layer;
 use winit::{
     event::{Event as WinitEvent, KeyboardInput, MouseScrollDelta, StartCause, WindowEvent},
     event_loop::{ControlFlow, EventLoop, EventLoopBuilder},
@@ -32,8 +33,10 @@ fn init_tracing() -> Result<(), Box<dyn Error>> {
         .with_default_directive("[metrics]=warn".parse()?)
         .from_env()?;
 
-    let subscriber = tracing_subscriber::registry().with(filter);
-    let subscriber = subscriber.with(tracing_subscriber::fmt::Layer::default());
+    let subscriber = tracing_subscriber::registry();
+
+    let fmt_layer = tracing_subscriber::fmt::Layer::default().with_filter(filter);
+    let subscriber = subscriber.with(fmt_layer);
 
     #[cfg(feature = "tracy")]
     let subscriber = subscriber.with(tracing_tracy::TracyLayer::new());
@@ -162,6 +165,9 @@ impl App {
 
             match event {
                 WinitEvent::RedrawRequested(window) => {
+                    #[cfg(feature = "tracy")]
+                    tracing_tracy::client::frame_mark();
+
                     if let Some(id) = self.ui.window_backend.id(window) {
                         self.ui.draw(id);
                     }

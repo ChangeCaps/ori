@@ -4,9 +4,7 @@ use ori_macro::Build;
 use ori_reactive::{Emitter, Event};
 use ori_style::Style;
 
-use crate::{
-    AvailableSpace, Context, DrawContext, Element, EventContext, LayoutContext, PointerEvent,
-};
+use crate::{AvailableSpace, DrawContext, Element, EventContext, LayoutContext, PointerEvent};
 
 /// A radio button element.
 #[derive(Clone, Debug, Default, Build)]

@@ -6,8 +6,7 @@ pub use rule::*;
 use std::{fmt::Display, fs, io, path::Path, str::FromStr};
 
 use crate::{
-    StyleAttribute, StyleCache, StyleCacheEntry, StyleCacheKey, StyleSpec, StyleTree,
-    StyleheetParseError,
+    StyleAttribute, StyleCache, StyleCacheEntry, StyleSpec, StyleTree, StyleheetParseError,
 };
 
 /// An error that can occur when loading a style sheet.
@@ -111,14 +110,14 @@ impl Stylesheet {
     }
 
     /// Get and attribute and its specificity from the style sheet.
+    #[inline(always)]
     pub fn query_cached(
         &self,
         cache: &mut StyleCache,
-        cache_key: Option<StyleCacheKey>,
         tree: &StyleTree,
         key: &str,
     ) -> Option<StyleQuery> {
-        let (attr, spec) = self.query_cached_recurse_inner(cache, cache_key, tree, key)?;
+        let (attr, spec) = self.query_cached_recurse_inner(cache, tree, key)?;
 
         match attr.value {
             StyleRuleAttributeValue::Value(value) => {
@@ -147,7 +146,7 @@ impl Stylesheet {
             }
             StyleRuleAttributeValue::Inherit => {
                 let parent = tree.parent()?;
-                let query = self.query_cached(cache, None, &parent, key)?;
+                let query = self.query_cached(cache, &parent, key)?;
                 Some(StyleQuery {
                     attribute: query.attribute,
                     specificity: spec,
@@ -157,6 +156,7 @@ impl Stylesheet {
         }
     }
 
+    #[inline(always)]
     fn query_variable(
         &self,
         cache: &mut StyleCache,
@@ -166,7 +166,7 @@ impl Stylesheet {
         let mut tree = tree.clone();
 
         loop {
-            if let Some(query) = self.query_cached(cache, None, &tree, key) {
+            if let Some(query) = self.query_cached(cache, &tree, key) {
                 return Some(query.attribute);
             }
 
@@ -174,10 +174,10 @@ impl Stylesheet {
         }
     }
 
+    #[inline(always)]
     fn query_cached_recurse_inner(
         &self,
         cache: &mut StyleCache,
-        cache_key: Option<StyleCacheKey>,
         tree: &StyleTree,
         key: &str,
     ) -> Option<(StyleRuleAttribute, StyleSpec)> {
@@ -192,10 +192,7 @@ impl Stylesheet {
             return Some((attribute, StyleSpec::INLINE));
         }
 
-        let cache_key = match cache_key {
-            Some(key) => key,
-            None => tree.cache_key(),
-        };
+        let cache_key = tree.cache_key();
 
         // we need to check the cache, if the attribute was found in the cache, then we can return
         if let Some(entry) = cache.get(cache_key, key) {
@@ -204,6 +201,8 @@ impl Stylesheet {
                 None => return None,
             }
         }
+
+        tracing::trace!("cache miss for {}", key);
 
         // if the attribute was not found in the cache, then we need to search the stylesheet
         let Some((attr, spec)) =  self.query_attribute_specificity_inner(tree, key) else {
@@ -221,6 +220,7 @@ impl Stylesheet {
         Some((attr, spec))
     }
 
+    #[inline(always)]
     fn query_attribute_specificity_inner(
         &self,
         tree: &StyleTree,

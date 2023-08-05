@@ -4,8 +4,8 @@ use ori_reactive::{Event, EventSink, Signal};
 use ori_style::{StyleCache, StyleTree, Stylesheet};
 
 use crate::{
-    AvailableSpace, DebugEvent, DrawContext, EventContext, LayoutContext, Margin, Node, Padding,
-    PointerEvent, RequestRedrawEvent, Window, WindowResizedEvent,
+    AvailableSpace, Context, DebugEvent, DrawContext, EventContext, LayoutContext, Margin, Node,
+    Padding, PointerEvent, RequestRedrawEvent, Window, WindowResizedEvent,
 };
 
 impl Node {
@@ -21,30 +21,32 @@ impl Node {
         event: &Event,
         image_cache: &mut ImageCache,
     ) {
-        let element_state = &mut self.node_state();
-        element_state.style = self.element().style();
+        let node_state = &mut self.node_state();
+        node_state.style = self.element().style();
 
         if let Some(pointer_event) = event.get::<PointerEvent>() {
-            if Self::handle_pointer_event(element_state, pointer_event, event.is_handled()) {
+            if Self::handle_pointer_event(node_state, pointer_event, event.is_handled()) {
                 event_sink.emit(RequestRedrawEvent);
             }
         }
 
         if event.is::<WindowResizedEvent>() {
-            element_state.needs_layout = true;
+            node_state.needs_layout = true;
         }
 
-        let mut style_tree = StyleTree::new(element_state.style.clone());
+        let mut style_tree = StyleTree::new(node_state.style.clone());
         let mut cx = EventContext {
-            node: element_state,
-            renderer,
-            window,
-            fonts,
-            stylesheet,
-            style_tree: &mut style_tree,
-            event_sink,
-            style_cache,
-            image_cache,
+            context: Context::new(
+                node_state,
+                renderer,
+                window,
+                fonts,
+                stylesheet,
+                &mut style_tree,
+                style_cache,
+                event_sink,
+                image_cache,
+            ),
         };
 
         if let Some(event) = event.get::<DebugEvent>() {
@@ -73,15 +75,17 @@ impl Node {
 
         let mut style_tree = StyleTree::new(element_state.style.clone());
         let mut cx = LayoutContext {
-            node: element_state,
-            renderer,
-            window,
-            fonts,
-            stylesheet,
-            style_tree: &mut style_tree,
-            event_sink,
-            style_cache,
-            image_cache,
+            context: Context::new(
+                element_state,
+                renderer,
+                window,
+                fonts,
+                stylesheet,
+                &mut style_tree,
+                style_cache,
+                event_sink,
+                image_cache,
+            ),
             parent_space: space,
             space,
         };
@@ -119,17 +123,19 @@ impl Node {
         let parent_size = window.get().size.as_vec2();
         let mut style_tree = StyleTree::new(element_state.style.clone());
         let mut cx = DrawContext {
-            node: element_state,
+            context: Context::new(
+                element_state,
+                renderer,
+                window,
+                fonts,
+                stylesheet,
+                &mut style_tree,
+                style_cache,
+                event_sink,
+                image_cache,
+            ),
             frame,
-            renderer,
-            window,
-            fonts,
             parent_size,
-            stylesheet,
-            style_tree: &mut style_tree,
-            event_sink,
-            style_cache,
-            image_cache,
         };
 
         self.element().draw(self.element_state().as_mut(), &mut cx);

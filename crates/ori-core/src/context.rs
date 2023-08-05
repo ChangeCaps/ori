@@ -6,7 +6,8 @@ use std::{
 
 use glam::Vec2;
 use ori_graphics::{
-    Fonts, Frame, Glyphs, ImageCache, ImageHandle, ImageSource, Quad, Rect, Renderer, TextSection,
+    Fonts, Frame, Glyphs, ImageCache, ImageHandle, ImageSource, PrimitiveKind, Quad, Rect,
+    Renderer, TextSection,
 };
 use ori_reactive::{EventSink, Signal};
 use ori_style::{
@@ -18,31 +19,43 @@ use crate::{AvailableSpace, Margin, NodeState, Padding, RequestRedrawEvent, Wind
 /// A context for [`Element::event`](crate::Element::event).
 #[allow(missing_docs)]
 pub struct EventContext<'a> {
-    pub node: &'a mut NodeState,
-    pub renderer: &'a dyn Renderer,
-    pub window: Signal<Window>,
-    pub fonts: &'a mut Fonts,
-    pub stylesheet: &'a Stylesheet,
-    pub style_tree: &'a mut StyleTree,
-    pub style_cache: &'a mut StyleCache,
-    pub event_sink: &'a EventSink,
-    pub image_cache: &'a mut ImageCache,
+    pub context: Context<'a>,
+}
+
+impl<'a> Deref for EventContext<'a> {
+    type Target = Context<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.context
+    }
+}
+
+impl<'a> DerefMut for EventContext<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.context
+    }
 }
 
 /// A context for [`Element::layout`](crate::Element::layout).
 #[allow(missing_docs)]
 pub struct LayoutContext<'a> {
-    pub node: &'a mut NodeState,
-    pub renderer: &'a dyn Renderer,
-    pub window: Signal<Window>,
-    pub fonts: &'a mut Fonts,
-    pub stylesheet: &'a Stylesheet,
-    pub style_tree: &'a mut StyleTree,
-    pub style_cache: &'a mut StyleCache,
-    pub event_sink: &'a EventSink,
-    pub image_cache: &'a mut ImageCache,
+    pub context: Context<'a>,
     pub space: AvailableSpace,
     pub parent_space: AvailableSpace,
+}
+
+impl<'a> Deref for LayoutContext<'a> {
+    type Target = Context<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.context
+    }
+}
+
+impl<'a> DerefMut for LayoutContext<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.context
+    }
 }
 
 impl<'a> LayoutContext<'a> {
@@ -64,13 +77,10 @@ impl<'a> LayoutContext<'a> {
         let max_height = max_height.unwrap_or(Length::INFINITY);
 
         let parent = self.parent_space;
-        let scale = self.window().get().scale;
-        let vw = self.window().get().size.x as f32;
-        let vh = self.window().get().size.y as f32;
-        let min_width = min_width.pixels(0.0..parent.max.x, scale, vw, vh);
-        let max_width = max_width.pixels(0.0..parent.max.x, scale, vw, vh);
-        let min_height = min_height.pixels(0.0..parent.max.y, scale, vw, vh);
-        let max_height = max_height.pixels(0.0..parent.max.y, scale, vw, vh);
+        let min_width = self.resolve_length(min_width, 0.0..parent.max.x);
+        let max_width = self.resolve_length(max_width, 0.0..parent.max.x);
+        let min_height = self.resolve_length(min_height, 0.0..parent.max.y);
+        let max_height = self.resolve_length(max_height, 0.0..parent.max.y);
 
         let min_size = space.constrain(Vec2::new(min_width, min_height));
         let max_size = space.constrain(Vec2::new(max_width, max_height));
@@ -122,21 +132,15 @@ impl<'a, 'b> DrawLayer<'a, 'b> {
             .clip(self.clip);
 
         layer.draw(|frame| {
-            let mut child = DrawContext {
-                node: self.draw_context.node,
-                frame,
-                renderer: self.draw_context.renderer,
-                window: self.draw_context.window,
-                fonts: self.draw_context.fonts,
-                parent_size: self.draw_context.parent_size,
-                stylesheet: self.draw_context.stylesheet,
-                style_tree: self.draw_context.style_tree,
-                style_cache: self.draw_context.style_cache,
-                event_sink: self.draw_context.event_sink,
-                image_cache: self.draw_context.image_cache,
-            };
+            self.draw_context.context.cloned(|context| {
+                let mut child = DrawContext {
+                    context,
+                    parent_size: self.draw_context.parent_size,
+                    frame,
+                };
 
-            f(&mut child);
+                f(&mut child);
+            });
         });
     }
 }
@@ -144,17 +148,23 @@ impl<'a, 'b> DrawLayer<'a, 'b> {
 /// A context for [`Element::draw`](crate::Element::draw).
 #[allow(missing_docs)]
 pub struct DrawContext<'a> {
-    pub node: &'a mut NodeState,
+    pub context: Context<'a>,
     pub frame: &'a mut Frame,
-    pub renderer: &'a dyn Renderer,
-    pub window: Signal<Window>,
-    pub fonts: &'a mut Fonts,
     pub parent_size: Vec2,
-    pub stylesheet: &'a Stylesheet,
-    pub style_tree: &'a mut StyleTree,
-    pub style_cache: &'a mut StyleCache,
-    pub event_sink: &'a EventSink,
-    pub image_cache: &'a mut ImageCache,
+}
+
+impl<'a> Deref for DrawContext<'a> {
+    type Target = Context<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.context
+    }
+}
+
+impl<'a> DerefMut for DrawContext<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.context
+    }
 }
 
 impl<'a> DrawContext<'a> {
@@ -181,7 +191,10 @@ impl<'a> DrawContext<'a> {
 
     /// Draws the given text.
     pub fn draw_text(&mut self, glyphs: &Glyphs, rect: Rect) {
-        if let Some(mesh) = self.fonts.text_mesh(self.renderer, glyphs, rect) {
+        let fonts = &mut self.context.fonts;
+        let renderer = self.context.renderer;
+
+        if let Some(mesh) = fonts.text_mesh(renderer, glyphs, rect) {
             self.draw(mesh);
         }
     }
@@ -261,82 +274,146 @@ impl<'a> DrawContext<'a> {
         let quad = self.style_background();
         self.draw(quad);
     }
-}
 
-impl<'a> Deref for DrawContext<'a> {
-    type Target = Frame;
-
-    fn deref(&self) -> &Self::Target {
-        self.frame
+    pub fn draw(&mut self, primitive: impl Into<PrimitiveKind>) {
+        self.frame.draw(primitive);
     }
 }
 
-impl<'a> DerefMut for DrawContext<'a> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.frame
-    }
+pub struct Context<'a> {
+    pub node: &'a mut NodeState,
+    pub renderer: &'a dyn Renderer,
+    pub window: Signal<Window>,
+    pub fonts: &'a mut Fonts,
+    pub stylesheet: &'a Stylesheet,
+    pub style_tree: &'a mut StyleTree,
+    pub style_cache: &'a mut StyleCache,
+    pub event_sink: &'a EventSink,
+    pub image_cache: &'a mut ImageCache,
+    window_size: Vec2,
+    window_scale: f32,
 }
 
-/// A context that is passed to [`View`](crate::view::View) methods.
-///
-/// See [`EventContext`], [`DrawContext`] and [`LayoutContext`] for more information.
-pub trait Context {
-    /// Returns the [`Stylesheet`] of the application.
-    fn stylesheet(&self) -> &Stylesheet;
+impl<'a> Context<'a> {
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn new(
+        node: &'a mut NodeState,
+        renderer: &'a dyn Renderer,
+        window: Signal<Window>,
+        fonts: &'a mut Fonts,
+        stylesheet: &'a Stylesheet,
+        style_tree: &'a mut StyleTree,
+        style_cache: &'a mut StyleCache,
+        event_sink: &'a EventSink,
+        image_cache: &'a mut ImageCache,
+    ) -> Self {
+        Self {
+            node,
+            renderer,
+            window,
+            fonts,
+            stylesheet,
+            style_tree,
+            style_cache,
+            event_sink,
+            image_cache,
+            window_size: window.get().size.as_vec2(),
+            window_scale: window.get().scale,
+        }
+    }
 
-    /// Returns the [`StyleCache`] of the application.
-    fn style_cache(&self) -> &StyleCache;
+    pub(crate) fn child<T>(&mut self, node: &mut NodeState, f: impl FnOnce(Context<'_>) -> T) -> T {
+        node.propagate_up(self.node);
 
-    /// Returns the [`StyleCache`] of the application.
-    fn style_cache_mut(&mut self) -> &mut StyleCache;
+        if node.needs_layout {
+            self.request_redraw();
+        }
 
-    /// Returns the [`Stylesheet`] and [`StyleCache`] of the application.
-    fn stylesheet_and_cache_mut(&mut self) -> (&Stylesheet, &mut StyleCache);
+        node.update_style_tags();
+        self.style_tree.push(node.style.clone());
+        let context = Context {
+            node,
+            renderer: self.renderer,
+            window: self.window,
+            fonts: self.fonts,
+            stylesheet: self.stylesheet,
+            style_tree: self.style_tree,
+            style_cache: self.style_cache,
+            event_sink: self.event_sink,
+            image_cache: self.image_cache,
+            window_size: self.window_size,
+            window_scale: self.window_scale,
+        };
 
-    /// Gets the [`StyleAttribute`] and [`StyleSpec`] for the given `key`.
-    fn query_style_attribute(&mut self, key: &str) -> Option<(StyleAttribute, StyleSpec)>;
+        let result = f(context);
+        self.style_tree.pop();
 
-    /// Returns the [`NodeState`] of the current element.
-    fn node(&self) -> &NodeState;
+        self.node.propagate_down(node);
 
-    /// Returns the [`NodeState`] of the current element.
-    fn node_mut(&mut self) -> &mut NodeState;
+        result
+    }
 
-    /// Returns the [`Renderer`] of the application.
-    fn renderer(&self) -> &dyn Renderer;
+    pub(crate) fn cloned<T>(&mut self, f: impl FnOnce(Context<'_>) -> T) -> T {
+        let context = Context {
+            node: self.node,
+            renderer: self.renderer,
+            window: self.window,
+            fonts: self.fonts,
+            stylesheet: self.stylesheet,
+            style_tree: self.style_tree,
+            style_cache: self.style_cache,
+            event_sink: self.event_sink,
+            image_cache: self.image_cache,
+            window_size: self.window_size,
+            window_scale: self.window_scale,
+        };
 
-    /// Returns the [`Window`] of the application.
-    fn window(&self) -> Signal<Window>;
+        f(context)
+    }
 
-    /// Returns the [`Fonts`] of the application.
-    fn fonts(&self) -> &Fonts;
+    #[inline(always)]
+    pub fn window_size(&self) -> Vec2 {
+        self.window_size
+    }
 
-    /// Returns the [`Fonts`] of the application.
-    fn fonts_mut(&mut self) -> &mut Fonts;
+    #[inline(always)]
+    pub fn window_scale(&self) -> f32 {
+        self.window_scale
+    }
 
-    /// Returns the [`StyleTree`] of the current element.
-    fn style_tree(&self) -> &StyleTree;
+    #[inline(always)]
+    pub fn resolve_length(&self, length: Length, range: Range<f32>) -> f32 {
+        length.pixels(
+            range,
+            self.window_scale,
+            self.window_size.x,
+            self.window_size.y,
+        )
+    }
 
-    /// Returns the [`StyleTree`] of the current element.
-    fn style_tree_mut(&mut self) -> &mut StyleTree;
+    #[inline(always)]
+    pub fn query_style_attribute(&mut self, key: &str) -> Option<(StyleAttribute, StyleSpec)> {
+        let cache = &mut self.style_cache;
+        let tree = &self.style_tree;
+        let query = self.stylesheet.query_cached(cache, tree, key)?;
 
-    /// Returns the [`EventSink`] of the application.
-    fn event_sink(&self) -> &EventSink;
+        if query.inherited && !self.node.is_inheriting(query.attribute.key()) {
+            self.node.inheriting.push(query.attribute.clone());
+        }
 
-    /// Returns the [`ImageCache`] of the application.
-    fn image_cache(&self) -> &ImageCache;
-
-    /// Returns the [`ImageCache`] of the application.
-    fn image_cache_mut(&mut self) -> &mut ImageCache;
+        Some((query.attribute, query.specificity))
+    }
 
     /// Gets the [`StyleAttribute`] for the given `key`.
-    fn get_style_attribute(&mut self, key: &str) -> Option<StyleAttribute> {
+    #[inline(always)]
+    pub fn get_style_attribute(&mut self, key: &str) -> Option<StyleAttribute> {
         self.query_style_attribute(key)
             .map(|(attribute, _)| attribute)
     }
 
     /// Gets the value of a style attribute for the given `key`.
-    fn query_style<T: FromStyleAttribute + 'static>(
+    #[inline(always)]
+    pub fn query_style<T: FromStyleAttribute + 'static>(
         &mut self,
         key: &str,
     ) -> Option<(T, StyleSpec)> {
@@ -344,16 +421,14 @@ pub trait Context {
         let value = T::from_attribute(attribute.value().clone())?;
         let transition = attribute.transition();
 
-        Some((
-            self.node_mut().transition(key, value, transition),
-            specificity,
-        ))
+        Some((self.node.transition(key, value, transition), specificity))
     }
 
     /// Gets the value of a style attribute for the given `key`.
     ///
     /// This will also transition the value if the attribute has a transition.
-    fn get_style<T: FromStyleAttribute + 'static>(&mut self, key: &str) -> Option<T> {
+    #[inline(always)]
+    pub fn get_style<T: FromStyleAttribute + 'static>(&mut self, key: &str) -> Option<T> {
         self.query_style(key).map(|(value, _)| value)
     }
 
@@ -361,7 +436,8 @@ pub trait Context {
     ///
     /// This will also transition the value if the attribute has a transition.
     #[track_caller]
-    fn style<T: FromStyleAttribute + Default + 'static>(&mut self, key: &str) -> T {
+    #[inline(always)]
+    pub fn style<T: FromStyleAttribute + Default + 'static>(&mut self, key: &str) -> T {
         self.get_style(key).unwrap_or_default()
     }
 
@@ -369,7 +445,8 @@ pub trait Context {
     /// If both attributes have the same specificity, the `primary_key` will be used.
     ///
     /// This will also transition the value if the attribute has a transition.
-    fn style_group<T: FromStyleAttribute + Default + 'static>(&mut self, keys: &[&str]) -> T {
+    #[inline(always)]
+    pub fn style_group<T: FromStyleAttribute + Default + 'static>(&mut self, keys: &[&str]) -> T {
         let mut specificity = None;
         let mut result = None;
 
@@ -389,22 +466,19 @@ pub trait Context {
     /// `range` is the range from 0% to 100% of the desired value.
     ///
     /// This will also transition the value if the attribute has a transition.
-    fn get_style_length(&mut self, key: &str, range: Range<f32>) -> Option<f32> {
+    #[inline(always)]
+    pub fn get_style_length(&mut self, key: &str, range: Range<f32>) -> Option<f32> {
         let attribute = self.get_style_attribute(key)?;
         let value = Length::from_attribute(attribute.value().clone())?;
         let transition = attribute.transition();
 
-        let window = self.window().get();
-        let scale = window.scale;
-        let width = window.size.x as f32;
-        let height = window.size.y as f32;
-        let pixels = value.pixels(range, scale, width, height);
-
-        Some((self.node_mut()).transition(key, pixels, transition))
+        let pixels = self.resolve_length(value, range);
+        Some((self.node).transition(key, pixels, transition))
     }
 
     /// Gets the value of a style attribute in pixels and [`StyleSpec`] for the given `key`.
-    fn get_style_length_specificity(
+    #[inline(always)]
+    pub fn get_style_length_specificity(
         &mut self,
         key: &str,
         range: Range<f32>,
@@ -413,16 +487,8 @@ pub trait Context {
         let value = Length::from_attribute(attribute.value().clone())?;
         let transition = attribute.transition();
 
-        let window = self.window().get();
-        let scale = window.scale;
-        let width = window.size.x as f32;
-        let height = window.size.y as f32;
-        let pixels = value.pixels(range, scale, width, height);
-
-        Some((
-            (self.node_mut()).transition(key, pixels, transition),
-            specificity,
-        ))
+        let pixels = self.resolve_length(value, range);
+        Some(((self.node).transition(key, pixels, transition), specificity))
     }
 
     /// Gets the value of a style attribute in pixels for the given `key`, if there is no value, returns `0.0`.
@@ -430,7 +496,8 @@ pub trait Context {
     ///
     /// This will also transition the value if the attribute has a transition.
     #[track_caller]
-    fn style_length(&mut self, key: &str, range: Range<f32>) -> f32 {
+    #[inline(always)]
+    pub fn style_length(&mut self, key: &str, range: Range<f32>) -> f32 {
         self.get_style_length(key, range).unwrap_or_default()
     }
 
@@ -439,7 +506,8 @@ pub trait Context {
     /// `range` is the range from 0% to 100% of the desired value.
     ///
     /// This will also transition the value if the attribute has a transition.
-    fn style_length_group(&mut self, keys: &[&str], range: Range<f32>) -> f32 {
+    #[inline(always)]
+    pub fn style_length_group(&mut self, keys: &[&str], range: Range<f32>) -> f32 {
         let mut specificity = None;
         let mut result = None;
 
@@ -456,138 +524,138 @@ pub trait Context {
     }
 
     /// Layout a section of text.
-    fn layout_text(&mut self, text: &TextSection<'_>) -> Option<Glyphs> {
-        self.fonts_mut().layout_glyphs(text)
+    pub fn layout_text(&mut self, text: &TextSection<'_>) -> Option<Glyphs> {
+        self.fonts.layout_glyphs(text)
     }
 
     /// Measures the given text.
-    fn measure_text(&mut self, text: &TextSection<'_>) -> Vec2 {
-        self.fonts_mut().measure_text(text).unwrap_or_default()
+    pub fn measure_text(&mut self, text: &TextSection<'_>) -> Vec2 {
+        self.fonts.measure_text(text).unwrap_or_default()
     }
 
     /// Tries to downcast the `renderer` to the given type.
-    fn downcast_renderer<T: Renderer>(&self) -> Option<&T> {
-        self.renderer().downcast_ref()
+    pub fn downcast_renderer<T: Renderer>(&self) -> Option<&T> {
+        self.renderer.downcast_ref()
     }
 
     /// Loads an image from the given `source` and returns a handle to it.
-    fn load_image(&mut self, source: impl Into<ImageSource>) -> ImageHandle {
+    pub fn load_image(&mut self, source: impl Into<ImageSource>) -> ImageHandle {
         let source = source.into();
-        if let Some(handle) = self.image_cache().get(&source) {
+        if let Some(handle) = self.image_cache.get(&source) {
             return handle;
         }
 
         let data = source.clone().load();
-        let image = self.renderer().create_image(&data);
-        self.image_cache_mut().insert(source, image.clone());
+        let image = self.renderer.create_image(&data);
+        self.image_cache.insert(source, image.clone());
         image
     }
 
     /// Returns `true` if the element is active.
-    fn active(&self) -> bool {
-        self.node().active
+    pub fn active(&self) -> bool {
+        self.node.active
     }
 
     /// Returns `true` if the element is hovered.
-    fn hovered(&self) -> bool {
-        self.node().hovered
+    pub fn hovered(&self) -> bool {
+        self.node.hovered
     }
 
     /// Returns `true` if the element is focused.
-    fn focused(&self) -> bool {
-        self.node().focused
+    pub fn focused(&self) -> bool {
+        self.node.focused
     }
 
     /// Focuses the element, this will also request a redraw.
-    fn focus(&mut self) {
+    pub fn focus(&mut self) {
         if self.focused() {
             return;
         }
 
-        self.node_mut().focused = true;
+        self.node.focused = true;
         self.request_redraw();
     }
 
     /// Unfocuses the element, this will also request a redraw.
-    fn unfocus(&mut self) {
+    pub fn unfocus(&mut self) {
         if !self.focused() {
             return;
         }
 
-        self.node_mut().focused = false;
+        self.node.focused = false;
         self.request_redraw();
     }
 
     /// Hovers the element, this will also request a redraw.
-    fn hover(&mut self) {
+    pub fn hover(&mut self) {
         if self.hovered() {
             return;
         }
 
-        self.node_mut().hovered = true;
+        self.node.hovered = true;
         self.request_redraw();
     }
 
     /// Unhovers the element, this will also request a redraw.
-    fn unhover(&mut self) {
+    pub fn unhover(&mut self) {
         if !self.hovered() {
             return;
         }
 
-        self.node_mut().hovered = false;
+        self.node.hovered = false;
         self.request_redraw();
     }
 
     /// Activates the element, this will also request a redraw.
-    fn activate(&mut self) {
+    pub fn activate(&mut self) {
         if self.active() {
             return;
         }
 
-        self.node_mut().active = true;
+        self.node.active = true;
         self.request_redraw();
     }
 
     /// Deactivates the element, this will also request a redraw.
-    fn deactivate(&mut self) {
+    pub fn deactivate(&mut self) {
         if !self.active() {
             return;
         }
 
-        self.node_mut().active = false;
+        self.node.active = false;
         self.request_redraw();
     }
 
     /// Returns the local rect of the element.
-    fn local_rect(&self) -> Rect {
-        self.node().local_rect
+    pub fn local_rect(&self) -> Rect {
+        self.node.local_rect
     }
 
     /// Returns the global rect of the element.
-    fn rect(&self) -> Rect {
-        self.node().global_rect
+    pub fn rect(&self) -> Rect {
+        self.node.global_rect
     }
 
     /// Returns the margin of the element.
-    fn margin(&self) -> Margin {
-        self.node().margin
+    pub fn margin(&self) -> Margin {
+        self.node.margin
     }
 
     /// Returns the padding of the element.
-    fn padding(&self) -> Padding {
-        self.node().padding
+    pub fn padding(&self) -> Padding {
+        self.node.padding
     }
 
     /// Returns the size of the element.
-    fn size(&self) -> Vec2 {
-        self.node().local_rect.size()
+    pub fn size(&self) -> Vec2 {
+        self.node.local_rect.size()
     }
 
     /// Requests a redraw.
     ///
     /// This is a shortcut for `self.event_sink().send(RequestRedrawEvent)`.
     #[track_caller]
-    fn request_redraw(&mut self) {
+    pub fn request_redraw(&mut self) {
         tracing::trace!("request redraw");
         self.send_event(RequestRedrawEvent);
     }
@@ -596,100 +664,18 @@ pub trait Context {
     ///
     /// This is a shortcut for `self.state_mut().needs_layout = true`.
     #[track_caller]
-    fn request_layout(&mut self) {
+    pub fn request_layout(&mut self) {
         tracing::trace!("request layout");
-        self.node_mut().needs_layout = true;
+        self.node.needs_layout = true;
     }
 
     /// Sends an event to the event sink.
-    fn send_event(&self, event: impl Any + Send + Sync) {
-        self.event_sink().emit(event);
+    pub fn send_event(&self, event: impl Any + Send + Sync) {
+        self.event_sink.emit(event);
     }
 
     /// Returns the time in seconds since the last frame.
-    fn delta_time(&self) -> f32 {
-        self.node().delta_time()
+    pub fn delta_time(&self) -> f32 {
+        self.node.delta_time()
     }
 }
-
-macro_rules! context {
-    ($name:ident) => {
-        impl<'a> Context for $name<'a> {
-            fn stylesheet(&self) -> &Stylesheet {
-                self.stylesheet
-            }
-
-            fn style_cache(&self) -> &StyleCache {
-                self.style_cache
-            }
-
-            fn style_cache_mut(&mut self) -> &mut StyleCache {
-                self.style_cache
-            }
-
-            fn stylesheet_and_cache_mut(&mut self) -> (&Stylesheet, &mut StyleCache) {
-                (self.stylesheet, self.style_cache)
-            }
-
-            fn query_style_attribute(&mut self, key: &str) -> Option<(StyleAttribute, StyleSpec)> {
-                let cache = &mut self.style_cache;
-                let tree = &self.style_tree;
-                let query = self.stylesheet.query_cached(cache, None, tree, key)?;
-
-                if query.inherited && !self.node.is_inheriting(query.attribute.key()) {
-                    self.node.inheriting.push(query.attribute.clone());
-                }
-
-                Some((query.attribute, query.specificity))
-            }
-
-            fn node(&self) -> &NodeState {
-                self.node
-            }
-
-            fn node_mut(&mut self) -> &mut NodeState {
-                self.node
-            }
-
-            fn renderer(&self) -> &dyn Renderer {
-                self.renderer
-            }
-
-            fn window(&self) -> Signal<Window> {
-                self.window
-            }
-
-            fn fonts(&self) -> &Fonts {
-                self.fonts
-            }
-
-            fn fonts_mut(&mut self) -> &mut Fonts {
-                self.fonts
-            }
-
-            fn style_tree(&self) -> &StyleTree {
-                self.style_tree
-            }
-
-            fn style_tree_mut(&mut self) -> &mut StyleTree {
-                self.style_tree
-            }
-
-            fn event_sink(&self) -> &EventSink {
-                &self.event_sink
-            }
-
-            fn image_cache(&self) -> &ImageCache {
-                &self.image_cache
-            }
-
-            fn image_cache_mut(&mut self) -> &mut ImageCache {
-                &mut self.image_cache
-            }
-        }
-    };
-}
-
-context!(EventContext);
-context!(LayoutContext);
-context!(DrawContext);

@@ -23,7 +23,7 @@ impl Scroll {
         Self::default()
     }
 
-    fn scrollbar_rect(&self, state: &ScrollState, cx: &mut impl Context) -> Rect {
+    fn scrollbar_rect(&self, state: &ScrollState, cx: &mut Context<'_>) -> Rect {
         let axis = cx.style::<Axis>("direction");
         let max_width = axis.major(cx.rect().size());
 
@@ -45,7 +45,7 @@ impl Scroll {
         )
     }
 
-    fn scrollbar_track_rect(&self, cx: &mut impl Context) -> Rect {
+    fn scrollbar_track_rect(&self, cx: &mut Context<'_>) -> Rect {
         let axis = cx.style::<Axis>("direction");
 
         let max_width = axis.major(cx.rect().size());
@@ -62,12 +62,12 @@ impl Scroll {
         )
     }
 
-    fn overflow(&self, cx: &mut impl Context) -> Vec2 {
+    fn overflow(&self, cx: &mut Context<'_>) -> Vec2 {
         let overflow = self.children.size() - cx.size() + cx.padding().size();
         overflow.max(Vec2::ZERO)
     }
 
-    fn should_show_scrollbar(&self, cx: &mut impl Context) -> bool {
+    fn should_show_scrollbar(&self, cx: &mut Context<'_>) -> bool {
         self.overflow(cx).max_element() > 1.0
     }
 

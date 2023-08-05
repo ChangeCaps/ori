@@ -1,8 +1,6 @@
 use std::sync::Arc;
 
-use ori_core::{
-    prelude::Build, AvailableSpace, Context, DrawContext, Element, EventContext, LayoutContext,
-};
+use ori_core::{prelude::Build, AvailableSpace, DrawContext, Element, EventContext, LayoutContext};
 use ori_graphics::{prelude::Vec2, ImageFilter, ImageHandle, Mesh, Rect};
 use ori_reactive::{Emitter, Event};
 use ori_style::Style;

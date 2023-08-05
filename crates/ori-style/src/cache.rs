@@ -17,8 +17,14 @@ pub struct StyleCacheKey {
 
 impl StyleCacheKey {
     /// Creates a new [`StyleCacheKey`] from a hash.
+    #[inline(always)]
     pub const fn from_hash(hash: u64) -> Self {
         Self { hash }
+    }
+
+    #[inline(always)]
+    pub const fn root() -> Self {
+        Self::from_hash(0)
     }
 }
 
@@ -112,6 +118,7 @@ impl StyleCache {
         self.attributes.clear();
     }
 
+    #[inline(always)]
     fn hash(hash: StyleCacheKey, key: &str) -> u64 {
         let mut hasher = seahash::SeaHasher::default();
         Hash::hash(key, &mut hasher);
@@ -120,6 +127,7 @@ impl StyleCache {
     }
 
     /// Insert a style attribute into the cache.
+    #[inline(always)]
     pub fn insert(&mut self, cache_key: StyleCacheKey, key: &str, entry: Option<StyleCacheEntry>) {
         let hash = Self::hash(cache_key, key);
 
@@ -135,6 +143,7 @@ impl StyleCache {
     }
 
     /// Get a style attribute from the cache.
+    #[inline(always)]
     pub fn get(&self, hash: StyleCacheKey, key: &str) -> Option<Option<StyleCacheEntry>> {
         let hash = Self::hash(hash, key);
         self.attributes.get(&hash).cloned()

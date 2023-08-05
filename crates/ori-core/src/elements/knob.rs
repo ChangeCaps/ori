@@ -6,9 +6,7 @@ use ori_macro::Build;
 use ori_reactive::{Event, OwnedSignal};
 use ori_style::Style;
 
-use crate::{
-    AvailableSpace, Context, DrawContext, Element, EventContext, LayoutContext, PointerEvent,
-};
+use crate::{AvailableSpace, DrawContext, Element, EventContext, LayoutContext, PointerEvent};
 
 /// A knob element.
 #[derive(Clone, Debug, Build)]

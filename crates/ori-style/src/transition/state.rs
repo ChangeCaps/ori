@@ -23,10 +23,12 @@ impl<T> Default for StyleTransitionState<T> {
 }
 
 impl<T: Transitionable> StyleTransitionState<T> {
+    #[inline(always)]
     fn mix(from: T, to: T, progress: f32) -> T {
         from * (1.0 - progress) + to * progress
     }
 
+    #[inline(always)]
     fn transition(&self) -> Option<StyleTransition> {
         if let Some(transition) = self.transition {
             return Some(transition);
@@ -35,6 +37,7 @@ impl<T: Transitionable> StyleTransitionState<T> {
         self.prev_transition
     }
 
+    #[inline(always)]
     fn is_complete(&self) -> bool {
         if let Some(transition) = self.transition() {
             return self.elapsed >= transition.duration;
@@ -48,6 +51,7 @@ impl<T: Transitionable> StyleTransitionState<T> {
     /// # Arguments
     /// - `to`: The value to transition to.
     /// - `transition`: The transition to use.
+    #[inline(always)]
     pub fn get(&mut self, to: T, transition: Option<StyleTransition>) -> T {
         if self.from.is_none() {
             self.from = Some(to);
@@ -75,6 +79,7 @@ impl<T: Transitionable> StyleTransitionState<T> {
     }
 
     /// Updates the transition.
+    #[inline(always)]
     pub fn update(&mut self, delta: f32) -> bool {
         if self.is_complete() {
             return false;

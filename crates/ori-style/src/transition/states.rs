@@ -14,6 +14,7 @@ pub struct StyleTransitionStates {
 
 impl StyleTransitionStates {
     /// Creates a new `TransitionStates`.
+    #[inline(always)]
     pub const fn new() -> Self {
         Self {
             lengths: SmallVec::new_const(),
@@ -21,6 +22,7 @@ impl StyleTransitionStates {
         }
     }
 
+    #[inline(always)]
     fn find_length(&mut self, name: &str) -> Option<&mut StyleTransitionState<f32>> {
         for (key, value) in &mut self.lengths {
             if key == name {
@@ -31,6 +33,7 @@ impl StyleTransitionStates {
         None
     }
 
+    #[inline(always)]
     fn find_color(&mut self, name: &str) -> Option<&mut StyleTransitionState<Color>> {
         for (key, value) in &mut self.colors {
             if key == name {
@@ -42,6 +45,7 @@ impl StyleTransitionStates {
     }
 
     /// Transitions an `f32` value.
+    #[inline(always)]
     pub fn transition_f32(
         &mut self,
         name: &str,
@@ -61,6 +65,7 @@ impl StyleTransitionStates {
     }
 
     /// Transitions a [`Color`] value.
+    #[inline(always)]
     pub fn transition_color(
         &mut self,
         name: &str,
@@ -79,6 +84,7 @@ impl StyleTransitionStates {
         result
     }
 
+    #[inline(always)]
     pub(crate) fn transition_any_inner<T: Any>(
         &mut self,
         name: &str,
@@ -95,6 +101,7 @@ impl StyleTransitionStates {
     }
 
     /// Transitions a value if it is an `f32` or a [`Color`], otherwise does nothing.
+    #[inline(always)]
     pub fn transition_any<T: 'static>(
         &mut self,
         name: &str,
@@ -106,6 +113,7 @@ impl StyleTransitionStates {
     }
 
     /// Updates the transitions.
+    #[inline(always)]
     pub fn update(&mut self, delta: f32) -> bool {
         let mut redraw = false;
 

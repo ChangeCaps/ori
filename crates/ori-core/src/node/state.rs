@@ -156,7 +156,7 @@ impl NodeState {
     /// Gets the style attribute for the given key.
     pub fn get_style_attribute(
         &mut self,
-        cx: &mut impl Context,
+        cx: &mut Context<'_>,
         key: &str,
     ) -> Option<StyleAttribute> {
         self.query_style_attribute(cx, key)
@@ -166,14 +166,15 @@ impl NodeState {
     /// Gets the style attribute and specificity for the given key.
     pub fn query_style_attribute(
         &mut self,
-        cx: &mut impl Context,
+        cx: &mut Context<'_>,
         key: &str,
     ) -> Option<(StyleAttribute, StyleSpec)> {
-        let mut style_tree = cx.style_tree().clone();
+        let mut style_tree = cx.style_tree.clone();
         style_tree.push(self.style.clone());
 
-        let (sheet, cache) = cx.stylesheet_and_cache_mut();
-        let query = sheet.query_cached(cache, None, &style_tree, key)?;
+        let sheet = &mut cx.stylesheet;
+        let cache = &mut cx.style_cache;
+        let query = sheet.query_cached(cache, &style_tree, key)?;
 
         if query.inherited && !self.is_inheriting(query.attribute.key()) {
             self.inheriting.push(query.attribute.clone());
@@ -185,7 +186,7 @@ impl NodeState {
     /// Gets the style attribute for the given key, and converts it to the given type.
     pub fn query_style<T: FromStyleAttribute + 'static>(
         &mut self,
-        cx: &mut impl Context,
+        cx: &mut Context<'_>,
         key: &str,
     ) -> Option<(T, StyleSpec)> {
         let (attribute, specificity) = self.query_style_attribute(cx, key)?;
@@ -198,7 +199,7 @@ impl NodeState {
     /// Gets the style attribute for the given key, and converts it to the given type.
     pub fn get_style<T: FromStyleAttribute + 'static>(
         &mut self,
-        cx: &mut impl Context,
+        cx: &mut Context<'_>,
         key: &str,
     ) -> Option<T> {
         self.query_style(cx, key).map(|(value, _)| value)
@@ -207,7 +208,7 @@ impl NodeState {
     /// Gets the style attribute for the given key, and converts it to the given type.
     pub fn style<T: FromStyleAttribute + Default + 'static>(
         &mut self,
-        cx: &mut impl Context,
+        cx: &mut Context<'_>,
         key: &str,
     ) -> T {
         self.get_style(cx, key).unwrap_or_default()
@@ -216,7 +217,7 @@ impl NodeState {
     /// Gets the style for a group of keys.
     pub fn style_group<T: FromStyleAttribute + Default + 'static>(
         &mut self,
-        cx: &mut impl Context,
+        cx: &mut Context<'_>,
         keys: &[&str],
     ) -> T {
         let mut specificity = None;

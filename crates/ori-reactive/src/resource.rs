@@ -10,6 +10,7 @@ pub struct Resource<T: 'static> {
 }
 
 impl<T> Clone for Resource<T> {
+    #[inline(always)]
     fn clone(&self) -> Self {
         Self {
             id: self.id,
@@ -42,6 +43,7 @@ impl<T: Send + Sync> Resource<T> {
     ///
     /// If the resource is not disposed, it will leak.
     #[track_caller]
+    #[inline(always)]
     pub fn new_leaking(data: T) -> Self {
         Self {
             id: Runtime::global().create_resource(data),
@@ -51,6 +53,7 @@ impl<T: Send + Sync> Resource<T> {
 
     /// Gets a clone of the resource, see [`Runtime::get_resource`].
     #[track_caller]
+    #[inline(always)]
     pub fn get(self) -> Option<T>
     where
         T: Clone,
@@ -61,6 +64,7 @@ impl<T: Send + Sync> Resource<T> {
 
     /// Runs `f` with a reference to the resource, see [`Runtime::with_resource`].
     #[track_caller]
+    #[inline(always)]
     pub fn with<U>(self, f: impl FnOnce(&T) -> U) -> Option<U> {
         // SAFETY: The resource was inserted with the same type as the one we're trying to get.
         unsafe { Runtime::global().with_resource(self.id, f) }
@@ -68,6 +72,7 @@ impl<T: Send + Sync> Resource<T> {
 
     /// Runs `f` with a mutable reference to the resource, see [`Runtime::with_resource_mut`].
     #[track_caller]
+    #[inline(always)]
     pub fn with_mut<U>(self, f: impl FnOnce(&mut T) -> U) -> Option<U> {
         // SAFETY: The resource was inserted with the same type as the one we're trying to get.
         unsafe { Runtime::global().with_resource_mut(self.id, f) }
@@ -75,6 +80,7 @@ impl<T: Send + Sync> Resource<T> {
 
     /// Sets the resource, see [`Runtime::set_resource`].
     #[track_caller]
+    #[inline(always)]
     pub fn set(self, data: T) -> Result<(), T> {
         // SAFETY: The resource was inserted with the same type as the one we're trying to set.
         unsafe { Runtime::global().set_resource(self.id, data) }
@@ -82,6 +88,7 @@ impl<T: Send + Sync> Resource<T> {
 
     /// Takes the resource, see [`Runtime::remove_resource`].
     #[track_caller]
+    #[inline(always)]
     pub fn take(self) -> Option<T> {
         // SAFETY: The resource was inserted with the same type as the one we're trying to take.
         unsafe { Runtime::global().remove_resource(self.id) }
@@ -90,6 +97,7 @@ impl<T: Send + Sync> Resource<T> {
 
 impl<T> Resource<T> {
     /// Gets the resource id.
+    #[inline(always)]
     pub fn id(self) -> ResourceId {
         self.id
     }
@@ -98,24 +106,28 @@ impl<T> Resource<T> {
     ///
     /// # Safety
     /// - The resource at `id` must be of type `T`.
+    #[inline(always)]
     pub unsafe fn set_id(&mut self, id: ResourceId) {
         self.id = id;
     }
 
     /// Adds a reference to the resource, see [`Runtime::reference_resource`].
     #[track_caller]
+    #[inline(always)]
     pub fn reference(self) {
         Runtime::global().reference_resource(self.id);
     }
 
     /// Registers the to be managed by the scope at `scope`, see [`Runtime::manage_resource`].
     #[track_caller]
+    #[inline(always)]
     pub fn manage(self, scope: ScopeId) {
         Runtime::global().manage_resource(scope, self.id);
     }
 
     /// Disposes the resource, see [`Runtime::dispose_resource`].
     #[track_caller]
+    #[inline(always)]
     pub fn dispose(self) {
         Runtime::global().dispose_resource(self.id);
     }

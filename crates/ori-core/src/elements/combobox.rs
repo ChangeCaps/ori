@@ -5,8 +5,8 @@ use ori_reactive::{Emitter, Event, OwnedSignal};
 use ori_style::Style;
 
 use crate::{
-    AvailableSpace, Children, Context, DrawContext, Element, EventContext, FlexLayout,
-    LayoutContext, Padding, PointerEvent, PrepareLayoutEvent,
+    AvailableSpace, Children, DrawContext, Element, EventContext, FlexLayout, LayoutContext,
+    Padding, PointerEvent, PrepareLayoutEvent,
 };
 
 /// A combo box element.
@@ -97,7 +97,7 @@ impl Element for ComboBox {
         // calculate the space for the content
         let content_space = AvailableSpace {
             min: Vec2::new(title_size.x, 0.0),
-            max: cx.window().get().size.as_vec2(),
+            max: cx.window.get().size.as_vec2(),
         };
 
         // get the flex layout for the content

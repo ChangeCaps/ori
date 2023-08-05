@@ -35,7 +35,7 @@ impl ImageState {
     /// Updates the image handle if the source has changed.
     pub fn update(
         &mut self,
-        context: &mut impl Context,
+        context: &mut Context<'_>,
         src: &ImageSource,
         filter: ImageFilter,
     ) -> &ImageHandle {

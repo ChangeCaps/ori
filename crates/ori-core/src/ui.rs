@@ -153,6 +153,25 @@ impl<W: WindowBackend, R: RenderBackend> Debug for WindowError<W, R> {
 /// A callback that is called when the application is idle.
 pub type IdleCallback<W, R> = dyn FnMut(&mut Ui<W, R>) + 'static;
 
+/// Configuration for the [`Ui`] system.
+#[derive(Clone, Debug)]
+pub struct UiConfig {
+    /// When enabled, pointer moved events will only be emitted just before drawing.
+    ///
+    /// This is useful because on some platforms, pointer moved events are emitted
+    /// at a very high rate, (up to 1000 times per second), which can cause a lot of
+    /// unnecessary work to be done.
+    pub reduce_pointer_events: bool,
+}
+
+impl Default for UiConfig {
+    fn default() -> Self {
+        Self {
+            reduce_pointer_events: true,
+        }
+    }
+}
+
 /// The main entry point for the UI system.
 ///
 /// When implementing a custom shell, this is primarily the type that you will interact with.
@@ -177,9 +196,12 @@ where
     pub style_loader: StyleLoader,
     /// The idle callback, see [`Ui::idle`] for more information.
     pub idle_callback: Option<Box<IdleCallback<W, R>>>,
+    /// The configuration, see [`UiConfig`] for more information.
+    pub config: UiConfig,
     /// The metrics, see [`Metrics`] for more information.
     pub metrics: Metrics,
 
+    needs_pointer_moved: Vec<WindowId>,
     window_ui: HashMap<WindowId, WindowUi<R::Renderer>>,
 }
 
@@ -203,7 +225,9 @@ where
             image_cache: ImageCache::new(),
             style_loader: StyleLoader::new(),
             idle_callback: None,
+            config: UiConfig::default(),
             metrics: Metrics::new(),
+            needs_pointer_moved: Vec::new(),
             window_ui: HashMap::new(),
         }
     }
@@ -387,10 +411,54 @@ where
         self.get_modfiers(window).unwrap_or_default()
     }
 
+    fn generate_pointer_moved(&self, window: WindowId) -> Vec<PointerEvent> {
+        match self.window_ui.get(&window) {
+            Some(ui) => {
+                let mut events = Vec::new();
+
+                for (&device, &position) in ui.pointers.iter() {
+                    events.push(PointerEvent {
+                        device,
+                        position,
+                        modifiers: ui.modifiers,
+                        ..Default::default()
+                    });
+                }
+
+                events
+            }
+            None => Vec::new(),
+        }
+    }
+
+    fn simulate_pointer_moved(&mut self, window: WindowId) {
+        if let Some(i) = self.needs_pointer_moved.iter().position(|&i| i == window) {
+            self.needs_pointer_moved.swap_remove(i);
+
+            for pointer_event in self.generate_pointer_moved(window) {
+                self.metrics.pointer_moved.event();
+
+                let event = Event::new(pointer_event);
+                self.event_inner(window, &event, false);
+            }
+        }
+    }
+
     /// Handle a pointer being moved.
     pub fn pointer_moved(&mut self, window: WindowId, device: u64, position: Vec2) {
         if let Some(window) = self.window_ui.get_mut(&window) {
             window.pointers.insert(device, position);
+        }
+
+        // if we are reducing pointer events, we won't send the event now
+        // instead, we will send it when the window is redrawn
+        if self.config.reduce_pointer_events {
+            if !self.needs_pointer_moved.contains(&window) {
+                self.needs_pointer_moved.push(window);
+                self.window_backend.request_redraw(window);
+            }
+
+            return;
         }
 
         let event = PointerEvent {
@@ -532,6 +600,7 @@ where
         }
     }
 
+    #[tracing::instrument(level = "trace", skip(self))]
     fn event_inner(&mut self, id: WindowId, event: &Event, update_window: bool) {
         tracing::trace!("Event for window {:?}: {:?}", id, event.type_name());
 
@@ -562,6 +631,7 @@ where
         }
     }
 
+    #[tracing::instrument(level = "trace", skip(self))]
     fn layout_inner(&mut self, id: WindowId, update_window: bool) {
         tracing::trace!("Laying out window {:?}", id);
 
@@ -597,9 +667,14 @@ where
     }
 
     /// Draw a window.
+    #[tracing::instrument(level = "trace", skip(self))]
     pub fn draw(&mut self, id: WindowId) {
+        // if reducing pointer events, simulate them now
+        self.simulate_pointer_moved(id);
+
         tracing::trace!("Drawing window {:?}", id);
 
+        // before drawing, we need to make sure the ui is laid out
         self.layout_inner(id, false);
 
         if let Some(ui) = self.window_ui.get_mut(&id) {

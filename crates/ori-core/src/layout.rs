@@ -124,7 +124,7 @@ impl Padding {
         }
     }
 
-    pub fn from_style_named(context: &mut impl Context, space: AvailableSpace, name: &str) -> Self {
+    pub fn from_style_named(context: &mut Context<'_>, space: AvailableSpace, name: &str) -> Self {
         let left = &[&format!("{}-left", name), name];
         let right = &[&format!("{}-right", name), name];
         let top = &[&format!("{}-top", name), name];
@@ -144,7 +144,7 @@ impl Padding {
     }
 
     /// Create a new [`Padding`] from the style of the element.
-    pub fn from_style(context: &mut impl Context, space: AvailableSpace) -> Self {
+    pub fn from_style(context: &mut Context<'_>, space: AvailableSpace) -> Self {
         Self::from_style_named(context, space, "padding")
     }
 
@@ -200,7 +200,7 @@ impl Margin {
     }
 
     /// Create a new [`Margin`] from the style of the element.
-    pub fn from_style(context: &mut impl Context, space: AvailableSpace) -> Self {
+    pub fn from_style(context: &mut Context<'_>, space: AvailableSpace) -> Self {
         let left = context.style_length_group(&["margin-left", "margin"], 0.0..space.max.x);
         let right = context.style_length_group(&["margin-right", "margin"], 0.0..space.max.x);
         let top = context.style_length_group(&["margin-top", "margin"], 0.0..space.max.y);

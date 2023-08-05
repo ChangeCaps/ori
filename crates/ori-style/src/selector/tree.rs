@@ -14,58 +14,72 @@ pub struct StyleTree {
     pub ancestors: Vec<Style>,
     /// The top level element selector.
     pub element: Style,
+    /// The cache keys for the style tree.
+    pub keys: Vec<StyleCacheKey>,
 }
 
 impl StyleTree {
     /// Creates a new [`StyleTree`].
+    #[inline(always)]
     pub fn new(element: Style) -> Self {
+        let key = Self::hash_style(None, &element);
+
         Self {
             ancestors: Vec::new(),
             element,
+            keys: vec![key],
         }
     }
 
     /// Creates a new [`StyleTree`] with a default root element.
+    #[inline(always)]
     pub fn root() -> Self {
         let element = Style::default().with_tag("root");
         Self::new(element)
     }
 
     /// Pushes an ancestor to the tree.
+    #[inline(always)]
     pub fn push(&mut self, element: Style) {
-        let ancestor = mem::replace(&mut self.element, element);
-        self.ancestors.push(ancestor);
+        let parent = self.keys.last().copied();
+        let key = Self::hash_style(parent, &element);
+
+        let parent = mem::replace(&mut self.element, element);
+        self.ancestors.push(parent);
+        self.keys.push(key);
     }
 
     /// Pops an ancestor from the tree.
+    #[inline(always)]
     pub fn pop(&mut self) -> Option<Style> {
+        self.keys.pop()?;
         let ancestor = self.ancestors.pop()?;
         Some(mem::replace(&mut self.element, ancestor))
     }
 
     /// Returns the parent tree.
+    #[inline(always)]
     pub fn parent(&self) -> Option<StyleTree> {
         let mut tree = self.clone();
         tree.pop()?;
         Some(tree)
     }
 
-    fn hash_style(style: &Style, hasher: &mut seahash::SeaHasher) {
-        Hash::hash(&style.element, hasher);
-        Hash::hash(&style.classes, hasher);
-        Hash::hash(&style.tags, hasher);
+    #[inline(always)]
+    fn hash_style(parent: Option<StyleCacheKey>, style: &Style) -> StyleCacheKey {
+        let mut hasher = seahash::SeaHasher::default();
+
+        Hash::hash(&parent, &mut hasher);
+        Hash::hash(&style.element, &mut hasher);
+        Hash::hash(&style.classes, &mut hasher);
+        Hash::hash(&style.tags, &mut hasher);
+
+        StyleCacheKey::from_hash(hasher.finish())
     }
 
     /// Returns the cache key for the style tree.
+    #[inline(always)]
     pub fn cache_key(&self) -> StyleCacheKey {
-        let mut hasher = seahash::SeaHasher::default();
-
-        for ancestor in &self.ancestors {
-            Self::hash_style(ancestor, &mut hasher);
-        }
-
-        Self::hash_style(&self.element, &mut hasher);
-
-        StyleCacheKey::from_hash(hasher.finish())
+        self.keys.last().copied().unwrap_or(StyleCacheKey::root())
     }
 }

@@ -47,7 +47,7 @@ impl Slider {
         Self::default()
     }
 
-    fn track_rect(cx: &mut impl Context) -> Rect {
+    fn track_rect(cx: &mut Context<'_>) -> Rect {
         let axis = cx.style::<Axis>("direction");
 
         let length = axis.major(cx.rect().size());
@@ -56,7 +56,7 @@ impl Slider {
         Rect::center_size(cx.rect().center(), axis.pack(length, size))
     }
 
-    fn fill_rect(&self, cx: &mut impl Context) -> Rect {
+    fn fill_rect(&self, cx: &mut Context<'_>) -> Rect {
         let axis = cx.style::<Axis>("direction");
 
         let value = self.value.get();
@@ -76,7 +76,7 @@ impl Slider {
         )
     }
 
-    fn knob_rect(&self, cx: &mut impl Context) -> Rect {
+    fn knob_rect(&self, cx: &mut Context<'_>) -> Rect {
         let axis = cx.style::<Axis>("direction");
 
         let track_rect = Self::track_rect(cx);

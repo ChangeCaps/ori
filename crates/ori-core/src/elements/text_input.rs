@@ -56,7 +56,7 @@ impl TextInput {
         text
     }
 
-    fn section(&self, state: &TextInputState, cx: &mut impl Context) -> TextSection {
+    fn section(&self, state: &TextInputState, cx: &mut Context<'_>) -> TextSection {
         let color = if self.is_placeholder() {
             cx.style("placeholder-color")
         } else {
@@ -79,7 +79,7 @@ impl TextInput {
         }
     }
 
-    fn cursor_select(&self, state: &mut TextInputState, cx: &mut impl Context, position: Vec2) {
+    fn cursor_select(&self, state: &mut TextInputState, cx: &mut Context<'_>, position: Vec2) {
         // early out if the text is empty
         if self.text.get().is_empty() {
             state.cursor = 0;
@@ -130,7 +130,7 @@ impl TextInput {
     fn pointer_event(
         &self,
         state: &mut TextInputState,
-        cx: &mut impl Context,
+        cx: &mut Context<'_>,
         event: &PointerEvent,
     ) -> bool {
         if event.is_press() && cx.hovered() {
@@ -147,7 +147,7 @@ impl TextInput {
         false
     }
 
-    fn key(&self, state: &mut TextInputState, cx: &mut impl Context, key: Key) -> bool {
+    fn key(&self, state: &mut TextInputState, cx: &mut Context<'_>, key: Key) -> bool {
         match key {
             Key::Backspace => self.input_backspace(state, cx),
             Key::Enter => self.input_enter(state, cx),
@@ -179,7 +179,7 @@ impl TextInput {
         self.text.get()[state.cursor..].chars().next()
     }
 
-    fn input_backspace(&self, state: &mut TextInputState, cx: &mut impl Context) {
+    fn input_backspace(&self, state: &mut TextInputState, cx: &mut Context<'_>) {
         let mut text = self.text.modify();
         let Some(prev_char) = self.prev_char(state) else { return };
         text.remove(state.cursor - prev_char.len_utf8());
@@ -189,7 +189,7 @@ impl TextInput {
         cx.request_layout();
     }
 
-    fn input_enter(&self, state: &mut TextInputState, cx: &mut impl Context) {
+    fn input_enter(&self, state: &mut TextInputState, cx: &mut Context<'_>) {
         if self.on_input.is_empty() {
             return;
         }
@@ -204,21 +204,21 @@ impl TextInput {
         cx.unfocus();
     }
 
-    fn input_left(&self, state: &mut TextInputState, _cx: &mut impl Context) {
+    fn input_left(&self, state: &mut TextInputState, _cx: &mut Context<'_>) {
         if let Some(prev_char) = self.prev_char(state) {
             state.cursor -= prev_char.len_utf8();
             state.cursor_blink = 0.0;
         }
     }
 
-    fn input_right(&self, state: &mut TextInputState, _cx: &mut impl Context) {
+    fn input_right(&self, state: &mut TextInputState, _cx: &mut Context<'_>) {
         if let Some(next_char) = self.next_char(state) {
             state.cursor += next_char.len_utf8();
             state.cursor_blink = 0.0;
         }
     }
 
-    fn input_text(&self, state: &mut TextInputState, cx: &mut impl Context, input: &str) {
+    fn input_text(&self, state: &mut TextInputState, cx: &mut Context<'_>, input: &str) {
         let mut input = input.replace('\x08', "");
 
         if !self.multiline {
@@ -237,7 +237,7 @@ impl TextInput {
     fn keyboard_event(
         &self,
         state: &mut TextInputState,
-        cx: &mut impl Context,
+        cx: &mut Context<'_>,
         event: &KeyboardEvent,
     ) -> bool {
         if !cx.focused() {
@@ -315,7 +315,8 @@ impl Element for TextInput {
         cx: &mut LayoutContext,
         space: AvailableSpace,
     ) -> Vec2 {
-        state.font_size = cx.style_length("font-size", 0.0..cx.parent_space.max.y);
+        let parent_space = cx.parent_space;
+        state.font_size = cx.style_length("font-size", 0.0..parent_space.max.y);
 
         let section = TextSection {
             text: &self.text(),

@@ -10,7 +10,7 @@ pub use state::*;
 use std::{any::Any, fmt::Debug, sync::Arc};
 
 use glam::Vec2;
-use ori_graphics::Rect;
+use ori_graphics::{Frame, Rect};
 use ori_reactive::Event;
 use ori_style::{FromStyleAttribute, StyleAttributeBuilder};
 use parking_lot::{Mutex, MutexGuard};
@@ -18,6 +18,7 @@ use parking_lot::{Mutex, MutexGuard};
 use crate::{
     AnyElement, AvailableSpace, Build, Context, DebugEvent, DrawContext, Element, EmptyElement,
     EventContext, ForceLayoutEvent, LayoutContext, Margin, Padding, PointerEvent,
+    PrepareLayoutEvent,
 };
 
 struct NodeInner {
@@ -201,7 +202,7 @@ impl Node {
     /// Get the style of the element, for a given key.
     pub fn get_style<S: FromStyleAttribute + 'static>(
         &self,
-        cx: &mut impl Context,
+        cx: &mut Context<'_>,
         key: &str,
     ) -> Option<S> {
         self.node_state().get_style(cx, key)
@@ -210,7 +211,7 @@ impl Node {
     /// Get the style of the element, for a given key. If the style is not found, `S::default()` is returned.
     pub fn style<S: FromStyleAttribute + Default + 'static>(
         &self,
-        cx: &mut impl Context,
+        cx: &mut Context<'_>,
         key: &str,
     ) -> S {
         self.get_style(cx, key).unwrap_or_default()
@@ -219,7 +220,7 @@ impl Node {
     /// Get the style of the element, for a group of keys. If the style is not found, `S::default()` is returned.
     pub fn style_group<S: FromStyleAttribute + Default + 'static>(
         &self,
-        cx: &mut impl Context,
+        cx: &mut Context<'_>,
         key: &[&str],
     ) -> S {
         self.node_state().style_group(cx, key)
@@ -300,64 +301,36 @@ impl Node {
     }
 
     // updates the cursor of the window.
-    fn update_cursor(cx: &mut impl Context) {
+    fn update_cursor(cx: &mut Context<'_>) {
         let cursor = cx.style("cursor");
 
-        if cx.node().unique && cx.window().get_untracked().cursor != cursor {
-            cx.window().modify().cursor = cursor;
+        if cx.node.unique && cx.window.get_untracked().cursor != cursor {
+            cx.window.modify().cursor = cursor;
         }
     }
 
-    fn with_inner<C: Context, O>(
-        &self,
-        cx: &mut C,
-        f: impl FnOnce(&mut NodeState, &mut C) -> O,
-    ) -> O {
-        let node_state = &mut self.node_state();
-        node_state.propagate_up(cx.node_mut());
+    fn event_inner(&self, mut cx: Context, event: &Event) {
+        let _guard = tracing::trace_span!("event {}", cx.node.style.element).entered();
 
-        if node_state.needs_layout {
-            cx.request_redraw();
-        }
-
-        node_state.update_style_tags();
-        cx.style_tree_mut().push(node_state.style.clone());
-        let res = f(node_state, cx);
-        cx.style_tree_mut().pop();
-
-        cx.node_mut().propagate_down(node_state);
-
-        res
-    }
-
-    fn event_inner(&self, state: &mut NodeState, cx: &mut EventContext, event: &Event) {
         if let Some(pointer_event) = event.get::<PointerEvent>() {
-            if Self::handle_pointer_event(state, pointer_event, event.is_handled()) {
+            if Self::handle_pointer_event(cx.node, pointer_event, event.is_handled()) {
                 cx.request_layout();
             }
         }
 
         if event.is::<ForceLayoutEvent>() {
-            state.needs_layout = true;
+            cx.node.needs_layout = true;
         }
 
-        let mut cx = EventContext {
-            node: state,
-            renderer: cx.renderer,
-            window: cx.window,
-            fonts: cx.fonts,
-            stylesheet: cx.stylesheet,
-            style_tree: cx.style_tree,
-            style_cache: cx.style_cache,
-            event_sink: cx.event_sink,
-            image_cache: cx.image_cache,
-        };
+        let mut cx = EventContext { context: cx };
 
-        for attr in cx.node.inheriting.clone() {
-            let query = cx.get_style_attribute(attr.key());
-            if Some(&attr) != query.as_ref() {
-                cx.node.needs_layout = true;
-                break;
+        if event.is::<PrepareLayoutEvent>() {
+            for attr in cx.node.inheriting.clone() {
+                let query = cx.get_style_attribute(attr.key());
+                if Some(&attr) != query.as_ref() {
+                    cx.node.needs_layout = true;
+                    break;
+                }
             }
         }
 
@@ -373,14 +346,14 @@ impl Node {
     }
 
     /// Handle an event.
-    pub fn event(&self, cx: &mut EventContext, event: &Event) {
-        self.with_inner(cx, |element_state, cx| {
-            self.event_inner(element_state, cx, event);
+    pub fn event(&self, cx: &mut EventContext<'_>, event: &Event) {
+        cx.child(&mut self.node_state(), |cx| {
+            self.event_inner(cx, event);
         });
     }
 
     /// Layout the element.
-    pub fn layout(&self, cx: &mut LayoutContext, space: AvailableSpace) -> Vec2 {
+    pub fn layout(&self, cx: &mut LayoutContext<'_>, space: AvailableSpace) -> Vec2 {
         let size = self.relayout(cx, space);
         self.set_available_space(space);
         size
@@ -388,24 +361,18 @@ impl Node {
 
     fn relayout_inner(
         &self,
-        state: &mut NodeState,
-        cx: &mut LayoutContext,
+        cx: Context<'_>,
+        parent_space: AvailableSpace,
         space: AvailableSpace,
     ) -> Vec2 {
-        state.inheriting.clear();
-        state.needs_layout = false;
+        let _guard = tracing::trace_span!("layout {}", cx.node.style.element).entered();
+
+        cx.node.inheriting.clear();
+        cx.node.needs_layout = false;
 
         let mut cx = LayoutContext {
-            node: state,
-            renderer: cx.renderer,
-            window: cx.window,
-            fonts: cx.fonts,
-            stylesheet: cx.stylesheet,
-            style_tree: cx.style_tree,
-            style_cache: cx.style_cache,
-            event_sink: cx.event_sink,
-            image_cache: cx.image_cache,
-            parent_space: cx.space,
+            context: cx,
+            parent_space,
             space,
         };
 
@@ -418,12 +385,12 @@ impl Node {
 
         let size = (self.element()).layout(self.element_state().as_mut(), &mut cx, space);
 
-        let local_offset = state.local_rect.min + state.margin.top_left();
-        let global_offset = state.global_rect.min + state.margin.top_left();
-        state.local_rect = Rect::min_size(local_offset, size);
-        state.global_rect = Rect::min_size(global_offset, size);
+        let local_offset = cx.node.local_rect.min + cx.node.margin.top_left();
+        let global_offset = cx.node.global_rect.min + cx.node.margin.top_left();
+        cx.node.local_rect = Rect::min_size(local_offset, size);
+        cx.node.global_rect = Rect::min_size(global_offset, size);
 
-        size + state.margin.size()
+        size + cx.node.margin.size()
     }
 
     /// Relayout the element.
@@ -432,26 +399,21 @@ impl Node {
     /// when flex layout has left over space, and flex elements need to fill that space.
     ///
     /// For more context see the implementation of [`Children::flex_layout`](crate::Children::flex_layout).
-    pub fn relayout(&self, cx: &mut LayoutContext, space: AvailableSpace) -> Vec2 {
-        self.with_inner(cx, |element_state, cx| {
-            self.relayout_inner(element_state, cx, space)
+    pub fn relayout(&self, cx: &mut LayoutContext<'_>, space: AvailableSpace) -> Vec2 {
+        let parent_space = cx.space;
+        cx.child(&mut self.node_state(), |cx| {
+            self.relayout_inner(cx, parent_space, space)
         })
     }
 
-    fn draw_inner(&self, state: &mut NodeState, cx: &mut DrawContext) {
+    fn draw_inner(&self, cx: Context<'_>, frame: &mut Frame) {
+        let _guard = tracing::trace_span!("draw {}", cx.node.style.element).entered();
+
         let parent_size = cx.size();
         let mut cx = DrawContext {
-            node: state,
-            frame: cx.frame,
-            renderer: cx.renderer,
-            window: cx.window,
-            fonts: cx.fonts,
+            context: cx,
+            frame,
             parent_size,
-            stylesheet: cx.stylesheet,
-            style_tree: cx.style_tree,
-            style_cache: cx.style_cache,
-            event_sink: cx.event_sink,
-            image_cache: cx.image_cache,
         };
 
         self.element().draw(self.element_state().as_mut(), &mut cx);
@@ -465,9 +427,10 @@ impl Node {
     }
 
     /// Draw the element.
-    pub fn draw(&self, cx: &mut DrawContext) {
-        self.with_inner(cx, |element_state, cx| {
-            self.draw_inner(element_state, cx);
+    pub fn draw(&self, cx: &mut DrawContext<'_>) {
+        let frame = &mut cx.frame;
+        cx.context.child(&mut self.node_state(), |cx| {
+            self.draw_inner(cx, frame);
         });
     }
 }

@@ -15,17 +15,20 @@ pub struct StyleTransition {
 
 impl StyleTransition {
     /// Create a new style transition.
+    #[inline(always)]
     pub const fn new(duration: f32) -> Self {
         Self { duration }
     }
 
     /// Create a new instant style transition.
+    #[inline(always)]
     pub const fn instant() -> Self {
         Self::new(0.0)
     }
 }
 
 impl From<f32> for StyleTransition {
+    #[inline(always)]
     fn from(duration: f32) -> Self {
         Self::new(duration)
     }

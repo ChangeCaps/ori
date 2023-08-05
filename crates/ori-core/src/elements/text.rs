@@ -3,7 +3,7 @@ use ori_graphics::{Glyphs, TextSection};
 use ori_macro::Build;
 use ori_style::Style;
 
-use crate::{AvailableSpace, Context, DrawContext, Element, IntoView, LayoutContext, View};
+use crate::{AvailableSpace, DrawContext, Element, IntoView, LayoutContext, View};
 
 macro_rules! impl_from {
     ($($ty:ty),*) => {
@@ -62,7 +62,8 @@ impl Element for Text {
         cx: &mut LayoutContext,
         space: AvailableSpace,
     ) -> Vec2 {
-        let font_size = cx.style_length("font-size", 0.0..cx.parent_space.max.y);
+        let parent_space = cx.parent_space;
+        let font_size = cx.style_length("font-size", 0.0..parent_space.max.y);
 
         let section = TextSection {
             text: &self.text,
