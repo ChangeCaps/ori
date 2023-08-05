@@ -24,6 +24,17 @@ impl StyleSpec {
     pub const fn new(class: u16, tag: u16) -> Self {
         Self { class, tag }
     }
+
+    /// A helper function to select the most specific [`StyleSpec`].
+    #[inline(always)]
+    pub fn select<T: Copy>(styles: &[Option<(T, StyleSpec)>], or: T) -> T {
+        styles
+            .iter()
+            .filter_map(|s| *s)
+            .max_by_key(|(_, spec)| *spec)
+            .map(|(style, _)| style)
+            .unwrap_or(or)
+    }
 }
 
 impl PartialOrd for StyleSpec {

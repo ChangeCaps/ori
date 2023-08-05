@@ -16,17 +16,6 @@ use ori_style::{
 
 use crate::{AvailableSpace, Margin, NodeState, Padding, RequestRedrawEvent, Window};
 
-// a helper function to select the style with the highest priority
-#[inline(always)]
-fn select_style<T: Copy>(styles: &[Option<(T, StyleSpec)>], or: T) -> T {
-    styles
-        .iter()
-        .filter_map(|s| *s)
-        .max_by_key(|(_, spec)| *spec)
-        .map(|(style, _)| style)
-        .unwrap_or(or)
-}
-
 /// A context for [`Element::event`](crate::Element::event).
 #[allow(missing_docs)]
 pub struct EventContext<'a> {
@@ -82,10 +71,10 @@ impl<'a> LayoutContext<'a> {
         let min_height = self.query_style::<Length>("min-height");
         let max_height = self.query_style::<Length>("max-height");
 
-        let min_width = select_style(&[min_width, size, width], Length::ZERO);
-        let max_width = select_style(&[max_width, size, width], Length::INFINITY);
-        let min_height = select_style(&[min_height, size, height], Length::ZERO);
-        let max_height = select_style(&[max_height, size, height], Length::INFINITY);
+        let min_width = StyleSpec::select(&[min_width, size, width], Length::ZERO);
+        let max_width = StyleSpec::select(&[max_width, size, width], Length::INFINITY);
+        let min_height = StyleSpec::select(&[min_height, size, height], Length::ZERO);
+        let max_height = StyleSpec::select(&[max_height, size, height], Length::INFINITY);
 
         let parent = self.parent_space;
         let min_width = self.resolve_length(min_width, 0.0..parent.max.x);
@@ -229,10 +218,10 @@ impl<'a> DrawContext<'a> {
         let bl = self.query_style::<Length>(&bl);
         let br = self.query_style::<Length>(&br);
 
-        let tl = select_style(&[tl, radius], Length::default());
-        let tr = select_style(&[tr, radius], Length::default());
-        let bl = select_style(&[bl, radius], Length::default());
-        let br = select_style(&[br, radius], Length::default());
+        let tl = StyleSpec::select(&[tl, radius], Length::default());
+        let tr = StyleSpec::select(&[tr, radius], Length::default());
+        let bl = StyleSpec::select(&[bl, radius], Length::default());
+        let br = StyleSpec::select(&[br, radius], Length::default());
 
         let min_element = parent_size.min_element();
 
@@ -259,10 +248,10 @@ impl<'a> DrawContext<'a> {
         let b = self.query_style::<Length>(&b);
         let l = self.query_style::<Length>(&l);
 
-        let t = select_style(&[t, width], Length::default());
-        let r = select_style(&[r, width], Length::default());
-        let b = select_style(&[b, width], Length::default());
-        let l = select_style(&[l, width], Length::default());
+        let t = StyleSpec::select(&[t, width], Length::default());
+        let r = StyleSpec::select(&[r, width], Length::default());
+        let b = StyleSpec::select(&[b, width], Length::default());
+        let l = StyleSpec::select(&[l, width], Length::default());
 
         [
             self.resolve_length(t, 0.0..parent_size.y),

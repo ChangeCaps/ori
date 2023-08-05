@@ -2,7 +2,7 @@ use std::ops::Range;
 
 use glam::Vec2;
 use ori_graphics::Rect;
-use ori_style::StyleAttributeEnum;
+use ori_style::{Length, StyleAttributeEnum, StyleSpec};
 
 use crate::Context;
 
@@ -124,22 +124,29 @@ impl Padding {
         }
     }
 
-    pub fn from_style_named(context: &mut Context<'_>, space: AvailableSpace, name: &str) -> Self {
-        let left = &[&format!("{}-left", name), name];
-        let right = &[&format!("{}-right", name), name];
-        let top = &[&format!("{}-top", name), name];
-        let bottom = &[&format!("{}-bottom", name), name];
+    pub fn from_style_named(cx: &mut Context<'_>, space: AvailableSpace, name: &str) -> Self {
+        let t = format!("{}-top", name);
+        let r = format!("{}-right", name);
+        let b = format!("{}-bottom", name);
+        let l = format!("{}-left", name);
 
-        let left = context.style_length_group(left, 0.0..space.max.x);
-        let right = context.style_length_group(right, 0.0..space.max.x);
-        let top = context.style_length_group(top, 0.0..space.max.y);
-        let bottom = context.style_length_group(bottom, 0.0..space.max.y);
+        let padding = cx.query_style::<Length>(name);
+
+        let t = cx.query_style::<Length>(&t);
+        let r = cx.query_style::<Length>(&r);
+        let b = cx.query_style::<Length>(&b);
+        let l = cx.query_style::<Length>(&l);
+
+        let t = StyleSpec::select(&[t, padding], Length::ZERO);
+        let r = StyleSpec::select(&[r, padding], Length::ZERO);
+        let b = StyleSpec::select(&[b, padding], Length::ZERO);
+        let l = StyleSpec::select(&[l, padding], Length::ZERO);
 
         Self {
-            left,
-            right,
-            top,
-            bottom,
+            left: cx.resolve_length(l, space.x_axis()),
+            right: cx.resolve_length(r, space.x_axis()),
+            top: cx.resolve_length(t, space.y_axis()),
+            bottom: cx.resolve_length(b, space.y_axis()),
         }
     }
 
@@ -200,17 +207,24 @@ impl Margin {
     }
 
     /// Create a new [`Margin`] from the style of the element.
-    pub fn from_style(context: &mut Context<'_>, space: AvailableSpace) -> Self {
-        let left = context.style_length_group(&["margin-left", "margin"], 0.0..space.max.x);
-        let right = context.style_length_group(&["margin-right", "margin"], 0.0..space.max.x);
-        let top = context.style_length_group(&["margin-top", "margin"], 0.0..space.max.y);
-        let bottom = context.style_length_group(&["margin-bottom", "margin"], 0.0..space.max.y);
+    pub fn from_style(cx: &mut Context<'_>, space: AvailableSpace) -> Self {
+        let margin = cx.query_style::<Length>("margin");
+
+        let t = cx.query_style::<Length>("margin-top");
+        let r = cx.query_style::<Length>("margin-right");
+        let b = cx.query_style::<Length>("margin-bottom");
+        let l = cx.query_style::<Length>("margin-left");
+
+        let t = StyleSpec::select(&[t, margin], Length::ZERO);
+        let r = StyleSpec::select(&[r, margin], Length::ZERO);
+        let b = StyleSpec::select(&[b, margin], Length::ZERO);
+        let l = StyleSpec::select(&[l, margin], Length::ZERO);
 
         Self {
-            left,
-            right,
-            top,
-            bottom,
+            left: cx.resolve_length(l, space.x_axis()),
+            right: cx.resolve_length(r, space.x_axis()),
+            top: cx.resolve_length(t, space.y_axis()),
+            bottom: cx.resolve_length(b, space.y_axis()),
         }
     }
 
