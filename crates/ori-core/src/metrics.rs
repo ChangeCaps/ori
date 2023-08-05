@@ -4,18 +4,18 @@ use std::{
 };
 
 #[derive(Clone, Debug)]
-pub struct InstantMetrics {
+pub struct InstantMetric {
     events: VecDeque<Instant>,
     count: usize,
 }
 
-impl Default for InstantMetrics {
+impl Default for InstantMetric {
     fn default() -> Self {
         Self::new(100)
     }
 }
 
-impl InstantMetrics {
+impl InstantMetric {
     pub fn new(count: usize) -> Self {
         Self {
             events: VecDeque::new(),
@@ -74,18 +74,18 @@ impl InstantMetrics {
 }
 
 #[derive(Clone, Debug)]
-pub struct DurationMetrics {
+pub struct DurationMetric {
     events: VecDeque<Duration>,
     count: usize,
 }
 
-impl Default for DurationMetrics {
+impl Default for DurationMetric {
     fn default() -> Self {
         Self::new(100)
     }
 }
 
-impl DurationMetrics {
+impl DurationMetric {
     pub fn new(count: usize) -> Self {
         Self {
             events: VecDeque::new(),
@@ -133,13 +133,13 @@ pub struct Metrics {
     /// The time the application was started.
     pub start_time: Instant,
     /// The number of pointer moved events per second.
-    pub pointer_moved: InstantMetrics,
+    pub pointer_moved: InstantMetric,
     /// The time it took to process the event.
-    pub event: DurationMetrics,
+    pub event: DurationMetric,
     /// The time it took to layout the application.
-    pub layout: DurationMetrics,
+    pub layout: DurationMetric,
     /// The time it took to draw the application.
-    pub draw: DurationMetrics,
+    pub draw: DurationMetric,
 }
 
 impl Default for Metrics {
@@ -152,10 +152,10 @@ impl Metrics {
     pub fn new() -> Self {
         Self {
             start_time: Instant::now(),
-            pointer_moved: InstantMetrics::new(100),
-            event: DurationMetrics::new(100),
-            layout: DurationMetrics::new(100),
-            draw: DurationMetrics::new(100),
+            pointer_moved: InstantMetric::new(100),
+            event: DurationMetric::new(100),
+            layout: DurationMetric::new(100),
+            draw: DurationMetric::new(100),
         }
     }
 
