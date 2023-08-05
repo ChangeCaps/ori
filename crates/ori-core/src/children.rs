@@ -1,4 +1,4 @@
-use std::slice;
+use std::{borrow::Cow, slice};
 
 use deref_derive::{Deref, DerefMut};
 use glam::Vec2;
@@ -11,34 +11,36 @@ use crate::{
     View,
 };
 
+const CHILDREN_CAPACITY: usize = 2;
+
 /// Children of an [`Element`](crate::Element).
 #[derive(Clone, Debug, Default, Deref, DerefMut)]
 pub struct Children {
-    elements: SmallVec<[View; 1]>,
+    views: SmallVec<[View; CHILDREN_CAPACITY]>,
 }
 
 impl<T: IntoView> From<T> for Children {
     fn from(value: T) -> Self {
         Self {
-            elements: smallvec![value.into_view()],
+            views: smallvec![value.into_view()],
         }
     }
 }
 
 impl Parent for Children {
     fn clear_children(&mut self) {
-        self.elements.clear();
+        self.views.clear();
     }
 
     fn add_children(&mut self, children: impl Iterator<Item = View>) -> usize {
         let children = children.collect::<Vec<_>>();
-        self.elements.push(View::fragment(children));
-        self.elements.len() - 1
+        self.views.push(View::fragment(children));
+        self.views.len() - 1
     }
 
     fn set_children(&mut self, slot: usize, children: impl Iterator<Item = View>) {
         let children = children.collect::<Vec<_>>();
-        self.elements[slot] = View::fragment(children);
+        self.views[slot] = View::fragment(children);
     }
 }
 
@@ -46,7 +48,7 @@ impl Children {
     /// Create a new children.
     pub const fn new() -> Self {
         Self {
-            elements: SmallVec::new_const(),
+            views: SmallVec::new_const(),
         }
     }
 
@@ -62,7 +64,7 @@ impl Children {
 
     /// Extend the children with an iterator.
     pub fn extend(&mut self, children: impl IntoIterator<Item = View>) {
-        self.elements.extend(children);
+        self.views.extend(children);
     }
 
     /// Layout the children using a FlexLayout.
@@ -81,17 +83,23 @@ impl Children {
 
     /// Returns true if any child needs to be laid out.
     pub fn needs_layout(&self) -> bool {
-        self.nodes().any(|child| child.needs_layout())
+        let mut needs_layout = false;
+
+        self.visit(|child| {
+            needs_layout |= child.needs_layout();
+        });
+
+        needs_layout
     }
 
     /// Returns the local rect of the flex container.
     pub fn local_rect(&self) -> Rect {
         let mut rect = None;
 
-        for child in self.nodes() {
+        self.visit(|child| {
             let rect = rect.get_or_insert_with(|| child.local_rect());
             *rect = rect.union(child.local_rect());
-        }
+        });
 
         rect.unwrap_or_default()
     }
@@ -100,10 +108,10 @@ impl Children {
     pub fn rect(&self) -> Rect {
         let mut rect = None;
 
-        for child in self.nodes() {
+        self.visit(|child| {
             let rect = rect.get_or_insert_with(|| child.rect());
             *rect = rect.union(child.rect());
-        }
+        });
 
         rect.unwrap_or_default()
     }
@@ -121,23 +129,30 @@ impl Children {
 
         let min = self.local_rect().min;
 
-        for child in self.nodes() {
+        self.visit(|child| {
             let child_offset = child.local_rect().min - min;
             child.set_offset(child_offset + offset);
-        }
+        });
     }
 
     /// Call the `event` method on all the children.
     pub fn event(&self, cx: &mut EventContext, event: &Event) {
-        for child in self.nodes() {
-            child.event(cx, event);
-        }
+        self.visit(|node| {
+            node.event(cx, event);
+        });
     }
 
     /// Draws the flex container.
     pub fn draw(&self, cx: &mut DrawContext) {
-        for child in self.nodes() {
-            child.draw(cx);
+        self.visit(|node| {
+            node.draw(cx);
+        });
+    }
+
+    #[inline(always)]
+    pub fn visit(&self, mut f: impl FnMut(&Node)) {
+        for view in self.views.iter() {
+            view.visit(&mut f);
         }
     }
 
@@ -147,17 +162,17 @@ impl Children {
     }
 
     /// Returns an iterator over all the nodes in the flex container.
-    pub fn nodes(&self) -> impl DoubleEndedIterator<Item = Node> + '_ {
+    pub fn nodes(&self) -> impl DoubleEndedIterator<Item = Cow<'_, Node>> + '_ {
         self.iter().flat_map(|child| child.flatten())
     }
 }
 
 impl IntoIterator for Children {
     type Item = View;
-    type IntoIter = smallvec::IntoIter<[Self::Item; 1]>;
+    type IntoIter = smallvec::IntoIter<[Self::Item; CHILDREN_CAPACITY]>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.elements.into_iter()
+        self.views.into_iter()
     }
 }
 
@@ -166,6 +181,6 @@ impl<'a> IntoIterator for &'a Children {
     type IntoIter = slice::Iter<'a, View>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.elements.iter()
+        self.views.iter()
     }
 }

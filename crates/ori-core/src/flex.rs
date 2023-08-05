@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use glam::Vec2;
 use smallvec::{smallvec, SmallVec};
 
@@ -113,12 +115,15 @@ struct WrapLine {
 }
 
 impl WrapLine {
-    pub fn nodes(self, children: &Children) -> impl Iterator<Item = Node> + '_ {
+    pub fn nodes(self, children: &Children) -> impl Iterator<Item = Cow<'_, Node>> + '_ {
         let len = self.end - self.start;
         children.nodes().skip(self.start).take(len)
     }
 
-    pub fn nodes_enumerate(self, children: &Children) -> impl Iterator<Item = (usize, Node)> + '_ {
+    pub fn nodes_enumerate(
+        self,
+        children: &Children,
+    ) -> impl Iterator<Item = (usize, Cow<'_, Node>)> + '_ {
         let len = self.end - self.start;
         children.nodes().enumerate().skip(self.start).take(len)
     }

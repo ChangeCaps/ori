@@ -1,9 +1,11 @@
-use std::sync::Arc;
+use std::{borrow::Cow, sync::Arc};
 
 use ori_reactive::OwnedSignal;
-use smallvec::{smallvec, SmallVec};
+use smallvec::SmallVec;
 
 use crate::{Element, Node};
+
+const VIEW_FLATTEN_CAPACITY: usize = 8;
 
 #[derive(Clone, Debug)]
 enum ViewKind {
@@ -107,20 +109,38 @@ impl View {
 
     /// Returns all elements in the [`View`], including nested elements, flattened into a single
     /// [`Vec`]. Dynamic [`View`]s are fetched in a reactive manner.
-    pub fn flatten(&self) -> SmallVec<[Node; 8]> {
+    #[inline(always)]
+    pub fn flatten(&self) -> SmallVec<[Cow<'_, Node>; VIEW_FLATTEN_CAPACITY]> {
+        let mut buffer = SmallVec::new();
+        self.flatten_inner(&mut buffer);
+        buffer
+    }
+
+    #[inline(always)]
+    fn flatten_inner<'a>(&'a self, buffer: &mut SmallVec<[Cow<'a, Node>; VIEW_FLATTEN_CAPACITY]>) {
         match &self.kind {
-            ViewKind::Node(element) => smallvec![element.clone()],
-            ViewKind::Fragment(fragment) => fragment.iter().flat_map(View::flatten).collect(),
-            ViewKind::Dynamic(signal) => signal.get().flatten(),
+            ViewKind::Node(element) => buffer.push(Cow::Borrowed(element)),
+            ViewKind::Fragment(fragment) => {
+                for view in fragment.iter() {
+                    view.flatten_inner(buffer);
+                }
+            }
+            ViewKind::Dynamic(signal) => {
+                signal.get().visit(|node| {
+                    buffer.push(Cow::Owned(node.clone()));
+                });
+            }
         }
     }
 
     /// Calls the given `visitor` on all elements in the [`View`], including nested elements.
     /// Dynamic [`View`]s are fetched in a reactive manner.
+    #[inline(always)]
     pub fn visit(&self, mut visitor: impl FnMut(&Node)) {
         self.visit_recurse(&mut visitor);
     }
 
+    #[inline(always)]
     fn visit_recurse(&self, visitor: &mut impl FnMut(&Node)) {
         match &self.kind {
             ViewKind::Node(element) => visitor(element),
