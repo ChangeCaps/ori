@@ -16,6 +16,17 @@ use ori_style::{
 
 use crate::{AvailableSpace, Margin, NodeState, Padding, RequestRedrawEvent, Window};
 
+// a helper function to select the style with the highest priority
+#[inline(always)]
+fn select_style<T: Copy>(styles: &[Option<(T, StyleSpec)>], or: T) -> T {
+    styles
+        .iter()
+        .filter_map(|s| *s)
+        .max_by_key(|(_, spec)| *spec)
+        .map(|(style, _)| style)
+        .unwrap_or(or)
+}
+
 /// A context for [`Element::event`](crate::Element::event).
 #[allow(missing_docs)]
 pub struct EventContext<'a> {
@@ -61,20 +72,20 @@ impl<'a> DerefMut for LayoutContext<'a> {
 impl<'a> LayoutContext<'a> {
     /// Gets the available space, constrained by the element's style.
     pub fn style_constraints(&mut self, space: AvailableSpace) -> AvailableSpace {
-        let min_width_group = &["min-width", "width", "size"];
-        let max_width_group = &["max-width", "width", "size"];
-        let min_height_group = &["min-height", "height", "size"];
-        let max_height_group = &["max-height", "height", "size"];
+        let size = self.query_style::<Length>("size");
 
-        let min_width: Option<Length> = self.style_group(min_width_group);
-        let max_width: Option<Length> = self.style_group(max_width_group);
-        let min_height: Option<Length> = self.style_group(min_height_group);
-        let max_height: Option<Length> = self.style_group(max_height_group);
+        let width = self.query_style::<Length>("width");
+        let height = self.query_style::<Length>("height");
 
-        let min_width = min_width.unwrap_or(Length::ZERO);
-        let max_width = max_width.unwrap_or(Length::INFINITY);
-        let min_height = min_height.unwrap_or(Length::ZERO);
-        let max_height = max_height.unwrap_or(Length::INFINITY);
+        let min_width = self.query_style::<Length>("min-width");
+        let max_width = self.query_style::<Length>("max-width");
+        let min_height = self.query_style::<Length>("min-height");
+        let max_height = self.query_style::<Length>("max-height");
+
+        let min_width = select_style(&[min_width, size, width], Length::ZERO);
+        let max_width = select_style(&[max_width, size, width], Length::INFINITY);
+        let min_height = select_style(&[min_height, size, height], Length::ZERO);
+        let max_height = select_style(&[max_height, size, height], Length::INFINITY);
 
         let parent = self.parent_space;
         let min_width = self.resolve_length(min_width, 0.0..parent.max.x);
@@ -210,20 +221,27 @@ impl<'a> DrawContext<'a> {
         let bl = format!("{}-bottom-left-radius", name);
         let br = format!("{}-bottom-right-radius", name);
 
-        let border_radius = format!("{}-radius", name);
+        let radius = format!("{}-radius", name);
+        let radius = self.query_style::<Length>(&radius);
 
-        let tl: &[&str] = &[&tl, &border_radius];
-        let tr: &[&str] = &[&tr, &border_radius];
-        let bl: &[&str] = &[&bl, &border_radius];
-        let br: &[&str] = &[&br, &border_radius];
+        let tl = self.query_style::<Length>(&tl);
+        let tr = self.query_style::<Length>(&tr);
+        let bl = self.query_style::<Length>(&bl);
+        let br = self.query_style::<Length>(&br);
 
-        let range = 0.0..parent_size.min_element();
-        let tl = self.style_length_group(tl, range.clone());
-        let tr = self.style_length_group(tr, range.clone());
-        let bl = self.style_length_group(bl, range.clone());
-        let br = self.style_length_group(br, range);
+        let tl = select_style(&[tl, radius], Length::default());
+        let tr = select_style(&[tr, radius], Length::default());
+        let bl = select_style(&[bl, radius], Length::default());
+        let br = select_style(&[br, radius], Length::default());
 
-        [tl, tr, br, bl]
+        let min_element = parent_size.min_element();
+
+        [
+            self.resolve_length(tl, 0.0..min_element),
+            self.resolve_length(tr, 0.0..min_element),
+            self.resolve_length(bl, 0.0..min_element),
+            self.resolve_length(br, 0.0..min_element),
+        ]
     }
 
     /// Gets the border width for the given element.
@@ -234,19 +252,24 @@ impl<'a> DrawContext<'a> {
         let l = format!("{}-left-width", name);
 
         let width = format!("{}-width", name);
+        let width = self.query_style::<Length>(&width);
 
-        let t: &[&str] = &[&t, &width];
-        let r: &[&str] = &[&r, &width];
-        let b: &[&str] = &[&b, &width];
-        let l: &[&str] = &[&l, &width];
+        let t = self.query_style::<Length>(&t);
+        let r = self.query_style::<Length>(&r);
+        let b = self.query_style::<Length>(&b);
+        let l = self.query_style::<Length>(&l);
 
-        let range = 0.0..parent_size.min_element();
-        let t = self.style_length_group(t, range.clone());
-        let r = self.style_length_group(r, range.clone());
-        let b = self.style_length_group(b, range.clone());
-        let l = self.style_length_group(l, range);
+        let t = select_style(&[t, width], Length::default());
+        let r = select_style(&[r, width], Length::default());
+        let b = select_style(&[b, width], Length::default());
+        let l = select_style(&[l, width], Length::default());
 
-        [t, r, b, l]
+        [
+            self.resolve_length(t, 0.0..parent_size.y),
+            self.resolve_length(r, 0.0..parent_size.x),
+            self.resolve_length(b, 0.0..parent_size.y),
+            self.resolve_length(l, 0.0..parent_size.x),
+        ]
     }
 
     pub fn style_background(&mut self) -> Quad {
