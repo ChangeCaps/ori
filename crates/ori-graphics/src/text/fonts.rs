@@ -332,7 +332,7 @@ impl Fonts {
                     rect: Rect::min_size(min, size),
                     byte_offset: glyph.byte_offset,
                     line: line_index,
-                    baseline: line.baseline_y,
+                    baseline: line.baseline_y + offset.y,
                     line_descent: line.min_descent,
                     line_ascent: line.max_ascent,
                     advance,
@@ -415,29 +415,7 @@ impl Fonts {
             break;
         }
 
-        let x_diff = rect.width() - glyphs.size().x;
-        let y_diff = rect.height() - glyphs.size().y;
-
-        let x_offset = if glyphs.wrap() != TextWrap::None {
-            match glyphs.h_align() {
-                TextAlign::Left => 0.0,
-                TextAlign::Center => x_diff / 2.0,
-                TextAlign::Right => x_diff,
-            }
-        } else {
-            0.0
-        };
-        let y_offset = if glyphs.wrap() != TextWrap::None {
-            match glyphs.v_align() {
-                TextAlign::Top => 0.0,
-                TextAlign::Center => y_diff / 2.0,
-                TextAlign::Bottom => y_diff,
-            }
-        } else {
-            0.0
-        };
-
-        let offset = Vec2::new(x_offset, y_offset);
+        let offset = glyphs.offset(rect);
         let mut mesh = Mesh::new();
 
         for (glyph, uv) in glyphs.iter().zip(uvs) {

@@ -348,8 +348,11 @@ impl Element for TextInput {
             return;
         }
 
+        let offset = glyphs.offset(cx.rect());
         let cursor_center = match self.cursor_position(state, glyphs) {
-            Some(position) if !self.text.get().is_empty() => position + padded_rect.top_left(),
+            Some(position) if !self.text.get().is_empty() => {
+                position + offset + padded_rect.top_left()
+            }
             _ => padded_rect.left_center() + Vec2::Y,
         };
 

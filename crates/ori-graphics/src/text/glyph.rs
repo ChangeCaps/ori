@@ -60,6 +60,32 @@ impl Glyphs {
         self.v_align
     }
 
+    pub fn offset(&self, rect: Rect) -> Vec2 {
+        let x_diff = rect.width() - self.size().x;
+        let y_diff = rect.height() - self.size().y;
+
+        let x_offset = if self.wrap() != TextWrap::None {
+            match self.h_align() {
+                TextAlign::Left => 0.0,
+                TextAlign::Center => x_diff / 2.0,
+                TextAlign::Right => x_diff,
+            }
+        } else {
+            0.0
+        };
+        let y_offset = if self.wrap() != TextWrap::None {
+            match self.v_align() {
+                TextAlign::Top => 0.0,
+                TextAlign::Center => y_diff / 2.0,
+                TextAlign::Bottom => y_diff,
+            }
+        } else {
+            0.0
+        };
+
+        Vec2::new(x_offset, y_offset)
+    }
+
     pub fn color(&self) -> Color {
         self.color
     }
