@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use ori_reactive::OwnedSignal;
+use smallvec::{smallvec, SmallVec};
 
 use crate::{Element, Node};
 
@@ -106,9 +107,9 @@ impl View {
 
     /// Returns all elements in the [`View`], including nested elements, flattened into a single
     /// [`Vec`]. Dynamic [`View`]s are fetched in a reactive manner.
-    pub fn flatten(&self) -> Vec<Node> {
+    pub fn flatten(&self) -> SmallVec<[Node; 8]> {
         match &self.kind {
-            ViewKind::Node(element) => vec![element.clone()],
+            ViewKind::Node(element) => smallvec![element.clone()],
             ViewKind::Fragment(fragment) => fragment.iter().flat_map(View::flatten).collect(),
             ViewKind::Dynamic(signal) => signal.get().flatten(),
         }
