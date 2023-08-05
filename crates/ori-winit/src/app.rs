@@ -24,11 +24,12 @@ fn init_tracing() -> Result<(), Box<dyn Error>> {
     use tracing_subscriber::layer::SubscriberExt;
 
     let filter = tracing_subscriber::EnvFilter::builder()
+        .with_default_directive("debug".parse()?)
         .with_default_directive("wgpu=warn".parse()?)
         .with_default_directive("naga=warn".parse()?)
         .with_default_directive("winit=warn".parse()?)
         .with_default_directive("mio=warn".parse()?)
-        .with_default_directive("debug".parse()?)
+        .with_default_directive("[metrics]=warn".parse()?)
         .from_env()?;
 
     let subscriber = tracing_subscriber::registry().with(filter);

@@ -1,6 +1,7 @@
 use std::{
     collections::HashMap,
     fmt::{Debug, Display},
+    time::Instant,
 };
 
 use glam::{UVec2, Vec2};
@@ -10,9 +11,9 @@ use ori_style::{LoadedStyleKind, StyleCache, StyleLoader};
 
 use crate::{
     function::{dynamic, window},
-    Body, BoxedBuildUi, CloseWindow, DragWindow, ForceLayoutEvent, Key, KeyboardEvent, Modifiers,
-    Node, OpenWindow, Parent, PointerButton, PointerEvent, PrepareLayoutEvent, RequestRedrawEvent,
-    Window, WindowBackend, WindowClosedEvent, WindowId, WindowResizedEvent,
+    Body, BoxedBuildUi, CloseWindow, DragWindow, ForceLayoutEvent, Key, KeyboardEvent, Metrics,
+    Modifiers, Node, OpenWindow, Parent, PointerButton, PointerEvent, PrepareLayoutEvent,
+    RequestRedrawEvent, Window, WindowBackend, WindowClosedEvent, WindowId, WindowResizedEvent,
 };
 
 const TEXT_FONT: &[u8] = include_bytes!("../fonts/NotoSans-Medium.ttf");
@@ -176,6 +177,8 @@ where
     pub style_loader: StyleLoader,
     /// The idle callback, see [`Ui::idle`] for more information.
     pub idle_callback: Option<Box<IdleCallback<W, R>>>,
+    /// The metrics, see [`Metrics`] for more information.
+    pub metrics: Metrics,
 
     window_ui: HashMap<WindowId, WindowUi<R::Renderer>>,
 }
@@ -200,6 +203,7 @@ where
             image_cache: ImageCache::new(),
             style_loader: StyleLoader::new(),
             idle_callback: None,
+            metrics: Metrics::new(),
             window_ui: HashMap::new(),
         }
     }
@@ -318,6 +322,8 @@ where
     ///
     /// This will reload styles if necessary, among other things.
     pub fn idle(&mut self) {
+        self.metrics.log();
+
         self.image_cache.clean();
 
         if let Some(mut idle) = self.idle_callback.take() {
@@ -394,6 +400,7 @@ where
             ..Default::default()
         };
 
+        self.metrics.pointer_moved.event();
         self.event_inner(window, &Event::new(event), true);
     }
 
@@ -534,6 +541,7 @@ where
 
             let window = window(ui.scope);
 
+            let start = Instant::now();
             ori_reactive::effect::delay_effects(|| {
                 ui.root.event_root_inner(
                     self.style_loader.stylesheet(),
@@ -546,6 +554,7 @@ where
                     &mut self.image_cache,
                 );
             });
+            self.metrics.event.event(start.elapsed());
 
             if update_window {
                 ui.update_window(&mut self.window_backend, &window.get());
@@ -562,6 +571,7 @@ where
             ui.query_window(&mut self.window_backend);
             let window = window(ui.scope);
 
+            let start = Instant::now();
             ori_reactive::effect::delay_effects(|| {
                 ui.root.layout_root_inner(
                     self.style_loader.stylesheet(),
@@ -573,6 +583,7 @@ where
                     &mut self.image_cache,
                 );
             });
+            self.metrics.layout.event(start.elapsed());
 
             if update_window {
                 ui.update_window(&mut self.window_backend, &window.get());
@@ -596,6 +607,7 @@ where
 
             let window = window(ui.scope);
 
+            let start = Instant::now();
             ori_reactive::effect::delay_effects(|| {
                 ui.root.draw_root_inner(
                     self.style_loader.stylesheet(),
@@ -608,6 +620,7 @@ where
                     &mut self.image_cache,
                 );
             });
+            self.metrics.draw.event(start.elapsed());
 
             let window = window.get();
             ui.update_window(&mut self.window_backend, &window);
