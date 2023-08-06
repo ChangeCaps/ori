@@ -258,7 +258,7 @@ impl Node {
 
     /// Gets the global [`Affine` transform](Affine) of the element.
     pub fn global_transform(&self) -> Affine {
-        self.node_state().transform
+        self.node_state().global_transform
     }
 
     /// Whether the element is hovered.
@@ -437,7 +437,7 @@ impl Node {
     pub fn draw(&self, cx: &mut DrawContext<'_>) {
         let frame = &mut cx.frame;
         cx.context.child(&mut self.node_state(), |cx| {
-            cx.node.transform = cx.transform;
+            cx.node.global_transform = cx.transform;
             self.draw_inner(cx, frame);
         });
     }

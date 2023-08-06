@@ -109,7 +109,9 @@ impl Element for Slider {
             }
 
             if cx.active() {
-                let position = pointer_event.position * -cx.transform;
+                event.handle();
+
+                let position = cx.local(pointer_event.position);
 
                 let axis = cx.style::<Axis>("direction");
                 let track_rect = Self::track_rect(cx);

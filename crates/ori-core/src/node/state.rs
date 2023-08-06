@@ -51,7 +51,7 @@ pub struct NodeState {
     /// The local rect of the element, relative to the parent.
     pub rect: Rect,
     /// The global transform of the element.
-    pub transform: Affine,
+    pub global_transform: Affine,
     /// Whether the element is active.
     pub active: bool,
     /// Whether the element is focused.
@@ -81,7 +81,7 @@ impl Default for NodeState {
             margin: Margin::ZERO,
             padding: Padding::ZERO,
             rect: Rect::ZERO,
-            transform: Affine::IDENTITY,
+            global_transform: Affine::IDENTITY,
             active: false,
             focused: false,
             hovered: false,
@@ -146,12 +146,23 @@ impl NodeState {
         self.last_draw.elapsed().as_secs_f32()
     }
 
-    /// Returns true if the element is inheriting the given key.
+    /// Returns `true` if the element is inheriting the given `key`.
     pub fn is_inheriting(&self, key: &str) -> bool {
         self.inheriting.iter().any(|a| a.key() == key)
     }
 
-    /// Gets the style attribute for the given key.
+    /// Transforms `self` relative to the `parent`.
+    pub fn transform(&mut self, parent: Affine) -> Affine {
+        self.global_transform = parent * self.local_transform();
+        self.global_transform
+    }
+
+    /// Returns the local transform of the element.
+    pub fn local_transform(&self) -> Affine {
+        Affine::translation(self.rect.top_left())
+    }
+
+    /// Gets the style attribute for the given `key`.
     pub fn get_style_attribute(
         &mut self,
         cx: &mut Context<'_>,

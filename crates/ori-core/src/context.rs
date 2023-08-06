@@ -385,7 +385,7 @@ impl<'a> Context<'a> {
         event_sink: &'a EventSink,
         image_cache: &'a mut ImageCache,
     ) -> Self {
-        let offset = node.rect.top_left();
+        let transform = node.transform(Affine::IDENTITY);
 
         Self {
             node,
@@ -397,7 +397,7 @@ impl<'a> Context<'a> {
             style_cache,
             event_sink,
             image_cache,
-            transform: Affine::translation(offset),
+            transform,
             window_size: window.get().size.as_vec2(),
             window_scale: window.get().scale,
         }
@@ -413,7 +413,7 @@ impl<'a> Context<'a> {
         node.update_style_tags();
         self.style_tree.push(node.style.clone());
 
-        let translation = node.rect.top_left();
+        let transform = node.transform(self.transform);
         let context = Context {
             node,
             renderer: self.renderer,
@@ -424,7 +424,7 @@ impl<'a> Context<'a> {
             style_cache: self.style_cache,
             event_sink: self.event_sink,
             image_cache: self.image_cache,
-            transform: self.transform * Affine::translation(translation),
+            transform,
             window_size: self.window_size,
             window_scale: self.window_scale,
         };
@@ -732,17 +732,22 @@ impl<'a> Context<'a> {
 
     /// Returns the global rect of the element.
     pub fn global_rect(&self) -> Rect {
-        self.rect().transform(self.transform)
+        self.rect().transform(self.global_transform())
     }
 
     /// Returns the local transform of the element.
     pub fn local_transform(&self) -> Affine {
-        Affine::translation(self.rect().top_left())
+        self.node.local_transform()
     }
 
     /// Returns the global transform of the element.
     pub fn global_transform(&self) -> Affine {
         self.transform
+    }
+
+    /// Transforms a point in global coordinates to local coordinates.
+    pub fn local(&self, point: impl Into<Vec2>) -> Vec2 {
+        self.global_transform().inverse() * point.into()
     }
 
     /// Returns the margin of the element.

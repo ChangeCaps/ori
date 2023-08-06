@@ -1,4 +1,4 @@
-use std::ops::{Mul, MulAssign, Neg};
+use std::ops::{Mul, MulAssign};
 
 use glam::{Affine2, Mat2, Vec2};
 
@@ -129,14 +129,6 @@ impl Mul<Affine> for Affine {
 
     fn mul(self, rhs: Affine) -> Self::Output {
         self.mul_affine(rhs)
-    }
-}
-
-impl Neg for Affine {
-    type Output = Self;
-
-    fn neg(self) -> Self::Output {
-        self.inverse()
     }
 }
 

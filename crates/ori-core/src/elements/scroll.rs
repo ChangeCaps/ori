@@ -100,7 +100,7 @@ impl Scroll {
         }
 
         let scrollbar_track_rect = self.scrollbar_track_rect(cx);
-        let position = event.position * -cx.transform;
+        let position = cx.local(event.position);
 
         if scrollbar_track_rect.contains(position) {
             handled = true;
