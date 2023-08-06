@@ -39,14 +39,13 @@ pub mod prelude {
     pub use crate::affine::Affine;
     pub use crate::color::Color;
     pub use crate::curve::Curve;
-    pub use crate::font;
     pub use crate::image;
     pub use crate::image::{ImageData, ImageHandle, ImageLoadError, ImageSource};
     pub use crate::mesh::{Mesh, Vertex};
     pub use crate::quad::Quad;
     pub use crate::rect::Rect;
     pub use crate::text::{
-        FontFamily, FontStretch, FontStyle, FontWeight, TextAlign, TextSection, TextWrap,
+        font, FontFamily, FontStretch, FontStyle, FontWeight, TextAlign, TextSection, TextWrap,
     };
 
     pub use glam::*;

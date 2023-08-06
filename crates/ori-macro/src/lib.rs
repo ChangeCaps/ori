@@ -13,6 +13,13 @@ pub fn view(input: proc_macro::TokenStream) -> manyhow::Result<proc_macro::Token
     view::view(input)
 }
 
+/// Includes a font from a file, or directory.
+#[manyhow::manyhow]
+#[proc_macro]
+pub fn font(input: proc_macro::TokenStream) -> manyhow::Result<proc_macro::TokenStream> {
+    font::font(input)
+}
+
 /// Includes a style sheet from a file, or directory.
 ///
 /// This macro will load the style sheet from the given path if it exists, otherwise it will

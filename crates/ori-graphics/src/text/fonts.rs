@@ -10,6 +10,7 @@ use fontdue::{
     Font, FontSettings, Metrics,
 };
 use glam::Vec2;
+pub use ori_macro::font;
 
 use crate::{
     FontAtlas, FontQuery, Glyph, Glyphs, Mesh, Rect, Renderer, TextAlign, TextSection, TextWrap,
@@ -44,6 +45,8 @@ pub enum FontSource {
     Data(Vec<u8>),
     /// A font loaded from a file.
     Path(PathBuf),
+    /// A collection of fonts.
+    Collection(Vec<FontSource>),
 }
 
 impl From<Vec<u8>> for FontSource {
@@ -76,21 +79,6 @@ impl From<PathBuf> for FontSource {
     }
 }
 
-/// Includes a font from a file.
-#[macro_export]
-macro_rules! font {
-    ($path:literal) => {
-        $crate::FontSource::Data(
-            ::std::include_bytes!(::std::concat!(
-                ::std::env!("CARGO_MANIFEST_DIR"),
-                "/",
-                $path
-            ))
-            .to_vec(),
-        )
-    };
-}
-
 /// A collection of loaded fonts.
 #[derive(Clone, Debug, Default)]
 pub struct Fonts {
@@ -112,6 +100,13 @@ impl Fonts {
         match source {
             FontSource::Data(data) => {
                 self.load_font_data(data);
+                Ok(())
+            }
+            FontSource::Collection(sources) => {
+                for source in sources {
+                    self.load_font(source)?;
+                }
+
                 Ok(())
             }
             FontSource::Path(path) if path.is_dir() => {
