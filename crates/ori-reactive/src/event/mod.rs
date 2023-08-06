@@ -61,6 +61,18 @@ impl Event {
         self.inner.downcast_ref()
     }
 
+    /// Maps the event if it is of type `T`.
+    pub fn map<T: Any + Send + Sync>(&self, f: impl FnOnce(&T) -> T) -> Self {
+        match self.downcast_ref::<T>() {
+            Some(event) => Self {
+                inner: Arc::new(f(event)),
+                is_handled: self.is_handled.clone(),
+                type_name: self.type_name,
+            },
+            None => self.clone(),
+        }
+    }
+
     /// Tries to downcast the event to type `T`.
     ///
     /// If `T` is `Event`, then this function will return `Some(self)`.

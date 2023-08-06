@@ -100,13 +100,14 @@ impl Scroll {
         }
 
         let scrollbar_track_rect = self.scrollbar_track_rect(cx);
+        let position = event.position * -cx.transform;
 
-        if scrollbar_track_rect.contains(event.position) {
+        if scrollbar_track_rect.contains(position) {
             handled = true;
             cx.hover();
         }
 
-        if scrollbar_track_rect.contains(event.position) && event.is_press() {
+        if scrollbar_track_rect.contains(position) && event.is_press() {
             cx.activate();
         }
 
@@ -119,7 +120,7 @@ impl Scroll {
             let end = axis.major(scrollbar_track_rect.max);
             let range = end - start;
 
-            let scroll = (axis.major(event.position) - start) / range;
+            let scroll = (axis.major(position) - start) / range;
             state.scroll = axis.pack(scroll.clamp(0.0, 1.0), 0.0);
 
             cx.request_redraw();

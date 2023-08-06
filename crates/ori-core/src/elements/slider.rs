@@ -50,10 +50,10 @@ impl Slider {
     fn track_rect(cx: &mut Context<'_>) -> Rect {
         let axis = cx.style::<Axis>("direction");
 
-        let length = axis.major(cx.global_rect().size());
+        let length = axis.major(cx.size());
         let size = cx.style_length("track-size", 0.0..length);
 
-        Rect::center_size(cx.global_rect().center(), axis.pack(length, size))
+        Rect::center_size(cx.rect().center(), axis.pack(length, size))
     }
 
     fn fill_rect(&self, cx: &mut Context<'_>) -> Rect {
@@ -68,7 +68,7 @@ impl Slider {
         let knob_size = cx.style_length("knob-size", 0.0..track_size);
 
         let padding = f32::max(knob_size - track_size, 0.0);
-        let length = (axis.major(cx.global_rect().size()) - padding * 2.0) * t + padding;
+        let length = (axis.major(cx.rect().size()) - padding * 2.0) * t + padding;
 
         Rect::min_size(
             track_rect.min,
@@ -109,6 +109,8 @@ impl Element for Slider {
             }
 
             if cx.active() {
+                let position = pointer_event.position * -cx.transform;
+
                 let axis = cx.style::<Axis>("direction");
                 let track_rect = Self::track_rect(cx);
 
@@ -117,7 +119,7 @@ impl Element for Slider {
                 let padding = f32::max(knob_size - track_size, 0.0);
 
                 let length = axis.major(track_rect.size()) - padding * 2.0;
-                let point = axis.major(pointer_event.position - track_rect.min) - padding;
+                let point = axis.major(position - track_rect.min) - padding;
                 let t = f32::clamp(point / length, 0.0, 1.0);
 
                 let value = self.min + t * (self.max - self.min);
