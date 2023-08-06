@@ -10,6 +10,7 @@ use ori_core::{
 use ori_reactive::Event;
 use ori_style::Stylesheet;
 use ori_wgpu::WgpuBackend;
+use tracing::metadata::LevelFilter;
 use tracing_subscriber::Layer;
 use winit::{
     event::{Event as WinitEvent, KeyboardInput, MouseScrollDelta, StartCause, WindowEvent},
@@ -30,7 +31,8 @@ fn init_tracing() -> Result<(), Box<dyn Error>> {
         .add_directive("naga=warn".parse()?)
         .add_directive("winit=warn".parse()?)
         .add_directive("mio=warn".parse()?)
-        .add_directive("ori=warn".parse()?);
+        .add_directive("ori=warn".parse()?)
+        .add_directive(LevelFilter::DEBUG.into());
 
     if let Ok(env) = env::var(tracing_subscriber::EnvFilter::DEFAULT_ENV) {
         filter = filter.add_directive(env.parse()?);
