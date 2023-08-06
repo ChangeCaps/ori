@@ -194,9 +194,9 @@ impl Node {
     pub fn set_offset(&self, offset: Vec2) {
         let mut element_state = self.node_state();
 
-        let size = element_state.local_rect.size();
+        let size = element_state.rect.size();
         let min = element_state.margin.top_left() + offset;
-        element_state.local_rect = Rect::min_size(min, size);
+        element_state.rect = Rect::min_size(min, size);
     }
 
     /// Get the style of the element, for a given key.
@@ -252,13 +252,8 @@ impl Node {
     }
 
     /// Gets the local [`Rect`] of the element.
-    pub fn local_rect(&self) -> Rect {
-        self.node_state().local_rect
-    }
-
-    /// Gets the global [`Rect`] of the element.
     pub fn rect(&self) -> Rect {
-        self.node_state().global_rect
+        self.node_state().rect
     }
 
     /// Whether the element is hovered.
@@ -279,7 +274,7 @@ impl Node {
     /// Gets the size of the element.
     pub fn size(&self) -> Vec2 {
         let element_state = self.node_state();
-        element_state.local_rect.size() + element_state.margin.size()
+        element_state.rect.size() + element_state.margin.size()
     }
 }
 
@@ -287,10 +282,11 @@ impl Node {
     // returns true if the element should be redrawn.
     fn handle_pointer_event(
         element_state: &mut NodeState,
+        global_rect: Rect,
         event: &PointerEvent,
         is_handled: bool,
     ) -> bool {
-        let contains = element_state.global_rect.contains(event.position);
+        let contains = global_rect.contains(event.position);
         let is_over = contains && !event.left && !is_handled;
         if is_over != element_state.hovered && event.is_motion() {
             element_state.hovered = is_over;
@@ -313,7 +309,7 @@ impl Node {
         let _guard = tracing::trace_span!("event {}", cx.node.style.element).entered();
 
         if let Some(pointer_event) = event.get::<PointerEvent>() {
-            if Self::handle_pointer_event(cx.node, pointer_event, event.is_handled()) {
+            if Self::handle_pointer_event(cx.node, cx.rect(), pointer_event, event.is_handled()) {
                 cx.request_layout();
             }
         }
@@ -385,10 +381,8 @@ impl Node {
 
         let size = (self.element()).layout(self.element_state().as_mut(), &mut cx, space);
 
-        let local_offset = cx.node.local_rect.min + cx.node.margin.top_left();
-        let global_offset = cx.node.global_rect.min + cx.node.margin.top_left();
-        cx.node.local_rect = Rect::min_size(local_offset, size);
-        cx.node.global_rect = Rect::min_size(global_offset, size);
+        let local_offset = cx.node.rect.min + cx.node.margin.top_left();
+        cx.node.rect = Rect::min_size(local_offset, size);
 
         size + cx.node.margin.size()
     }

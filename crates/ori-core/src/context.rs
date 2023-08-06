@@ -36,6 +36,14 @@ impl<'a> DerefMut for EventContext<'a> {
     }
 }
 
+impl<'a> EventContext<'a> {
+    pub fn offset(&mut self, offset: Vec2, f: impl FnOnce(&mut Self)) {
+        self.offset += offset;
+        f(self);
+        self.offset -= offset;
+    }
+}
+
 /// A context for [`Element::layout`](crate::Element::layout).
 #[allow(missing_docs)]
 pub struct LayoutContext<'a> {
@@ -106,6 +114,7 @@ impl<'a> LayoutContext<'a> {
 pub struct DrawLayer<'a, 'b> {
     draw_context: &'b mut DrawContext<'a>,
     z_index: f32,
+    offset: Option<Vec2>,
     clip: Option<Rect>,
 }
 
@@ -116,9 +125,15 @@ impl<'a, 'b> DrawLayer<'a, 'b> {
         self
     }
 
+    /// Set the rectangle for the layer.
+    pub fn offset(mut self, offset: Vec2) -> Self {
+        self.offset = Some(offset);
+        self
+    }
+
     /// Set the clipping rectangle for the layer.
     pub fn clip(mut self, clip: Rect) -> Self {
-        self.clip = Some(clip.round());
+        self.clip = Some(clip);
         self
     }
 
@@ -132,7 +147,9 @@ impl<'a, 'b> DrawLayer<'a, 'b> {
             .clip(self.clip);
 
         layer.draw(|frame| {
-            self.draw_context.context.cloned(|context| {
+            self.draw_context.context.cloned(|mut context| {
+                context.offset += self.offset.unwrap_or(Vec2::ZERO);
+
                 let mut child = DrawContext {
                     context,
                     parent_size: self.draw_context.parent_size,
@@ -178,6 +195,7 @@ impl<'a> DrawContext<'a> {
         DrawLayer {
             draw_context: self,
             z_index: 1.0,
+            offset: None,
             clip: None,
         }
     }
@@ -323,6 +341,7 @@ pub struct Context<'a> {
     pub style_cache: &'a mut StyleCache,
     pub event_sink: &'a EventSink,
     pub image_cache: &'a mut ImageCache,
+    pub offset: Vec2,
     window_size: Vec2,
     window_scale: f32,
 }
@@ -340,6 +359,8 @@ impl<'a> Context<'a> {
         event_sink: &'a EventSink,
         image_cache: &'a mut ImageCache,
     ) -> Self {
+        let offset = node.rect.top_left();
+
         Self {
             node,
             renderer,
@@ -350,6 +371,7 @@ impl<'a> Context<'a> {
             style_cache,
             event_sink,
             image_cache,
+            offset,
             window_size: window.get().size.as_vec2(),
             window_scale: window.get().scale,
         }
@@ -364,6 +386,8 @@ impl<'a> Context<'a> {
 
         node.update_style_tags();
         self.style_tree.push(node.style.clone());
+
+        let offset = self.rect().top_left();
         let context = Context {
             node,
             renderer: self.renderer,
@@ -374,6 +398,7 @@ impl<'a> Context<'a> {
             style_cache: self.style_cache,
             event_sink: self.event_sink,
             image_cache: self.image_cache,
+            offset,
             window_size: self.window_size,
             window_scale: self.window_scale,
         };
@@ -397,6 +422,7 @@ impl<'a> Context<'a> {
             style_cache: self.style_cache,
             event_sink: self.event_sink,
             image_cache: self.image_cache,
+            offset: self.offset,
             window_size: self.window_size,
             window_scale: self.window_scale,
         };
@@ -675,12 +701,12 @@ impl<'a> Context<'a> {
 
     /// Returns the local rect of the element.
     pub fn local_rect(&self) -> Rect {
-        self.node.local_rect
+        self.node.rect
     }
 
     /// Returns the global rect of the element.
     pub fn rect(&self) -> Rect {
-        self.node.global_rect
+        self.node.rect.translate(self.offset)
     }
 
     /// Returns the margin of the element.
@@ -695,7 +721,7 @@ impl<'a> Context<'a> {
 
     /// Returns the size of the element.
     pub fn size(&self) -> Vec2 {
-        self.node.local_rect.size()
+        self.node.rect.size()
     }
 
     /// Requests a redraw.

@@ -1,5 +1,5 @@
 use glam::Vec2;
-use ori_graphics::{Fonts, Frame, ImageCache, Rect, Renderer};
+use ori_graphics::{Fonts, Frame, ImageCache, Renderer};
 use ori_reactive::{Event, EventSink, Signal};
 use ori_style::{StyleCache, StyleTree, Stylesheet};
 
@@ -25,7 +25,8 @@ impl Node {
         node_state.style = self.element().style();
 
         if let Some(pointer_event) = event.get::<PointerEvent>() {
-            if Self::handle_pointer_event(node_state, pointer_event, event.is_handled()) {
+            let rect = node_state.rect;
+            if Self::handle_pointer_event(node_state, rect, pointer_event, event.is_handled()) {
                 event_sink.emit(RequestRedrawEvent);
             }
         }
@@ -99,8 +100,7 @@ impl Node {
         let size = (self.element()).layout(self.element_state().as_mut(), &mut cx, space);
 
         element_state.available_space = space;
-        element_state.local_rect = Rect::min_size(element_state.local_rect.min, size);
-        element_state.global_rect = Rect::min_size(element_state.global_rect.min, size);
+        element_state.rect.max = element_state.rect.min + size;
 
         size
     }

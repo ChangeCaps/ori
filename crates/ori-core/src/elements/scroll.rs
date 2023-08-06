@@ -67,6 +67,10 @@ impl Scroll {
         overflow.max(Vec2::ZERO)
     }
 
+    fn offset(&self, state: &ScrollState, cx: &mut Context<'_>) -> Vec2 {
+        -self.overflow(cx) * state.scroll
+    }
+
     fn should_show_scrollbar(&self, cx: &mut Context<'_>) -> bool {
         self.overflow(cx).max_element() > 1.0
     }
@@ -130,7 +134,6 @@ impl Scroll {
 /// The state of a scroll element.
 #[derive(Default)]
 pub struct ScrollState {
-    offset: Vec2,
     scroll: Vec2,
 }
 
@@ -152,21 +155,18 @@ impl Element for Scroll {
             }
         }
 
-        self.children.event(cx, event);
+        let offset = self.offset(state, cx);
+        cx.offset(offset, |cx| {
+            self.children.event(cx, event);
+        });
     }
 
-    fn layout(
-        &self,
-        state: &mut Self::State,
-        cx: &mut LayoutContext,
-        space: AvailableSpace,
-    ) -> Vec2 {
+    fn layout(&self, _: &mut Self::State, cx: &mut LayoutContext, space: AvailableSpace) -> Vec2 {
         let flex = FlexLayout::from_style(cx);
         let (_, minor) = flex.axis.unpack(space.max);
         let max = flex.axis.pack(f32::INFINITY, minor);
         let child_space = AvailableSpace::new(space.min, max);
         let size = self.children.flex_layout(cx, child_space, flex);
-        state.offset = self.children.local_rect().min;
 
         space.constrain(size)
     }
@@ -174,12 +174,9 @@ impl Element for Scroll {
     fn draw(&self, state: &mut Self::State, cx: &mut DrawContext) {
         cx.draw_background();
 
-        let overflow = self.overflow(cx);
-        let offset = state.offset;
-        self.children.set_offset(-state.scroll * overflow + offset);
-
-        let container_rect = cx.rect().translate(offset);
-        cx.layer().clip(container_rect).draw(|cx| {
+        let offset = self.offset(state, cx);
+        let container_rect = cx.rect();
+        cx.layer().offset(offset).clip(container_rect).draw(|cx| {
             self.children.draw(cx);
         });
 

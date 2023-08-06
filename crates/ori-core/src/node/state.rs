@@ -49,9 +49,7 @@ pub struct NodeState {
     /// The padding of the element.
     pub padding: Padding,
     /// The local rect of the element, relative to the parent.
-    pub local_rect: Rect,
-    /// The global rect of the element, relative to the window.
-    pub global_rect: Rect,
+    pub rect: Rect,
     /// Whether the element is active.
     pub active: bool,
     /// Whether the element is focused.
@@ -80,8 +78,7 @@ impl Default for NodeState {
             id: ElementId::new(),
             margin: Margin::ZERO,
             padding: Padding::ZERO,
-            local_rect: Rect::ZERO,
-            global_rect: Rect::ZERO,
+            rect: Rect::ZERO,
             active: false,
             focused: false,
             hovered: false,
@@ -108,9 +105,7 @@ impl NodeState {
     /// Propagate the [`NodeState`] up to the parent.
     ///
     /// This is called before events are propagated.
-    pub fn propagate_up(&mut self, parent: &mut NodeState) {
-        self.global_rect = self.local_rect.translate(parent.global_rect.min);
-    }
+    pub fn propagate_up(&mut self, _parent: &mut NodeState) {}
 
     /// Propagate the [`NodeState`] down to the child.
     ///

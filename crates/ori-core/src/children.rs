@@ -93,18 +93,6 @@ impl Children {
     }
 
     /// Returns the local rect of the flex container.
-    pub fn local_rect(&self) -> Rect {
-        let mut rect = None;
-
-        self.visit(|child| {
-            let rect = rect.get_or_insert_with(|| child.local_rect());
-            *rect = rect.union(child.local_rect());
-        });
-
-        rect.unwrap_or_default()
-    }
-
-    /// Returns the global rect of the flex container.
     pub fn rect(&self) -> Rect {
         let mut rect = None;
 
@@ -127,10 +115,10 @@ impl Children {
             return;
         }
 
-        let min = self.local_rect().min;
+        let min = self.rect().min;
 
         self.visit(|child| {
-            let child_offset = child.local_rect().min - min;
+            let child_offset = child.rect().min - min;
             child.set_offset(child_offset + offset);
         });
     }

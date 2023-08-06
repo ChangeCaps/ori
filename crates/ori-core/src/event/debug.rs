@@ -42,8 +42,7 @@ impl DebugEvent {
     pub fn set_element(&self, cx: &mut EventContext, element: &Node) {
         let debug_element = DebugElement {
             style: cx.style_tree.element.clone(),
-            local_rect: element.local_rect(),
-            global_rect: element.rect(),
+            local_rect: element.rect(),
             children: Vec::new(),
         };
 
@@ -56,8 +55,7 @@ impl DebugEvent {
     pub fn with_element(&self, cx: &mut EventContext, element: &Node) {
         let debug_element = DebugElement {
             style: cx.style_tree.element.clone(),
-            local_rect: element.local_rect(),
-            global_rect: element.rect(),
+            local_rect: element.rect(),
             children: Vec::new(),
         };
 

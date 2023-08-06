@@ -25,8 +25,6 @@ pub struct DebugElement {
     pub style: Style,
     /// The local rect of the element.
     pub local_rect: Rect,
-    /// The global rect of the element.
-    pub global_rect: Rect,
     /// The children of the element.
     pub children: Vec<DebugElement>,
 }
