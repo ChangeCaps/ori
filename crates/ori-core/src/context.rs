@@ -319,13 +319,13 @@ impl<'a> DrawContext<'a> {
         self.style_quad_named("background", "border", self.parent_size)
     }
 
-    /// Draws the quad at the current layout rect, see [`Context::style_background`].
+    /// Draws the quad at the current layout rect, see [`DrawContext::style_background`].
     pub fn draw_background(&mut self) {
         let quad = self.style_background();
         self.draw(quad);
     }
 
-    /// Draw a [`Primitive`].
+    /// Draw a [`PrimitiveKind`](ori_graphics::PrimitiveKind).
     pub fn draw(&mut self, primitive: impl Into<PrimitiveKind>) {
         self.frame.draw(primitive);
     }
