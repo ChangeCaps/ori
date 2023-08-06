@@ -40,7 +40,7 @@ impl Element for CustomElement {
                 let t = t * 2.0;
                 let x = t.sin();
                 let y = t.cos();
-                cx.rect().center() + Vec2::new(x, y) * *radius
+                cx.global_rect().center() + Vec2::new(x, y) * *radius
             },
             0.0,
             PI,

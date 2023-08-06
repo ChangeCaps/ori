@@ -309,7 +309,12 @@ impl Node {
         let _guard = tracing::trace_span!("event {}", cx.node.style.element).entered();
 
         if let Some(pointer_event) = event.get::<PointerEvent>() {
-            if Self::handle_pointer_event(cx.node, cx.rect(), pointer_event, event.is_handled()) {
+            if Self::handle_pointer_event(
+                cx.node,
+                cx.global_rect(),
+                pointer_event,
+                event.is_handled(),
+            ) {
                 cx.request_layout();
             }
         }
@@ -410,7 +415,10 @@ impl Node {
             parent_size,
         };
 
+        let tmp = cx.frame.transform;
+        cx.frame.transform = cx.transform;
         self.element().draw(self.element_state().as_mut(), &mut cx);
+        cx.frame.transform = tmp;
 
         if cx.node.update_transitions() {
             cx.request_redraw();

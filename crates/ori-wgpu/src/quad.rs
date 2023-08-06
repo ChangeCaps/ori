@@ -1,7 +1,7 @@
 use std::{mem, num::NonZeroU64};
 
 use bytemuck::{Pod, Zeroable};
-use ori_graphics::{math::Vec2, Color, ImageHandle, Quad, Rect};
+use ori_graphics::{math::Vec2, prelude::Mat2, Affine, Color, ImageHandle, Quad, Rect};
 use wgpu::{
     include_wgsl,
     util::{BufferInitDescriptor, DeviceExt, StagingBelt},
@@ -19,9 +19,10 @@ use crate::WgpuImage;
 #[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
 struct QuadUniforms {
     resolution: Vec2,
+    translation: Vec2,
+    matrix: Mat2,
     min: Vec2,
     max: Vec2,
-    _pad: [u8; 8],
     color: Color,
     border_color: Color,
     border_radius: [f32; 4],
@@ -72,14 +73,15 @@ impl Instance {
         encoder: &mut CommandEncoder,
         staging_belt: &mut StagingBelt,
         quad: &Quad,
-        width: u32,
-        height: u32,
+        transform: Affine,
+        resolution: Vec2,
     ) {
         let uniforms = QuadUniforms {
-            resolution: Vec2::new(width as f32, height as f32),
+            resolution,
+            translation: transform.translation,
+            matrix: transform.matrix,
             min: quad.rect.min,
             max: quad.rect.max,
-            _pad: [0; 8],
             color: quad.background_color,
             border_color: quad.border_color,
             border_radius: quad.border_radius,
@@ -264,10 +266,9 @@ impl QuadPipeline {
         device: &Device,
         encoder: &mut CommandEncoder,
         staging_belt: &mut StagingBelt,
-        width: u32,
-        height: u32,
+        resolution: Vec2,
         layer: usize,
-        quads: &[(&Quad, Option<Rect>)],
+        quads: &[(&Quad, Affine, Option<Rect>)],
     ) {
         if layer >= self.layers.len() {
             self.layers.resize_with(layer + 1, Layer::new);
@@ -281,16 +282,23 @@ impl QuadPipeline {
             (layer.instances).resize_with(quads.len(), || Instance::new(device, layout));
         }
 
-        let screen_rect = Rect::new(Vec2::ZERO, Vec2::new(width as f32, height as f32));
+        let screen_rect = Rect::new(Vec2::ZERO, resolution);
 
-        for ((quad, clip), instance) in quads.iter().zip(&mut layer.instances) {
+        for ((quad, transform, clip), instance) in quads.iter().zip(&mut layer.instances) {
             instance.clip = match clip {
                 Some(clip) => clip.intersect(screen_rect),
                 None => screen_rect,
             };
 
             instance.write_vertex_buffer(device, encoder, staging_belt, quad);
-            instance.write_uniform_buffer(device, encoder, staging_belt, quad, width, height);
+            instance.write_uniform_buffer(
+                device,
+                encoder,
+                staging_belt,
+                quad,
+                *transform,
+                resolution,
+            );
             instance.image = quad.background_image.clone();
         }
     }

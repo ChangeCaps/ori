@@ -86,7 +86,7 @@ impl TextInput {
             return;
         }
 
-        let position = position - cx.rect().top_left() - cx.padding().top_left();
+        let position = position - cx.global_rect().top_left() - cx.padding().top_left();
 
         let mut line = None;
         let mut dist = f32::MAX;

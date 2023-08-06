@@ -6,8 +6,8 @@ use std::{
 
 use glam::Vec2;
 use ori_graphics::{
-    Color, Fonts, Frame, Glyphs, ImageCache, ImageHandle, ImageSource, PrimitiveKind, Quad, Rect,
-    Renderer, TextSection,
+    Affine, Color, Fonts, Frame, Glyphs, ImageCache, ImageHandle, ImageSource, Primitive,
+    PrimitiveKind, Quad, Rect, Renderer, TextSection,
 };
 use ori_reactive::{EventSink, Signal};
 use ori_style::{
@@ -37,10 +37,19 @@ impl<'a> DerefMut for EventContext<'a> {
 }
 
 impl<'a> EventContext<'a> {
-    pub fn offset(&mut self, offset: Vec2, f: impl FnOnce(&mut Self)) {
-        self.offset += offset;
+    pub fn transform(&mut self, transform: Affine, f: impl FnOnce(&mut Self)) {
+        let tmp = self.transform;
+        self.transform *= transform;
         f(self);
-        self.offset -= offset;
+        self.transform = tmp;
+    }
+
+    pub fn translate(&mut self, translation: Vec2, f: impl FnOnce(&mut Self)) {
+        self.transform(Affine::translation(translation), f);
+    }
+
+    pub fn rotate(&mut self, angle: f32, f: impl FnOnce(&mut Self)) {
+        self.transform(Affine::rotation(angle), f);
     }
 }
 
@@ -113,9 +122,9 @@ impl<'a> LayoutContext<'a> {
 /// A layer for drawing, see [`DrawContext::layer`](DrawContext::layer).
 pub struct DrawLayer<'a, 'b> {
     draw_context: &'b mut DrawContext<'a>,
-    z_index: f32,
-    offset: Option<Vec2>,
-    clip: Option<Rect>,
+    pub z_index: f32,
+    pub transform: Affine,
+    pub clip: Option<Rect>,
 }
 
 impl<'a, 'b> DrawLayer<'a, 'b> {
@@ -125,9 +134,21 @@ impl<'a, 'b> DrawLayer<'a, 'b> {
         self
     }
 
-    /// Set the rectangle for the layer.
-    pub fn offset(mut self, offset: Vec2) -> Self {
-        self.offset = Some(offset);
+    /// Transform the layer.
+    pub fn transform(mut self, transform: Affine) -> Self {
+        self.transform = transform;
+        self
+    }
+
+    /// Translate the layer.
+    pub fn translate(mut self, translation: Vec2) -> Self {
+        self.transform *= Affine::translation(translation);
+        self
+    }
+
+    /// Rotate the layer.
+    pub fn rotate(mut self, angle: f32) -> Self {
+        self.transform *= Affine::rotation(angle);
         self
     }
 
@@ -139,16 +160,14 @@ impl<'a, 'b> DrawLayer<'a, 'b> {
 
     /// Draw the layer.
     pub fn draw(self, f: impl FnOnce(&mut DrawContext)) {
-        let layer = self
-            .draw_context
-            .frame
-            .layer()
-            .z_index(self.z_index)
-            .clip(self.clip);
+        let mut layer = self.draw_context.frame.layer();
+        layer.z_index = self.z_index;
+        layer.transform = self.transform;
+        layer.clip = self.clip;
 
         layer.draw(|frame| {
             self.draw_context.context.cloned(|mut context| {
-                context.offset += self.offset.unwrap_or(Vec2::ZERO);
+                context.transform *= self.transform;
 
                 let mut child = DrawContext {
                     context,
@@ -195,7 +214,7 @@ impl<'a> DrawContext<'a> {
         DrawLayer {
             draw_context: self,
             z_index: 1.0,
-            offset: None,
+            transform: Affine::IDENTITY,
             clip: None,
         }
     }
@@ -213,7 +232,14 @@ impl<'a> DrawContext<'a> {
         let renderer = self.context.renderer;
 
         if let Some(mesh) = fonts.text_mesh(renderer, glyphs, rect) {
-            self.draw(mesh);
+            let primitive = Primitive {
+                kind: PrimitiveKind::Mesh(mesh),
+                z_index: self.frame.z_index,
+                transform: self.frame.transform.round(),
+                clip: self.frame.clip,
+            };
+
+            self.frame.draw_primitive(primitive);
         }
     }
 
@@ -341,7 +367,7 @@ pub struct Context<'a> {
     pub style_cache: &'a mut StyleCache,
     pub event_sink: &'a EventSink,
     pub image_cache: &'a mut ImageCache,
-    pub offset: Vec2,
+    pub transform: Affine,
     window_size: Vec2,
     window_scale: f32,
 }
@@ -359,7 +385,7 @@ impl<'a> Context<'a> {
         event_sink: &'a EventSink,
         image_cache: &'a mut ImageCache,
     ) -> Self {
-        let offset = node.rect.top_left();
+        let translation = node.rect.top_left();
 
         Self {
             node,
@@ -371,7 +397,7 @@ impl<'a> Context<'a> {
             style_cache,
             event_sink,
             image_cache,
-            offset,
+            transform: Affine::translation(translation),
             window_size: window.get().size.as_vec2(),
             window_scale: window.get().scale,
         }
@@ -387,7 +413,7 @@ impl<'a> Context<'a> {
         node.update_style_tags();
         self.style_tree.push(node.style.clone());
 
-        let offset = self.rect().top_left();
+        let translation = self.rect().top_left();
         let context = Context {
             node,
             renderer: self.renderer,
@@ -398,7 +424,7 @@ impl<'a> Context<'a> {
             style_cache: self.style_cache,
             event_sink: self.event_sink,
             image_cache: self.image_cache,
-            offset,
+            transform: self.transform * Affine::translation(translation),
             window_size: self.window_size,
             window_scale: self.window_scale,
         };
@@ -422,7 +448,7 @@ impl<'a> Context<'a> {
             style_cache: self.style_cache,
             event_sink: self.event_sink,
             image_cache: self.image_cache,
-            offset: self.offset,
+            transform: self.transform,
             window_size: self.window_size,
             window_scale: self.window_scale,
         };
@@ -700,13 +726,18 @@ impl<'a> Context<'a> {
     }
 
     /// Returns the local rect of the element.
-    pub fn local_rect(&self) -> Rect {
+    pub fn rect(&self) -> Rect {
         self.node.rect
     }
 
     /// Returns the global rect of the element.
-    pub fn rect(&self) -> Rect {
-        self.node.rect.translate(self.offset)
+    pub fn global_rect(&self) -> Rect {
+        self.node.rect.transform(self.transform)
+    }
+
+    /// Returns the local transform of the element.
+    pub fn local_transform(&self) -> Affine {
+        Affine::translation(self.rect().top_left())
     }
 
     /// Returns the margin of the element.

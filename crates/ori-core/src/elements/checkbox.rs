@@ -77,7 +77,7 @@ impl Element for CheckBox {
         if self.checked.get() {
             let section = TextSection {
                 text: Self::CHECKMARK,
-                font_size: cx.rect().size().min_element() * 0.8,
+                font_size: cx.size().min_element() * 0.8,
                 font_family: FontFamily::Name(String::from("Material Icons")),
                 h_align: TextAlign::Center,
                 v_align: TextAlign::Center,
@@ -87,7 +87,7 @@ impl Element for CheckBox {
             };
 
             if let Some(glyphs) = cx.layout_text(&section) {
-                cx.draw_text(&glyphs, cx.rect());
+                cx.draw_text(&glyphs, cx.global_rect());
             }
         }
     }

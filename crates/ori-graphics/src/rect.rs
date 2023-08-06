@@ -2,6 +2,8 @@ use std::ops::{Add, Sub};
 
 use glam::Vec2;
 
+use crate::Affine;
+
 /// A rectangle with a minimum and maximum point.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Rect {
@@ -197,6 +199,24 @@ impl Rect {
     /// Returns the bottom-center point of the rectangle.
     pub fn bottom_center(self) -> Vec2 {
         Vec2::new(self.center().x, self.max.y)
+    }
+
+    /// Transforms the rectangle by the given [`Affine`] transformation.
+    pub fn transform(self, affine: Affine) -> Self {
+        let tl = affine * self.top_left();
+        let tr = affine * self.top_right();
+        let bl = affine * self.bottom_left();
+        let br = affine * self.bottom_right();
+
+        let min_x = f32::min(f32::min(tl.x, tr.x), f32::min(bl.x, br.x));
+        let min_y = f32::min(f32::min(tl.y, tr.y), f32::min(bl.y, br.y));
+        let max_x = f32::max(f32::max(tl.x, tr.x), f32::max(bl.x, br.x));
+        let max_y = f32::max(f32::max(tl.y, tr.y), f32::max(bl.y, br.y));
+
+        Self {
+            min: Vec2::new(min_x, min_y),
+            max: Vec2::new(max_x, max_y),
+        }
     }
 
     /// Translates the rectangle by the given offset.

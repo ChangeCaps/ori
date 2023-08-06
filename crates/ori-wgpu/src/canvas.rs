@@ -82,7 +82,7 @@ impl Element for WgpuCanvas {
     }
 
     fn event(&self, _state: &mut Self::State, cx: &mut EventContext, event: &Event) {
-        self.on_event.emit(&(cx.rect(), event.clone()));
+        self.on_event.emit(&(cx.global_rect(), event.clone()));
     }
 
     fn layout(
@@ -95,7 +95,7 @@ impl Element for WgpuCanvas {
     }
 
     fn draw(&self, state: &mut Self::State, cx: &mut DrawContext) {
-        let rect = cx.rect();
+        let rect = cx.global_rect();
         let width = cx.size().x as u32;
         let height = cx.size().y as u32;
 

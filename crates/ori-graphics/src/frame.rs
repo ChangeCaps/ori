@@ -1,4 +1,4 @@
-use crate::{Mesh, Quad, Rect};
+use crate::{Affine, Mesh, Quad, Rect};
 
 /// A primitive that can be drawn to the screen, see [`Primitive`] for more information.
 pub enum PrimitiveKind {
@@ -28,6 +28,7 @@ impl From<Mesh> for PrimitiveKind {
 pub struct Primitive {
     pub kind: PrimitiveKind,
     pub z_index: f32,
+    pub transform: Affine,
     pub clip: Option<Rect>,
 }
 
@@ -35,16 +36,18 @@ pub struct Primitive {
 #[derive(Default)]
 pub struct Frame {
     primitives: Vec<Primitive>,
-    z_index: f32,
-    clip: Option<Rect>,
+    pub z_index: f32,
+    pub transform: Affine,
+    pub clip: Option<Rect>,
 }
 
 impl Frame {
     /// Create a new frame.
     pub fn new() -> Self {
         Self {
-            z_index: 0.0,
             primitives: Vec::new(),
+            z_index: 0.0,
+            transform: Affine::IDENTITY,
             clip: None,
         }
     }
@@ -52,6 +55,9 @@ impl Frame {
     /// Clear the frame.
     pub fn clear(&mut self) {
         self.primitives.clear();
+        self.z_index = 0.0;
+        self.transform = Affine::IDENTITY;
+        self.clip = None;
     }
 
     /// Get the z-index of the frame.
@@ -69,6 +75,7 @@ impl Frame {
         self.draw_primitive(Primitive {
             kind: primitive.into(),
             z_index: self.z_index,
+            transform: self.transform,
             clip: self.clip,
         });
     }
@@ -83,6 +90,7 @@ impl Frame {
         Layer {
             frame: self,
             z_index: 1.0,
+            transform: Affine::IDENTITY,
             clip: None,
         }
     }
@@ -102,14 +110,21 @@ impl Frame {
 /// than the z-index of the frame it is drawn to.
 pub struct Layer<'a> {
     frame: &'a mut Frame,
-    z_index: f32,
-    clip: Option<Rect>,
+    pub z_index: f32,
+    pub transform: Affine,
+    pub clip: Option<Rect>,
 }
 
 impl<'a> Layer<'a> {
     /// Set the z-index of the layer.
     pub fn z_index(mut self, z_index: f32) -> Self {
         self.z_index = z_index;
+        self
+    }
+
+    /// Transform the layer;
+    pub fn transform(mut self, transform: Affine) -> Self {
+        self.transform *= transform;
         self
     }
 
@@ -122,13 +137,15 @@ impl<'a> Layer<'a> {
     /// Draw to the layer, with `f` being called with a [`Frame`].
     pub fn draw(self, f: impl FnOnce(&mut Frame)) {
         self.frame.z_index += self.z_index;
+        let tmp_transform = self.frame.transform;
 
+        self.frame.transform *= self.transform;
         if let Some(clip) = self.clip {
             // save the old clip
-            let old_clip = self.frame.clip;
+            let tmp_clip = self.frame.clip;
 
             // set the new clip intersected with the old clip
-            self.frame.clip = match old_clip {
+            self.frame.clip = match tmp_clip {
                 Some(old_clip) => Some(old_clip.intersect(clip)),
                 None => Some(clip),
             };
@@ -137,11 +154,12 @@ impl<'a> Layer<'a> {
             f(self.frame);
 
             // restore the old clip
-            self.frame.clip = old_clip;
+            self.frame.clip = tmp_clip;
         } else {
             f(self.frame);
         }
 
         self.frame.z_index -= self.z_index;
+        self.frame.transform = tmp_transform;
     }
 }

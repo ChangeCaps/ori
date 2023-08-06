@@ -100,7 +100,7 @@ impl Element for Div {
     fn draw(&self, _: &mut Self::State, cx: &mut DrawContext) {
         cx.draw_background();
 
-        let clip_rect = cx.rect();
+        let clip_rect = cx.global_rect();
         cx.layer().clip(clip_rect).draw(|cx| {
             self.children.draw(cx);
         });

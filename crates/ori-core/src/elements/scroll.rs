@@ -156,7 +156,7 @@ impl Element for Scroll {
         }
 
         let offset = self.offset(state, cx);
-        cx.offset(offset, |cx| {
+        cx.translate(offset, |cx| {
             self.children.event(cx, event);
         });
     }
@@ -175,8 +175,8 @@ impl Element for Scroll {
         cx.draw_background();
 
         let offset = self.offset(state, cx);
-        let container_rect = cx.rect();
-        cx.layer().offset(offset).clip(container_rect).draw(|cx| {
+        let clip_rect = cx.global_rect();
+        cx.layer().translate(offset).clip(clip_rect).draw(|cx| {
             self.children.draw(cx);
         });
 

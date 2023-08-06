@@ -7,6 +7,7 @@
 //! - [`ImageSource`], [`ImageData`] and [`ImageHandle`]
 //! - [`Mesh`] and [`Vertex`]
 
+mod affine;
 mod color;
 mod curve;
 mod frame;
@@ -19,6 +20,7 @@ mod render;
 mod text;
 
 pub use self::image::*;
+pub use affine::*;
 pub use color::*;
 pub use curve::*;
 pub use frame::*;
@@ -34,6 +36,7 @@ pub use glam as math;
 pub mod prelude {
     //! A collection of commonly used types and traits.
 
+    pub use crate::affine::Affine;
     pub use crate::color::Color;
     pub use crate::curve::Curve;
     pub use crate::font;

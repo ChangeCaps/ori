@@ -1,5 +1,7 @@
 struct Uniforms {
 	resolution: vec2<f32>,
+	translation: vec2<f32>,
+	matrix: mat2x2<f32>,
 	top_left: vec2<f32>,
 	bottom_right: vec2<f32>,
 	color: vec4<f32>,
@@ -25,15 +27,21 @@ struct VertexInput {
 
 struct VertexOutput {
 	@builtin(position) clip: vec4<f32>,
-	@location(0) uv: vec2<f32>,
+	@location(0) position: vec2<f32>,
+	@location(1) uv: vec2<f32>,
+}
+
+fn screen_to_clip(position: vec2<f32>) -> vec2<f32> {
+	return position / uniforms.resolution * vec2<f32>(2.0, -2.0) - vec2<f32>(1.0, -1.0);
 }
 
 @vertex
 fn vertex(in: VertexInput) -> VertexOutput {
 	var out: VertexOutput;
 
-	let position = in.position / uniforms.resolution * vec2<f32>(2.0, -2.0) - vec2<f32>(1.0, -1.0);
-	out.clip = vec4<f32>(position, 0.0, 1.0);
+	var position = in.position * uniforms.matrix + uniforms.translation;
+	out.clip = vec4<f32>(screen_to_clip(position), 0.0, 1.0);
+	out.position = in.position;
 	out.uv = in.uv;
 
 	return out;
@@ -101,14 +109,14 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
 	var color = uniforms.color * image_color;
 
 	let border_radius = select_border_radius(
-		in.clip.xy,
+		in.position,
 		uniforms.top_left,
 		uniforms.bottom_right,
 		uniforms.border_radius,
 	);
 
 	let border_width = select_border_width(
-		in.clip.xy,
+		in.position,
 		uniforms.top_left,
 		uniforms.bottom_right,
 		uniforms.border_width,
@@ -119,7 +127,7 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
 		let internal_border = max(border_radius - border_width, 0.0);
 
 		let internal_dist = quad_distance(
-			in.clip.xy,
+			in.position,
 			uniforms.top_left + vec2<f32>(border_width),
 			uniforms.bottom_right - vec2<f32>(border_width),
 			internal_border,
@@ -135,7 +143,7 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
 	}
 
 	let dist = quad_distance(
-		in.clip.xy,
+		in.position,
 		uniforms.top_left,
 		uniforms.bottom_right,
 		border_radius,

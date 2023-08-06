@@ -1,5 +1,7 @@
 struct Uniforms {
 	resolution: vec2<f32>,
+	translation: vec2<f32>,
+	matrix: mat2x2<f32>,
 }
 
 @group(0) @binding(0)
@@ -29,12 +31,16 @@ struct VertexOutput {
 	color: vec4<f32>,
 }
 
+fn screen_to_clip(position: vec2<f32>) -> vec2<f32> {
+	return position / uniforms.resolution * vec2<f32>(2.0, -2.0) - vec2<f32>(1.0, -1.0);
+}
+
 @vertex
 fn vertex(in: VertexInput) -> VertexOutput {
 	var out: VertexOutput;
 
-	let position = in.position / uniforms.resolution * vec2<f32>(2.0, -2.0) - vec2<f32>(1.0, -1.0);
-	out.position = vec4<f32>(position, 0.0, 1.0);
+	let position = uniforms.matrix * in.position + uniforms.translation;
+	out.position = vec4<f32>(screen_to_clip(position), 0.0, 1.0);
 	out.uv = in.uv;
 	out.color = in.color;
 

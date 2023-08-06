@@ -1,7 +1,7 @@
 use std::{mem, num::NonZeroU64};
 
 use bytemuck::{Pod, Zeroable};
-use ori_graphics::{math::Vec2, ImageHandle, Mesh, Rect, Vertex};
+use ori_graphics::{math::Vec2, prelude::Mat2, Affine, ImageHandle, Mesh, Rect, Vertex};
 use wgpu::{
     include_wgsl, util::StagingBelt, vertex_attr_array, BindGroup, BindGroupDescriptor,
     BindGroupEntry, BindGroupLayout, BindGroupLayoutDescriptor, BindGroupLayoutEntry, BindingType,
@@ -17,23 +17,40 @@ use crate::WgpuImage;
 #[derive(Clone, Copy, Debug, Default, PartialEq, Pod, Zeroable)]
 struct MeshUniforms {
     resolution: Vec2,
+    translation: Vec2,
+    matrix: Mat2,
 }
 
 #[derive(Debug)]
 struct Instance {
+    uniform_buffer: Buffer,
     vertex_buffer: Buffer,
     index_buffer: Buffer,
     index_count: u32,
+    uniform_bind_group: BindGroup,
     image: Option<ImageHandle>,
     clip: Rect,
 }
 
 impl Instance {
-    fn new(device: &Device) -> Self {
+    fn new(device: &Device, uniform_layout: &BindGroupLayout) -> Self {
+        let uniform_buffer = MeshPipeline::create_uniform_buffer(device);
+
+        let uniform_bind_group = device.create_bind_group(&BindGroupDescriptor {
+            label: Some("mesh uniform bind group"),
+            layout: uniform_layout,
+            entries: &[BindGroupEntry {
+                binding: 0,
+                resource: uniform_buffer.as_entire_binding(),
+            }],
+        });
+
         Self {
+            uniform_buffer,
             vertex_buffer: MeshPipeline::create_vertex_buffer(device, 512),
             index_buffer: MeshPipeline::create_index_buffer(device, 512),
             index_count: 0,
+            uniform_bind_group,
             image: None,
             clip: Rect::default(),
         }
@@ -45,6 +62,33 @@ impl Instance {
 
     fn recreate_index_buffer(&mut self, device: &Device, indices: u64) {
         self.index_buffer = MeshPipeline::create_index_buffer(device, indices);
+    }
+
+    fn write_uniform_buffer(
+        &self,
+        device: &Device,
+        encoder: &mut CommandEncoder,
+        staging_belt: &mut StagingBelt,
+        resolution: Vec2,
+        transform: Affine,
+    ) {
+        let uniforms = MeshUniforms {
+            resolution,
+            translation: transform.translation,
+            matrix: transform.matrix,
+        };
+
+        let bytes = bytemuck::bytes_of(&uniforms);
+
+        let mut buffer = staging_belt.write_buffer(
+            encoder,
+            &self.uniform_buffer,
+            0,
+            NonZeroU64::new(bytes.len() as u64).unwrap(),
+            device,
+        );
+
+        buffer.copy_from_slice(bytes);
     }
 
     fn write_vertex_buffer(
@@ -120,10 +164,7 @@ impl Layer {
 }
 
 pub struct MeshPipeline {
-    #[allow(dead_code)]
-    bind_group_layout: BindGroupLayout,
-    uniform_buffer: Buffer,
-    uniform_bind_group: BindGroup,
+    uniform_layout: BindGroupLayout,
     pipeline: RenderPipeline,
     layers: Vec<Layer>,
 }
@@ -136,14 +177,7 @@ impl MeshPipeline {
     ) -> Self {
         let shader = device.create_shader_module(include_wgsl!("shader/mesh.wgsl"));
 
-        let uniform_buffer = device.create_buffer(&BufferDescriptor {
-            label: Some("Mesh Uniform Buffer"),
-            size: mem::size_of::<MeshUniforms>() as u64,
-            usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-
-        let bind_group_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+        let uniform_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
             label: Some("Mesh Bind Group Layout"),
             entries: &[BindGroupLayoutEntry {
                 binding: 0,
@@ -157,18 +191,9 @@ impl MeshPipeline {
             }],
         });
 
-        let uniform_bind_group = device.create_bind_group(&BindGroupDescriptor {
-            label: Some("Mesh Uniform Bind Group"),
-            layout: &bind_group_layout,
-            entries: &[BindGroupEntry {
-                binding: 0,
-                resource: uniform_buffer.as_entire_binding(),
-            }],
-        });
-
         let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: Some("Mesh Pipeline Layout"),
-            bind_group_layouts: &[&bind_group_layout, image_bind_group_layout],
+            bind_group_layouts: &[&uniform_layout, image_bind_group_layout],
             push_constant_ranges: &[],
         });
 
@@ -203,12 +228,19 @@ impl MeshPipeline {
         });
 
         Self {
-            bind_group_layout,
-            uniform_buffer,
-            uniform_bind_group,
+            uniform_layout,
             pipeline,
             layers: Vec::new(),
         }
+    }
+
+    fn create_uniform_buffer(device: &Device) -> Buffer {
+        device.create_buffer(&BufferDescriptor {
+            label: Some("Mesh Uniform Buffer"),
+            size: mem::size_of::<MeshUniforms>() as u64,
+            usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        })
     }
 
     fn create_vertex_buffer(device: &Device, vertices: u64) -> Buffer {
@@ -229,44 +261,16 @@ impl MeshPipeline {
         })
     }
 
-    fn write_uniform_buffer(
-        &self,
-        device: &Device,
-        encoder: &mut CommandEncoder,
-        staging_belt: &mut StagingBelt,
-        width: u32,
-        height: u32,
-    ) {
-        let uniforms = MeshUniforms {
-            resolution: Vec2::new(width as f32, height as f32),
-        };
-
-        let bytes = bytemuck::bytes_of(&uniforms);
-
-        let mut buffer = staging_belt.write_buffer(
-            encoder,
-            &self.uniform_buffer,
-            0,
-            NonZeroU64::new(bytes.len() as u64).unwrap(),
-            device,
-        );
-
-        buffer.copy_from_slice(bytes);
-    }
-
     #[allow(clippy::too_many_arguments)]
     pub fn prepare(
         &mut self,
         device: &Device,
         encoder: &mut CommandEncoder,
         staging_belt: &mut StagingBelt,
-        width: u32,
-        height: u32,
+        resolution: Vec2,
         layer: usize,
-        meshes: &[(&Mesh, Option<Rect>)],
+        meshes: &[(&Mesh, Affine, Option<Rect>)],
     ) {
-        self.write_uniform_buffer(device, encoder, staging_belt, width, height);
-
         if layer >= self.layers.len() {
             self.layers.resize_with(layer + 1, Layer::new);
         }
@@ -275,12 +279,13 @@ impl MeshPipeline {
         layer.instance_count = meshes.len();
 
         if meshes.len() > layer.instances.len() {
-            (layer.instances).resize_with(meshes.len(), || Instance::new(device));
+            let layout = &self.uniform_layout;
+            (layer.instances).resize_with(meshes.len(), || Instance::new(device, layout));
         }
 
-        let screen_rect = Rect::new(Vec2::ZERO, Vec2::new(width as f32, height as f32));
+        let screen_rect = Rect::new(Vec2::ZERO, resolution);
 
-        for ((mesh, clip), instance) in meshes.iter().zip(&mut layer.instances) {
+        for ((mesh, transform, clip), instance) in meshes.iter().zip(&mut layer.instances) {
             if mesh.vertices.is_empty() || mesh.indices.is_empty() {
                 instance.index_count = 0;
                 continue;
@@ -291,10 +296,11 @@ impl MeshPipeline {
                 None => screen_rect,
             };
 
+            instance.write_uniform_buffer(device, encoder, staging_belt, resolution, *transform);
             instance.write_vertex_buffer(device, encoder, staging_belt, &mesh.vertices);
             instance.write_index_buffer(device, encoder, staging_belt, &mesh.indices);
-            instance.image = mesh.image.clone();
             instance.index_count = mesh.indices.len() as u32;
+            instance.image = mesh.image.clone();
         }
     }
 
@@ -307,7 +313,6 @@ impl MeshPipeline {
         let layer = &self.layers[layer];
 
         pass.set_pipeline(&self.pipeline);
-        pass.set_bind_group(0, &self.uniform_bind_group, &[]);
 
         for instance in &layer.instances[..layer.instance_count] {
             if instance.index_count == 0 || instance.clip.size().min_element() < 1.0 {
@@ -332,6 +337,7 @@ impl MeshPipeline {
                 pass.set_bind_group(1, &default_image.bind_group, &[]);
             }
 
+            pass.set_bind_group(0, &instance.uniform_bind_group, &[]);
             pass.set_vertex_buffer(0, instance.vertex_buffer.slice(..));
             pass.set_index_buffer(instance.index_buffer.slice(..), IndexFormat::Uint32);
             pass.draw_indexed(0..instance.index_count, 0, 0..1);

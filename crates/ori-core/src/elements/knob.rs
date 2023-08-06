@@ -57,7 +57,7 @@ impl Element for Knob {
                     let delta = pointer_event.position - prev_position;
                     let delta = delta.x - delta.y;
                     let range = self.max - self.min;
-                    let delta = delta / cx.rect().width() * range * 0.15;
+                    let delta = delta / cx.global_rect().width() * range * 0.15;
                     let value = self.value.get();
                     let new_value = f32::clamp(value + delta, self.min, self.max);
                     if new_value != value {

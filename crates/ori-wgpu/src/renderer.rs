@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use ori_graphics::{
-    prelude::UVec2, Color, Frame, ImageData, ImageFilter, ImageHandle, Primitive, PrimitiveKind,
-    Renderer,
+    prelude::{UVec2, Vec2},
+    Color, Frame, ImageData, ImageFilter, ImageHandle, Primitive, PrimitiveKind, Renderer,
 };
 use wgpu::{
     util::{DeviceExt, StagingBelt},
@@ -232,14 +232,15 @@ impl WgpuRenderer {
         let mut quads = Vec::new();
         let mut meshes = Vec::new();
 
+        let resolution = Vec2::new(self.config.width as f32, self.config.height as f32);
+
         for primitive in primitives {
             if primitive.z_index != z_index {
                 self.quad_pipeline.prepare(
                     &self.device,
                     encoder,
                     &mut self.staging_belt,
-                    self.config.width,
-                    self.config.height,
+                    resolution,
                     layer,
                     &quads,
                 );
@@ -248,8 +249,7 @@ impl WgpuRenderer {
                     &self.device,
                     encoder,
                     &mut self.staging_belt,
-                    self.config.width,
-                    self.config.height,
+                    resolution,
                     layer,
                     &meshes,
                 );
@@ -262,8 +262,12 @@ impl WgpuRenderer {
             }
 
             match primitive.kind {
-                PrimitiveKind::Quad(ref quad) => quads.push((quad, primitive.clip)),
-                PrimitiveKind::Mesh(ref mesh) => meshes.push((mesh, primitive.clip)),
+                PrimitiveKind::Quad(ref quad) => {
+                    quads.push((quad, primitive.transform, primitive.clip));
+                }
+                PrimitiveKind::Mesh(ref mesh) => {
+                    meshes.push((mesh, primitive.transform, primitive.clip));
+                }
             }
         }
 
@@ -271,8 +275,7 @@ impl WgpuRenderer {
             &self.device,
             encoder,
             &mut self.staging_belt,
-            self.config.width,
-            self.config.height,
+            resolution,
             layer,
             &quads,
         );
@@ -281,8 +284,7 @@ impl WgpuRenderer {
             &self.device,
             encoder,
             &mut self.staging_belt,
-            self.config.width,
-            self.config.height,
+            resolution,
             layer,
             &meshes,
         );
