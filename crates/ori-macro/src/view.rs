@@ -50,8 +50,16 @@ fn transform_block(parser: ParseStream) -> Result<Option<TokenStream>, syn::Erro
     let content = parser.parse::<Content>()?;
 
     let tokens = match content {
-        Content::For(expr) => quote!(::std::iter::IntoIterator::into_iter(#expr)),
-        Content::Expr(expr) => quote!(::std::iter::once(#ori_core::View::new(#expr))),
+        Content::For(expr) => {
+            quote!(#ori_core::View::fragment(
+                ::std::iter::IntoIterator::into_iter(#expr)
+            ))
+        }
+        Content::Expr(expr) => {
+            quote!(#ori_core::View::new(
+                #ori_core::View::new(#expr)
+            ))
+        }
     };
 
     Ok(Some(tokens))
@@ -207,26 +215,29 @@ fn view_node(context: &Expr, node: &Node) -> manyhow::Result<Expr> {
         Node::Block(block) => {
             let block = block.try_block().unwrap();
             let inner_expr = match block.stmts.first().unwrap() {
-                Stmt::Expr(Expr::Call(expr), _) => expr.args.first().unwrap(),
+                Stmt::Expr(Expr::Call(expr), _) => match expr.args.first().unwrap() {
+                    Expr::Call(expr) => expr.args.first().unwrap(),
+                    _ => unreachable!(),
+                },
                 _ => unreachable!(),
             };
-            let dynamic = expr_is_dynamic(inner_expr);
+            let is_dynamic = expr_is_dynamic(inner_expr);
 
-            let fragment = parse_quote_spanned!(block.span() =>
+            let view = parse_quote_spanned!(block.span() =>
                 #[allow(unused_braces)]
-                #ori_core::View::fragment(::std::iter::Iterator::collect::<::std::vec::Vec<_>>(#block))
+                #block
             );
 
-            if dynamic {
+            if is_dynamic {
                 Ok(parse_quote_spanned! {block.span() => {
                     let __view = #context.owned_memo_scoped(move |#context| {
                         #context.emit(#ori_core::RequestRedrawEvent);
-                        #fragment
+                        #view
                     });
                     #ori_core::View::dynamic(__view)
                 }})
             } else {
-                Ok(fragment)
+                Ok(view)
             }
         }
         Node::Comment(comment) => {
@@ -254,6 +265,36 @@ fn view_node(context: &Expr, node: &Node) -> manyhow::Result<Expr> {
             }})
         }
         _ => unreachable!(),
+    }
+}
+
+/// Checks if the given expression is dynamic, which means that it can change reactively.
+fn expr_is_dynamic(value: &Expr) -> bool {
+    match value {
+        Expr::Array(expr) => expr.elems.iter().any(expr_is_dynamic),
+        Expr::Assign(_) => false,
+        Expr::Block(expr) => expr.block.stmts.iter().any(|stmt| match stmt {
+            Stmt::Expr(expr, _) => expr_is_dynamic(expr),
+            _ => true,
+        }),
+        Expr::Unary(expr) => expr_is_dynamic(&expr.expr),
+        Expr::Binary(expr) => expr_is_dynamic(&expr.left) || expr_is_dynamic(&expr.right),
+        Expr::Cast(expr) => expr_is_dynamic(&expr.expr),
+        Expr::Closure(_) => false,
+        Expr::Field(expr) => expr_is_dynamic(&expr.base),
+        Expr::Group(expr) => expr_is_dynamic(&expr.expr),
+        Expr::Lit(_) => false,
+        Expr::Paren(expr) => expr_is_dynamic(&expr.expr),
+        Expr::Path(_) => false,
+        Expr::Reference(expr) => expr_is_dynamic(&expr.expr),
+        Expr::Repeat(expr) => expr_is_dynamic(&expr.expr),
+        Expr::Return(expr) => match expr.expr.as_ref() {
+            Some(expr) => expr_is_dynamic(expr),
+            None => false,
+        },
+        Expr::Try(expr) => expr_is_dynamic(&expr.expr),
+        Expr::Tuple(expr) => expr.elems.iter().any(expr_is_dynamic),
+        _ => true,
     }
 }
 
@@ -357,36 +398,6 @@ fn attribute_kind(attribute: &KeyedAttribute) -> manyhow::Result<(String, String
     }
 
     Ok((kind.to_string(), key))
-}
-
-/// Checks if the given expression is dynamic, which means that it can change reactively.
-fn expr_is_dynamic(value: &Expr) -> bool {
-    match value {
-        Expr::Array(expr) => expr.elems.iter().any(expr_is_dynamic),
-        Expr::Assign(_) => false,
-        Expr::Block(expr) => expr.block.stmts.iter().any(|stmt| match stmt {
-            Stmt::Expr(expr, _) => expr_is_dynamic(expr),
-            _ => true,
-        }),
-        Expr::Unary(expr) => expr_is_dynamic(&expr.expr),
-        Expr::Binary(expr) => expr_is_dynamic(&expr.left) || expr_is_dynamic(&expr.right),
-        Expr::Cast(expr) => expr_is_dynamic(&expr.expr),
-        Expr::Closure(_) => false,
-        Expr::Field(expr) => expr_is_dynamic(&expr.base),
-        Expr::Group(expr) => expr_is_dynamic(&expr.expr),
-        Expr::Lit(_) => false,
-        Expr::Paren(expr) => expr_is_dynamic(&expr.expr),
-        Expr::Path(_) => false,
-        Expr::Reference(expr) => expr_is_dynamic(&expr.expr),
-        Expr::Repeat(expr) => expr_is_dynamic(&expr.expr),
-        Expr::Return(expr) => match expr.expr.as_ref() {
-            Some(expr) => expr_is_dynamic(expr),
-            None => false,
-        },
-        Expr::Try(expr) => expr_is_dynamic(&expr.expr),
-        Expr::Tuple(expr) => expr.elems.iter().any(expr_is_dynamic),
-        _ => true,
-    }
 }
 
 /// Wraps the given block in an effect scope.
