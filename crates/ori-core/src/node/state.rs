@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use ori_graphics::Rect;
+use ori_graphics::{Affine, Rect};
 use ori_style::{
     FromStyleAttribute, Style, StyleAttribute, StyleSpec, StyleTransition, StyleTransitionStates,
 };
@@ -50,6 +50,8 @@ pub struct NodeState {
     pub padding: Padding,
     /// The local rect of the element, relative to the parent.
     pub rect: Rect,
+    /// The global transform of the element.
+    pub transform: Affine,
     /// Whether the element is active.
     pub active: bool,
     /// Whether the element is focused.
@@ -79,6 +81,7 @@ impl Default for NodeState {
             margin: Margin::ZERO,
             padding: Padding::ZERO,
             rect: Rect::ZERO,
+            transform: Affine::IDENTITY,
             active: false,
             focused: false,
             hovered: false,

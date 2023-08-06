@@ -10,7 +10,7 @@ pub use state::*;
 use std::{any::Any, fmt::Debug, sync::Arc};
 
 use glam::Vec2;
-use ori_graphics::{Frame, Rect};
+use ori_graphics::{Affine, Frame, Rect};
 use ori_reactive::Event;
 use ori_style::{FromStyleAttribute, StyleAttributeBuilder};
 use parking_lot::{Mutex, MutexGuard};
@@ -256,6 +256,11 @@ impl Node {
         self.node_state().rect
     }
 
+    /// Gets the global [`Affine` transform](Affine) of the element.
+    pub fn global_transform(&self) -> Affine {
+        self.node_state().transform
+    }
+
     /// Whether the element is hovered.
     pub fn hovered(&self) -> bool {
         self.node_state().hovered
@@ -432,6 +437,7 @@ impl Node {
     pub fn draw(&self, cx: &mut DrawContext<'_>) {
         let frame = &mut cx.frame;
         cx.context.child(&mut self.node_state(), |cx| {
+            cx.node.transform = cx.transform;
             self.draw_inner(cx, frame);
         });
     }
