@@ -303,7 +303,7 @@ impl Scope {
                 if signal.lock().is_some() {
                     signal.lock().unwrap().set(value);
                 } else {
-                    *signal.lock() = Some(child.signal(value));
+                    *signal.lock() = Some(self.signal(value));
                 }
             }
         });
