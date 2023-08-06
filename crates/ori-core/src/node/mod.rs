@@ -416,7 +416,7 @@ impl Node {
         };
 
         let tmp = cx.frame.transform;
-        cx.frame.transform = cx.transform;
+        cx.frame.transform = cx.parent_transform;
         self.element().draw(self.element_state().as_mut(), &mut cx);
         cx.frame.transform = tmp;
 

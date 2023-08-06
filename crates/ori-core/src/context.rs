@@ -38,10 +38,10 @@ impl<'a> DerefMut for EventContext<'a> {
 
 impl<'a> EventContext<'a> {
     pub fn transform(&mut self, transform: Affine, f: impl FnOnce(&mut Self)) {
-        let tmp = self.transform;
-        self.transform *= transform;
+        let tmp = self.parent_transform;
+        self.parent_transform *= transform;
         f(self);
-        self.transform = tmp;
+        self.parent_transform = tmp;
     }
 
     pub fn translate(&mut self, translation: Vec2, f: impl FnOnce(&mut Self)) {
@@ -167,7 +167,7 @@ impl<'a, 'b> DrawLayer<'a, 'b> {
 
         layer.draw(|frame| {
             self.draw_context.context.cloned(|mut context| {
-                context.transform *= self.transform;
+                context.parent_transform *= self.transform;
 
                 let mut child = DrawContext {
                     context,
@@ -367,7 +367,7 @@ pub struct Context<'a> {
     pub style_cache: &'a mut StyleCache,
     pub event_sink: &'a EventSink,
     pub image_cache: &'a mut ImageCache,
-    pub transform: Affine,
+    pub parent_transform: Affine,
     window_size: Vec2,
     window_scale: f32,
 }
@@ -385,8 +385,6 @@ impl<'a> Context<'a> {
         event_sink: &'a EventSink,
         image_cache: &'a mut ImageCache,
     ) -> Self {
-        let translation = node.rect.top_left();
-
         Self {
             node,
             renderer,
@@ -397,7 +395,7 @@ impl<'a> Context<'a> {
             style_cache,
             event_sink,
             image_cache,
-            transform: Affine::translation(translation),
+            parent_transform: Affine::IDENTITY,
             window_size: window.get().size.as_vec2(),
             window_scale: window.get().scale,
         }
@@ -424,7 +422,7 @@ impl<'a> Context<'a> {
             style_cache: self.style_cache,
             event_sink: self.event_sink,
             image_cache: self.image_cache,
-            transform: self.transform * Affine::translation(translation),
+            parent_transform: self.parent_transform * Affine::translation(translation),
             window_size: self.window_size,
             window_scale: self.window_scale,
         };
@@ -448,7 +446,7 @@ impl<'a> Context<'a> {
             style_cache: self.style_cache,
             event_sink: self.event_sink,
             image_cache: self.image_cache,
-            transform: self.transform,
+            parent_transform: self.parent_transform,
             window_size: self.window_size,
             window_scale: self.window_scale,
         };
@@ -732,12 +730,17 @@ impl<'a> Context<'a> {
 
     /// Returns the global rect of the element.
     pub fn global_rect(&self) -> Rect {
-        self.node.rect.transform(self.transform)
+        self.node.rect.transform(self.parent_transform)
     }
 
     /// Returns the local transform of the element.
     pub fn local_transform(&self) -> Affine {
         Affine::translation(self.rect().top_left())
+    }
+
+    /// Returns the global transform of the element.
+    pub fn global_transform(&self) -> Affine {
+        self.local_transform() * self.parent_transform
     }
 
     /// Returns the margin of the element.

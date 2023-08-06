@@ -87,7 +87,7 @@ impl Element for CheckBox {
             };
 
             if let Some(glyphs) = cx.layout_text(&section) {
-                cx.draw_text(&glyphs, cx.global_rect());
+                cx.draw_text(&glyphs, cx.rect());
             }
         }
     }
