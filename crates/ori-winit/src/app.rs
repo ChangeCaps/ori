@@ -1,4 +1,5 @@
 use std::{
+    env,
     error::Error,
     time::{Duration, Instant},
 };
@@ -24,14 +25,16 @@ use crate::{
 fn init_tracing() -> Result<(), Box<dyn Error>> {
     use tracing_subscriber::layer::SubscriberExt;
 
-    let filter = tracing_subscriber::EnvFilter::builder()
-        .with_default_directive("debug".parse()?)
-        .with_default_directive("wgpu=warn".parse()?)
-        .with_default_directive("naga=warn".parse()?)
-        .with_default_directive("winit=warn".parse()?)
-        .with_default_directive("mio=warn".parse()?)
-        .with_default_directive("[metrics]=warn".parse()?)
-        .from_env()?;
+    let mut filter = tracing_subscriber::EnvFilter::default()
+        .add_directive("wgpu=warn".parse()?)
+        .add_directive("naga=warn".parse()?)
+        .add_directive("winit=warn".parse()?)
+        .add_directive("mio=warn".parse()?)
+        .add_directive("ori=warn".parse()?);
+
+    if let Ok(env) = env::var(tracing_subscriber::EnvFilter::DEFAULT_ENV) {
+        filter = filter.add_directive(env.parse()?);
+    }
 
     let subscriber = tracing_subscriber::registry();
 
