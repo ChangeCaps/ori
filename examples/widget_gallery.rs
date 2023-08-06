@@ -80,7 +80,7 @@ fn ui(cx: Scope) -> View {
                     { format!("Counter: {}", counter.get()) }
                 </Button>
 
-                <Image src="examples/images/image.jpg" />
+                <Image src=image!("examples/images/image.jpg") />
 
                 <TextInput bind:text=text on:input=|text| info!("Input '{}'", text) />
 

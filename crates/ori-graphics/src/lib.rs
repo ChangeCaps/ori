@@ -40,6 +40,7 @@ pub mod prelude {
     pub use crate::color::Color;
     pub use crate::curve::Curve;
     pub use crate::font;
+    pub use crate::image;
     pub use crate::image::{ImageData, ImageHandle, ImageLoadError, ImageSource};
     pub use crate::mesh::{Mesh, Vertex};
     pub use crate::quad::Quad;

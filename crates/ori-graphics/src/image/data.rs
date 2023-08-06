@@ -6,9 +6,13 @@ use crate::ImageFilter;
 
 /// Includes [`ImageData`] from a file.
 #[macro_export]
-macro_rules! include_image {
-    ($($tt:tt)*) => {
-        $crate::ImageData::from_bytes(include_bytes!($($tt)*))
+macro_rules! image {
+    ($path:literal) => {
+        $crate::ImageData::from_bytes(::std::include_bytes!(::std::concat!(
+            ::std::env!("CARGO_MANIFEST_DIR"),
+            "/",
+            $path
+        )))
     };
 }
 

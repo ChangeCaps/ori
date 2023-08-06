@@ -81,7 +81,12 @@ impl From<PathBuf> for FontSource {
 macro_rules! font {
     ($path:literal) => {
         $crate::FontSource::Data(
-            include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/", $path)).to_vec(),
+            ::std::include_bytes!(::std::concat!(
+                ::std::env!("CARGO_MANIFEST_DIR"),
+                "/",
+                $path
+            ))
+            .to_vec(),
         )
     };
 }
