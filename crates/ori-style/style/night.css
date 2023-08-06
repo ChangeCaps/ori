@@ -11,7 +11,14 @@
 
 	--track: #363636;
 	--track-hover: #404040;
-	--scrollbar-track: #363636a0;
+
+	--scrollbar: #36363600;
+	--scrollbar-hover: var(--secondary-active);
+	--scrollbar-active: var(--secondary-active);
+
+	--scrollbar-track: #36363600;
+	--scrollbar-track-hover: #363636a0;
+	--scrollbar-track-active: #363636c0;
 
 	--border: #404040;
 	--border-hover: #606060;
