@@ -37,7 +37,7 @@ impl Event {
     }
 
     /// Marks the event as handled.
-    pub fn handle(&self) {
+    pub fn handled(&self) {
         self.is_handled.store(true, Ordering::Release);
     }
 

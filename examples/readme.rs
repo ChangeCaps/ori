@@ -10,7 +10,9 @@ fn ui(cx: Scope) -> impl View {
         Text::new(format!("Clicked {} times", counter.get()))
     });
 
-    Button::new(text).on_press(move |_| *counter.modify() += 1)
+    let button = Button::new(text).on_press(move |_| *counter.modify() += 1);
+
+    row![FlexChild::new(button).flex(1.0)]
 }
 
 fn main() {

@@ -44,6 +44,7 @@ pub mod prelude {
     pub use crate::view::{DrawContext, EventContext, IntoView, LayoutContext, View};
     pub use crate::views::*;
     pub use crate::window::{Window, WindowBuilder, WindowId};
+    pub use crate::{column, row};
 
     pub use glam::*;
     pub use tracing::{debug, error, info, trace, warn};

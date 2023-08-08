@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use glam::Vec2;
 use ori_graphics::{Color, Quad};
 use ori_reactive::Event;
@@ -7,12 +9,13 @@ use crate::{
     PointerEvent, StateView,
 };
 
-type On<T> = Box<dyn Fn(T) + Send + Sync>;
+type OnPointerEvent = Arc<dyn Fn(&PointerEvent) + Send + Sync>;
 
+#[derive(Clone)]
 pub struct Button {
     content: Node,
-    on_press: Option<On<PointerEvent>>,
-    on_release: Option<On<PointerEvent>>,
+    on_press: Option<OnPointerEvent>,
+    on_release: Option<OnPointerEvent>,
     padding: Padding,
 }
 
@@ -40,14 +43,49 @@ impl Button {
         self
     }
 
-    pub fn on_press(mut self, on_press: impl Fn(PointerEvent) + Send + Sync + 'static) -> Self {
-        self.on_press = Some(Box::new(on_press));
+    pub fn on_press(mut self, on_press: impl Fn(&PointerEvent) + Send + Sync + 'static) -> Self {
+        self.on_press = Some(Arc::new(on_press));
         self
     }
 
-    pub fn on_release(mut self, on_release: impl Fn(PointerEvent) + Send + Sync + 'static) -> Self {
-        self.on_release = Some(Box::new(on_release));
+    pub fn on_release(
+        mut self,
+        on_release: impl Fn(&PointerEvent) + Send + Sync + 'static,
+    ) -> Self {
+        self.on_release = Some(Arc::new(on_release));
         self
+    }
+
+    fn handle_pointer_event(
+        &self,
+        state: &mut ButtonState,
+        cx: &mut EventContext<'_>,
+        event: &PointerEvent,
+    ) -> bool {
+        let local = cx.local(event.position);
+        let mut handled = false;
+
+        state.hovered = cx.rect().contains(local);
+
+        if state.hovered && event.is_press() {
+            state.pressed = true;
+            cx.request_redraw();
+
+            if let Some(ref on_press) = self.on_press {
+                on_press(event);
+                handled = true;
+            }
+        } else if event.is_release() {
+            state.pressed = false;
+            cx.request_redraw();
+
+            if let Some(ref on_release) = self.on_release {
+                on_release(event);
+                handled = true;
+            }
+        }
+
+        handled
     }
 }
 
@@ -75,24 +113,8 @@ impl StateView for Button {
         }
 
         if let Some(pointer) = event.get::<PointerEvent>() {
-            let local = cx.local(pointer.position);
-
-            state.hovered = cx.rect().contains(local);
-
-            if state.hovered && pointer.is_press() {
-                state.pressed = true;
-                event.handle();
-
-                if let Some(ref on_press) = self.on_press {
-                    on_press(pointer.clone());
-                }
-            } else if pointer.is_release() {
-                state.pressed = false;
-                event.handle();
-
-                if let Some(ref on_release) = self.on_release {
-                    on_release(pointer.clone());
-                }
+            if self.handle_pointer_event(state, cx, pointer) {
+                event.handled();
             }
         }
     }
@@ -106,14 +128,23 @@ impl StateView for Button {
         cx.child(0, &self.content, space.pad(self.padding)) + self.padding
     }
 
-    fn draw(&self, _state: &mut Self::State, cx: &mut DrawContext<'_>) {
+    fn draw(&self, state: &mut Self::State, cx: &mut DrawContext<'_>) {
+        let color = if state.hovered {
+            if state.pressed {
+                Color::BLUE
+            } else {
+                Color::GREEN
+            }
+        } else {
+            Color::CYAN
+        };
+
         cx.draw(Quad {
             rect: cx.rect(),
-            background_color: Color::CYAN,
+            background_color: color,
             background_image: None,
             border_radius: [5.0; 4],
-            border_width: [1.0; 4],
-            border_color: Color::BLACK,
+            ..Default::default()
         });
 
         cx.with_padding(self.padding, |cx| {

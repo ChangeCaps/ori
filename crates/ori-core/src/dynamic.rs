@@ -3,12 +3,18 @@ use ori_reactive::{Event, OwnedSignal};
 
 use crate::{AvailableSpace, DrawContext, EventContext, LayoutContext, Node, View};
 
+/// A node that can be dynamically changed reactively.
+///
+/// See [`dynamic`](crate::function::dynamic) for more information.
 #[derive(Clone, Debug)]
 pub struct DynamicNode {
     signal: OwnedSignal<Node>,
 }
 
 impl DynamicNode {
+    /// Creates a new dynamic node.
+    ///
+    /// See [`dynamic`](crate::function::dynamic) for more information.
     pub fn new(signal: OwnedSignal<Node>) -> Self {
         Self { signal }
     }
