@@ -2,17 +2,15 @@
 use ori::prelude::*;
 
 // define the ui
-fn ui(cx: Scope) -> View {
+fn ui(cx: Scope) -> impl View {
     // create a signal that will hold the state of the counter
     let counter = signal(cx, 0);
 
-    // render the ui using the view! macro
-    view! {
-        <Button on:click=move |_| *counter.modify() += 1>
-            "Click me!"
-        </Button>
-        { format!("Clicked {} times", counter.get()) }
-    }
+    let text = dynamic(cx, move |_| {
+        Text::new(format!("Clicked {} times", counter.get()))
+    });
+
+    Button::new(text).on_press(move |_| *counter.modify() += 1)
 }
 
 fn main() {

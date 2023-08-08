@@ -1,29 +1,44 @@
-use std::{
-    collections::HashMap,
-    fmt::{Debug, Display},
-    time::Instant,
-};
+use std::{collections::HashMap, fmt::Debug, time::Instant};
 
 use glam::{UVec2, Vec2};
 use ori_graphics::{FontSource, Fonts, Frame, ImageCache, RenderBackend, Renderer};
 use ori_reactive::{Emitter, Event, EventSink, Scope, Task};
-use ori_style::{LoadedStyleKind, StyleCache, StyleLoader};
 
 use crate::{
     function::{dynamic, window},
-    Body, BoxedBuildUi, CloseWindow, DragWindow, ForceLayoutEvent, Key, KeyboardEvent, Metrics,
-    Modifiers, Node, OpenWindow, Parent, PointerButton, PointerEvent, PrepareLayoutEvent,
-    RequestRedrawEvent, Window, WindowBackend, WindowClosedEvent, WindowId, WindowResizedEvent,
+    AvailableSpace, CloseWindow, DragWindow, ForceLayoutEvent, IntoView, Key, KeyboardEvent,
+    Metrics, Modifiers, Node, OpenWindow, PointerButton, PointerEvent, RequestRedrawEvent, Tree,
+    Window, WindowBackend, WindowClosedEvent, WindowId, WindowResizedEvent,
 };
 
 const TEXT_FONT: &[u8] = include_bytes!("../fonts/NotoSans-Medium.ttf");
 const ICON_FONT: &[u8] = include_bytes!("../fonts/MaterialIcons-Regular.ttf");
+
+pub trait BuildUi<V>: Sized + Send + Sync + 'static {
+    fn build(&mut self, cx: Scope) -> Node;
+
+    fn function(mut self) -> UiFunction {
+        Box::new(move |scope| self.build(scope))
+    }
+}
+
+impl<V: IntoView, F> BuildUi<V> for F
+where
+    F: FnMut(Scope) -> V + Send + Sync + 'static,
+{
+    fn build(&mut self, scope: Scope) -> Node {
+        Node::new(self(scope))
+    }
+}
+
+pub type UiFunction = Box<dyn FnMut(Scope) -> Node + Send + Sync + 'static>;
 
 struct WindowUi<R: Renderer> {
     renderer: R,
     window: Window,
     root: Node,
     scope: Scope,
+    tree: Tree,
     event_sink: EventSink,
     event_emitter: Emitter<Event>,
     modifiers: Modifiers,
@@ -188,12 +203,8 @@ where
     pub frame: Frame,
     /// The font system, see [`Fonts`] for more information.
     pub fonts: Fonts,
-    /// The style cache, see [`StyleCache`] for more information.
-    pub style_cache: StyleCache,
     /// The image cache, see [`ImageCache`] for more information.
     pub image_cache: ImageCache,
-    /// The style loader, see [`StyleLoader`] for more information.
-    pub style_loader: StyleLoader,
     /// The idle callback, see [`Ui::idle`] for more information.
     pub idle_callback: Option<Box<IdleCallback<W, R>>>,
     /// The configuration, see [`UiConfig`] for more information.
@@ -221,9 +232,7 @@ where
             render_backend,
             frame: Frame::new(),
             fonts,
-            style_cache: StyleCache::new(),
             image_cache: ImageCache::new(),
-            style_loader: StyleLoader::new(),
             idle_callback: None,
             config: UiConfig::default(),
             metrics: Metrics::new(),
@@ -259,7 +268,7 @@ where
         &mut self,
         target: W::Target<'_>,
         window: &Window,
-        ui: BoxedBuildUi,
+        ui: UiFunction,
     ) -> Result<(), WindowError<W, R>> {
         {
             // here we clone the window and set it to invisible
@@ -295,13 +304,14 @@ where
         scope.with_context(scope.signal(window.clone()));
 
         // create the root view
-        let root = Self::create_root_node(scope, ui);
+        let root = Node::new(dynamic(scope, ui));
 
         let window_ui = WindowUi {
             renderer,
             window: window.clone(),
             root,
             scope,
+            tree: Tree::new(),
             event_sink,
             event_emitter,
             modifiers: Modifiers::default(),
@@ -315,16 +325,6 @@ where
         tracing::debug!("Window {} created", window.id());
 
         Ok(())
-    }
-
-    /// Creates the root node for a window, this will automatically add the body element.
-    fn create_root_node(cx: Scope, ui: BoxedBuildUi) -> Node {
-        // create the body element
-        let mut body = Body::new();
-        body.add_child(dynamic(cx, ui));
-
-        // create the root node
-        Node::new(body)
     }
 
     /// Close a window.
@@ -353,17 +353,6 @@ where
         if let Some(mut idle) = self.idle_callback.take() {
             idle(self);
             self.idle_callback = Some(idle);
-        }
-
-        match self.style_loader.reload() {
-            Ok(true) => {
-                self.style_cache.clear();
-                self.force_layout();
-            }
-            Err(err) => {
-                tracing::error!("Failed to reload styles: {}", err);
-            }
-            _ => {}
         }
     }
 
@@ -612,15 +601,13 @@ where
 
             let start = Instant::now();
             ori_reactive::effect::delay_effects(|| {
-                ui.root.event_root_inner(
-                    self.style_loader.stylesheet(),
-                    &mut self.style_cache,
-                    &ui.renderer,
-                    window,
+                ui.root.event_root(
                     &mut self.fonts,
-                    &ui.event_sink,
-                    event,
+                    &ui.renderer,
                     &mut self.image_cache,
+                    &ui.event_sink,
+                    &mut ui.tree,
+                    event,
                 );
             });
             self.metrics.event.event(start.elapsed());
@@ -635,22 +622,20 @@ where
     fn layout_inner(&mut self, id: WindowId, update_window: bool) {
         tracing::trace!("Laying out window {:?}", id);
 
-        self.event_inner(id, &Event::new(PrepareLayoutEvent), false);
-
         if let Some(ui) = self.window_ui.get_mut(&id) {
             ui.query_window(&mut self.window_backend);
             let window = window(ui.scope);
+            let size = window.get_untracked().size.as_vec2();
 
             let start = Instant::now();
             ori_reactive::effect::delay_effects(|| {
-                ui.root.layout_root_inner(
-                    self.style_loader.stylesheet(),
-                    &mut self.style_cache,
-                    &ui.renderer,
-                    window,
+                ui.root.layout_root(
                     &mut self.fonts,
-                    &ui.event_sink,
+                    &ui.renderer,
                     &mut self.image_cache,
+                    &ui.event_sink,
+                    &mut ui.tree,
+                    AvailableSpace::new(Vec2::ZERO, size),
                 );
             });
             self.metrics.layout.event(start.elapsed());
@@ -684,15 +669,13 @@ where
 
             let start = Instant::now();
             ori_reactive::effect::delay_effects(|| {
-                ui.root.draw_root_inner(
-                    self.style_loader.stylesheet(),
-                    &mut self.style_cache,
-                    &mut self.frame,
-                    &ui.renderer,
-                    window,
+                ui.root.draw_root(
                     &mut self.fonts,
-                    &ui.event_sink,
+                    &ui.renderer,
                     &mut self.image_cache,
+                    &ui.event_sink,
+                    &mut ui.tree,
+                    &mut self.frame,
                 );
             });
             self.metrics.draw.event(start.elapsed());
@@ -703,10 +686,6 @@ where
             let clear_color = window.clear_color;
             (ui.renderer).render_frame(&self.frame, clear_color);
         }
-    }
-
-    pub fn style_loader(&self) -> &StyleLoader {
-        &self.style_loader
     }
 }
 
@@ -721,20 +700,6 @@ where
     fn font(mut self, font: impl Into<FontSource>) -> Self {
         if let Err(err) = self.ui().fonts.load_font(font) {
             tracing::error!("failed to load font: {:?}", err);
-        }
-
-        self
-    }
-
-    /// Add a style to the app, this can be called multiple times to add
-    /// multiple styles.
-    fn style<T>(mut self, style: T) -> Self
-    where
-        T: TryInto<LoadedStyleKind>,
-        T::Error: Display,
-    {
-        if let Err(err) = self.ui().style_loader.add_style(style) {
-            tracing::error!("failed to load style: {}", err);
         }
 
         self

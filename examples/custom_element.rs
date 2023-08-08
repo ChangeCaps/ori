@@ -52,7 +52,7 @@ impl Element for CustomElement {
     }
 }
 
-fn ui(_cx: Scope) -> View {
+fn ui(_cx: Scope) -> IntoView {
     view! {
         <CustomElement />
     }

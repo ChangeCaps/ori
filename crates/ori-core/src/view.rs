@@ -1,233 +1,249 @@
-use std::{borrow::Cow, sync::Arc};
+use std::sync::Arc;
 
-use ori_reactive::OwnedSignal;
-use smallvec::SmallVec;
+use deref_derive::{Deref, DerefMut};
+use glam::Vec2;
+use ori_graphics::{Affine, Frame, Glyphs, PrimitiveKind, Rect};
+use ori_reactive::Event;
 
-use crate::{Element, Node};
+use crate::{AvailableSpace, Context, Node, Padding};
 
-const VIEW_FLATTEN_CAPACITY: usize = 8;
-
-#[derive(Clone, Debug)]
-enum ViewKind {
-    Node(Node),
-    Fragment(Arc<[View]>),
-    Dynamic(OwnedSignal<View>),
+#[derive(Deref, DerefMut)]
+pub struct EventContext<'a> {
+    #[deref]
+    pub(crate) context: Context<'a>,
+    pub(crate) transform: Affine,
+    pub(crate) size: Vec2,
 }
 
-impl Default for ViewKind {
-    fn default() -> Self {
-        Self::Fragment(Arc::new([]))
-    }
-}
+impl<'a> EventContext<'a> {
+    pub(crate) fn new(context: Context<'a>, transform: Affine) -> Self {
+        let size = context.size();
 
-/// A view in the UI tree.
-///
-/// A view can be one of the following:
-/// - An [`Element`].
-/// - A fragment containing a list of [`View`]s.
-/// - A dynamic [`View`] that can change over time.
-#[derive(Clone, Debug, Default)]
-pub struct View {
-    kind: ViewKind,
-}
-
-impl View {
-    fn from_kind(kind: ViewKind) -> Self {
-        Self { kind }
-    }
-
-    /// Creates a new [`Node`].
-    pub fn new(into_view: impl IntoView) -> Self {
-        into_view.into_view()
-    }
-
-    /// Creates a new [`View`] from an [`Node`].
-    pub fn node(node: Node) -> Self {
-        Self::from_kind(ViewKind::Node(node))
-    }
-
-    /// Creates a new [`View`] fragment from a list of [`View`]s.
-    pub fn fragment(fragment: impl IntoIterator<Item = View>) -> Self {
-        Self::from_kind(ViewKind::Fragment(fragment.into_iter().collect()))
-    }
-
-    /// Creates a new dynamic [`View`] from an [`OwnedSignal`].
-    pub fn dynamic(signal: OwnedSignal<View>) -> Self {
-        Self::from_kind(ViewKind::Dynamic(signal))
-    }
-
-    /// Creates an empty fragment.
-    pub fn empty() -> Self {
-        Self::fragment(Vec::new())
-    }
-
-    /// Returns the number of elements in the [`View`].
-    pub fn len(&self) -> usize {
-        match &self.kind {
-            ViewKind::Node(_) => 1,
-            ViewKind::Fragment(fragment) => fragment.iter().map(View::len).sum(),
-            ViewKind::Dynamic(signal) => signal.get().len(),
+        Self {
+            context,
+            transform,
+            size,
         }
     }
 
-    /// Returns `true` if the [`Node`] contains no elements.
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
+    pub fn child(&mut self, index: usize, view: &impl View, event: &Event) {
+        self.context.child(index, |context| {
+            let mut cx = EventContext::new(context, self.transform);
+            view.event(&mut cx, event);
+        })
     }
 
-    /// If `self` is a node, returns a reference to the [`Node`].
-    pub fn get_node(&self) -> Option<&Node> {
-        match &self.kind {
-            ViewKind::Node(element) => Some(element),
-            _ => None,
-        }
+    pub fn size(&self) -> Vec2 {
+        self.size
     }
 
-    /// Tries to convert the [`View`] into a [`Node`].
-    pub fn into_node(self) -> Option<Node> {
-        match self.kind {
-            ViewKind::Node(element) => Some(element),
-            _ => None,
-        }
+    pub fn rect(&self) -> Rect {
+        Rect::new(Vec2::ZERO, self.size)
     }
 
-    /// Tries to convert the [`View`] into a fragment.
-    pub fn into_fragment(self) -> Option<Arc<[View]>> {
-        match self.kind {
-            ViewKind::Fragment(fragment) => Some(fragment),
-            _ => None,
-        }
+    pub fn transform(&self) -> Affine {
+        self.transform
     }
 
-    /// Tries to convert the [`View`] into a dynamic [`View`].
-    pub fn into_dynamic(self) -> Option<OwnedSignal<View>> {
-        match self.kind {
-            ViewKind::Dynamic(signal) => Some(signal),
-            _ => None,
-        }
+    /// Transforms a point from global coordinates to local coordinates.
+    ///
+    /// This is useful when dealing with mouse events.
+    pub fn local(&self, point: Vec2) -> Vec2 {
+        self.transform.inverse() * point
     }
 
-    /// Returns all elements in the [`View`], including nested elements, flattened into a single
-    /// [`Vec`]. Dynamic [`View`]s are fetched in a reactive manner.
-    #[inline(always)]
-    pub fn flatten(&self) -> SmallVec<[Cow<'_, Node>; VIEW_FLATTEN_CAPACITY]> {
-        let mut buffer = SmallVec::new();
-        self.flatten_inner(&mut buffer);
-        buffer
+    /// Transforms the context for the duration of the closure.
+    pub fn with_transform<T>(
+        &mut self,
+        transform: Affine,
+        f: impl FnOnce(&mut EventContext<'_>) -> T,
+    ) -> T {
+        let old_transform = self.transform;
+        self.transform *= transform;
+        let result = f(self);
+        self.transform = old_transform;
+        result
     }
 
-    #[inline(always)]
-    fn flatten_inner<'a>(&'a self, buffer: &mut SmallVec<[Cow<'a, Node>; VIEW_FLATTEN_CAPACITY]>) {
-        match &self.kind {
-            ViewKind::Node(element) => buffer.push(Cow::Borrowed(element)),
-            ViewKind::Fragment(fragment) => {
-                for view in fragment.iter() {
-                    view.flatten_inner(buffer);
-                }
-            }
-            ViewKind::Dynamic(signal) => {
-                signal.get().visit(|node| {
-                    buffer.push(Cow::Owned(node.clone()));
-                });
-            }
-        }
+    /// Translates the context for the duration of the closure.
+    pub fn with_translation<T>(
+        &mut self,
+        translation: Vec2,
+        f: impl FnOnce(&mut EventContext<'_>) -> T,
+    ) -> T {
+        self.with_transform(Affine::translation(translation), f)
     }
 
-    /// Calls the given `visitor` on all elements in the [`View`], including nested elements.
-    /// Dynamic [`View`]s are fetched in a reactive manner.
-    #[inline(always)]
-    pub fn visit(&self, mut visitor: impl FnMut(&Node)) {
-        self.visit_recurse(&mut visitor);
-    }
-
-    #[inline(always)]
-    fn visit_recurse(&self, visitor: &mut impl FnMut(&Node)) {
-        match &self.kind {
-            ViewKind::Node(element) => visitor(element),
-            ViewKind::Fragment(fragment) => {
-                fragment.iter().for_each(|view| view.visit_recurse(visitor))
-            }
-            ViewKind::Dynamic(signal) => signal.get().visit_recurse(visitor),
-        }
+    /// Pads the context for the duration of the closure.
+    pub fn with_padding<T>(
+        &mut self,
+        padding: Padding,
+        f: impl FnOnce(&mut EventContext<'_>) -> T,
+    ) -> T {
+        self.with_translation(padding.translation(), f)
     }
 }
 
-/// A trait for types that can be converted into a [`View`].
-///
-/// This trait is implemented for all types that implement [`Into<View>`],
-/// and should therefore not be implemented manually.
-pub trait IntoView {
-    fn into_view(self) -> View;
+#[derive(Deref, DerefMut)]
+pub struct LayoutContext<'a> {
+    #[deref]
+    pub(crate) context: Context<'a>,
 }
 
-impl IntoView for View {
-    fn into_view(self) -> View {
+impl<'a> LayoutContext<'a> {
+    pub(crate) fn new(context: Context<'a>) -> Self {
+        Self { context }
+    }
+
+    pub fn child(&mut self, index: usize, view: &impl View, space: AvailableSpace) -> Vec2 {
+        self.context.child(index, |context| {
+            let mut cx = LayoutContext::new(context);
+            let size = view.layout(&mut cx, space);
+            cx.context.tree.size = Some(size);
+            size
+        })
+    }
+}
+
+#[derive(Deref, DerefMut)]
+pub struct DrawContext<'a> {
+    #[deref]
+    pub(crate) context: Context<'a>,
+    pub(crate) frame: &'a mut Frame,
+    pub(crate) size: Vec2,
+}
+
+impl<'a> DrawContext<'a> {
+    pub(crate) fn new(context: Context<'a>, frame: &'a mut Frame) -> Self {
+        let size = context.size();
+        Self {
+            context,
+            frame,
+            size,
+        }
+    }
+
+    pub fn child(&mut self, index: usize, view: &impl View) {
+        self.with_layer(1.0, |cx| {
+            cx.context.child(index, |context| {
+                let mut cx = DrawContext::new(context, cx.frame);
+                view.draw(&mut cx);
+            })
+        })
+    }
+
+    pub fn size(&self) -> Vec2 {
+        self.size
+    }
+
+    pub fn rect(&self) -> Rect {
+        Rect::new(Vec2::ZERO, self.size())
+    }
+
+    pub fn transform(&self) -> Affine {
+        self.frame.transform
+    }
+
+    pub fn z_index(&self) -> f32 {
+        self.frame.z_index
+    }
+
+    pub fn clip(&self) -> Option<Rect> {
+        self.frame.clip
+    }
+
+    pub fn with_transform<T>(
+        &mut self,
+        transform: Affine,
+        f: impl FnOnce(&mut DrawContext<'_>) -> T,
+    ) -> T {
+        let old_transform = self.frame.transform;
+        self.frame.transform *= transform;
+        let result = f(self);
+        self.frame.transform = old_transform;
+        result
+    }
+
+    pub fn with_translation<T>(
+        &mut self,
+        translation: Vec2,
+        f: impl FnOnce(&mut DrawContext<'_>) -> T,
+    ) -> T {
+        self.with_transform(Affine::translation(translation), f)
+    }
+
+    pub fn with_padding<T>(
+        &mut self,
+        padding: Padding,
+        f: impl FnOnce(&mut DrawContext<'_>) -> T,
+    ) -> T {
+        self.with_translation(padding.translation(), f)
+    }
+
+    pub fn with_layer<T>(&mut self, z_index: f32, f: impl FnOnce(&mut DrawContext<'_>) -> T) -> T {
+        let old_z_index = self.frame.z_index;
+        self.frame.z_index += z_index;
+        let result = f(self);
+        self.frame.z_index = old_z_index;
+        result
+    }
+
+    pub fn with_clip<T>(&mut self, rect: Rect, f: impl FnOnce(&mut DrawContext<'_>) -> T) -> T {
+        let old_clip = self.frame.clip;
+        self.frame.clip = Some(rect);
+        let result = f(self);
+        self.frame.clip = old_clip;
+        result
+    }
+
+    pub fn draw(&mut self, primitive: impl Into<PrimitiveKind>) {
+        self.frame.draw(primitive);
+    }
+
+    pub fn draw_text(&mut self, glyphs: &Glyphs, rect: Rect) {
+        let mesh = self.context.fonts.text_mesh(self.renderer, glyphs, rect);
+
+        if let Some(mesh) = mesh {
+            self.draw(mesh);
+        }
+    }
+}
+
+pub trait IntoView: Sized {
+    type View: View;
+
+    fn into_view(self) -> Self::View;
+
+    fn into_node(self) -> Node {
+        View::into_node(self.into_view())
+    }
+}
+
+impl<T: View> IntoView for T {
+    type View = Self;
+
+    fn into_view(self) -> Self::View {
         self
     }
 }
 
-impl<T: Element> IntoView for T {
-    fn into_view(self) -> View {
-        View::node(Node::new(self))
+#[allow(unused_variables)]
+pub trait View: Send + Sync + 'static {
+    fn event(&self, cx: &mut EventContext<'_>, event: &Event) {}
+
+    fn layout(&self, cx: &mut LayoutContext<'_>, space: AvailableSpace) -> Vec2 {
+        space.min
+    }
+
+    fn draw(&self, cx: &mut DrawContext<'_>) {}
+
+    #[doc(hidden)]
+    fn into_node(self) -> Node
+    where
+        Self: Sized,
+    {
+        Node::from_arc(Arc::new(self))
     }
 }
 
-impl IntoView for Node {
-    fn into_view(self) -> View {
-        View::node(self)
-    }
-}
-
-impl<T: IntoView> IntoView for Vec<T> {
-    fn into_view(self) -> View {
-        View::fragment(self.into_iter().map(IntoView::into_view))
-    }
-}
-
-impl<T: Clone + IntoView> IntoView for &[T] {
-    fn into_view(self) -> View {
-        View::fragment(self.iter().cloned().map(IntoView::into_view))
-    }
-}
-
-impl<T: IntoView, const LEN: usize> IntoView for [T; LEN] {
-    fn into_view(self) -> View {
-        View::fragment(self.into_iter().map(IntoView::into_view))
-    }
-}
-
-macro_rules! impl_from_tuple {
-    (@internal $($name:ident),*) => {
-        impl<$($name: IntoView),*> IntoView for ($($name,)*) {
-            fn into_view(self) -> View {
-                #[allow(non_snake_case)]
-                let ($($name,)*) = self;
-                View::fragment(vec![$($name.into_view(),)*])
-            }
-        }
-    };
-    ($first:ident $(, $name:ident)*) => {
-        impl_from_tuple!(@internal $first $(,$name)*);
-        impl_from_tuple!($($name),*);
-    };
-    () => {
-        impl_from_tuple!(@internal);
-    };
-}
-
-impl_from_tuple!(A, B, C, D, E, F, G, H, I, J, K, L);
-
-impl IntoView for OwnedSignal<View> {
-    fn into_view(self) -> View {
-        View::dynamic(self)
-    }
-}
-
-impl<T: IntoView> IntoView for Option<T> {
-    fn into_view(self) -> View {
-        match self {
-            Some(view) => view.into_view(),
-            None => View::empty(),
-        }
-    }
-}
+impl View for () {}

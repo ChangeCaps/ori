@@ -3,7 +3,7 @@ use std::mem;
 use glam::Vec2;
 use parking_lot::Mutex;
 
-use crate::{BoxedBuildUi, BuildUi, View, Window, WindowId};
+use crate::{BuildUi, Node, UiFunction, Window, WindowId};
 
 /// An event that requests a redraw.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
@@ -39,7 +39,7 @@ impl WindowClosedEvent {
 /// An event that opens a new window, when emitted.
 pub struct OpenWindow {
     window: Window,
-    ui: Mutex<BoxedBuildUi>,
+    ui: Mutex<UiFunction>,
 }
 
 impl OpenWindow {
@@ -47,7 +47,7 @@ impl OpenWindow {
     pub fn new<I>(window: Window, ui: impl BuildUi<I>) -> Self {
         Self {
             window,
-            ui: Mutex::new(ui.boxed()),
+            ui: Mutex::new(ui.function()),
         }
     }
 
@@ -57,8 +57,8 @@ impl OpenWindow {
     }
 
     /// Takes the ui function, replacing it with an empty one.
-    pub fn take_ui(&self) -> BoxedBuildUi {
-        mem::replace(&mut self.ui.lock(), Box::new(|_| View::empty()))
+    pub fn take_ui(&self) -> UiFunction {
+        mem::replace(&mut self.ui.lock(), Box::new(|_| Node::empty()))
     }
 }
 

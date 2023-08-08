@@ -1,7 +1,7 @@
 use ori_reactive::{Modify, Scope, Signal};
 
 use crate::{
-    BuildUi, CloseWindow, DragWindow, IntoView, NodeRef, OpenWindow, View, Window, WindowId,
+    BuildUi, CloseWindow, DragWindow, DynamicNode, OpenWindow, RequestRedrawEvent, Window, WindowId,
 };
 
 /// Returns a signal with the current window.
@@ -45,12 +45,16 @@ pub fn drag_window(cx: Scope) {
     cx.emit(DragWindow::new());
 }
 
-/// Creates a new dynamic [`View`] from a Ui function.
-pub fn dynamic<I: IntoView>(cx: Scope, mut f: impl BuildUi<I>) -> View {
-    View::dynamic(cx.owned_memo_scoped(move |cx| f.ui(cx)))
+/// Request a redraw of the current window.
+pub fn request_redraw(cx: Scope) {
+    cx.emit(RequestRedrawEvent);
 }
 
-/// Creates a new [`NodeRef`].
-pub fn node_ref(cx: Scope) -> NodeRef {
-    NodeRef::new(cx)
+/// Creates a new dynamic [`View`] from a Ui function.
+pub fn dynamic<V>(cx: Scope, mut f: impl BuildUi<V>) -> DynamicNode {
+    DynamicNode::new(cx.owned_memo_scoped(move |cx| {
+        request_redraw(cx);
+
+        f.build(cx)
+    }))
 }

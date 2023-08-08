@@ -407,6 +407,8 @@ impl Fonts {
                     Some(rect) => uvs.push(rect),
                     None => {
                         atlas.grow(renderer);
+                        uvs.clear();
+
                         continue 'outer;
                     }
                 }

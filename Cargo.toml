@@ -26,13 +26,12 @@ ori-wgpu = { path = "crates/ori-wgpu", version = "0.1.0-alpha.1", optional = tru
 ori-winit = { path = "crates/ori-winit", version = "0.1.0-alpha.1", optional = true }
 
 [features]
-default = ["winit-wgpu", "wgpu-canvas"]
+default = ["winit-wgpu"]
 tracy = ["ori-winit/tracy"]
 image = ["ori-graphics/image"]
 
 # Backend features
 wgpu = ["ori-wgpu"]
-wgpu-canvas = ["ori-wgpu/canvas"]
 
 winit = ["ori-winit"]
 

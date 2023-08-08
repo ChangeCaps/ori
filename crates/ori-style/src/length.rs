@@ -5,6 +5,7 @@ use std::{
     ops::Range,
 };
 
+use ori_graphics::prelude::Vec2;
 pub use Length::*;
 
 /// A length. (eg. 10px, 10pt, 10%)
@@ -61,19 +62,13 @@ impl Length {
     pub const ZERO: Self = Px(0.0);
     pub const INFINITY: Self = Px(f32::INFINITY);
 
-    pub fn pixels(
-        self,
-        range: Range<f32>,
-        scale: f32,
-        window_width: f32,
-        window_height: f32,
-    ) -> f32 {
+    pub fn resolve(self, range: Range<f32>, scale: f32, window_size: Vec2) -> f32 {
         match self {
             Px(value) => value,
             Pt(value) => value * 96.0 / 72.0 * scale,
             Pc(value) => range.start + (range.end - range.start) * value / 100.0,
-            Vw(value) => value * window_width / 100.0,
-            Vh(value) => value * window_height / 100.0,
+            Vw(value) => value * window_size.x / 100.0,
+            Vh(value) => value * window_size.y / 100.0,
             Em(value) => value * 16.0 * scale,
         }
     }

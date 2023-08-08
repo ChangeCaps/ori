@@ -4,11 +4,8 @@ use std::{
     time::{Duration, Instant},
 };
 
-use ori_core::{
-    math::Vec2, BoxedBuildUi, BuildUi, Modifiers, Ui, UiBuilder, Window, WindowBuilder,
-};
+use ori_core::{math::Vec2, BuildUi, Modifiers, Ui, UiBuilder, UiFunction, Window, WindowBuilder};
 use ori_reactive::Event;
-use ori_style::Stylesheet;
 use ori_wgpu::WgpuBackend;
 use tracing::metadata::LevelFilter;
 use tracing_subscriber::Layer;
@@ -56,7 +53,7 @@ pub struct App {
     window: Window,
     event_loop: EventLoop<(WinitWindowId, Event)>,
     ui: Ui<WinitBackend, WgpuBackend>,
-    builder: Option<BoxedBuildUi>,
+    builder: Option<UiFunction>,
 }
 
 impl UiBuilder<WinitBackend, WgpuBackend> for App {
@@ -86,42 +83,14 @@ impl App {
 
         let window_backend = WinitBackend::new(event_loop.create_proxy());
         let wgpu_backend = WgpuBackend::new();
-        let mut ui = Ui::new(window_backend, wgpu_backend);
-
-        ui.style_loader.add_style(Stylesheet::day_theme()).unwrap();
+        let ui = Ui::new(window_backend, wgpu_backend);
 
         Self {
             window: Window::default(),
             ui,
             event_loop,
-            builder: Some(content.boxed()),
+            builder: Some(content.function()),
         }
-    }
-
-    /// Set the default theme to night theme, this will clear all the styles
-    /// that have been added before, and should therefore be called before
-    /// [`App::style`].
-    pub fn night_theme(mut self) -> Self {
-        self.ui.style_loader.clear();
-        self.ui.style_loader.add_style(Stylesheet::new()).unwrap();
-        self.ui
-            .style_loader
-            .add_style(Stylesheet::night_theme())
-            .unwrap();
-        self
-    }
-
-    /// Set the default theme to day theme, this will clear all the styles
-    /// that have been added before, and should therefore be called before
-    /// [`App::style`].
-    pub fn day_theme(mut self) -> Self {
-        self.ui.style_loader.clear();
-        self.ui.style_loader.add_style(Stylesheet::new()).unwrap();
-        self.ui
-            .style_loader
-            .add_style(Stylesheet::day_theme())
-            .unwrap();
-        self
     }
 }
 

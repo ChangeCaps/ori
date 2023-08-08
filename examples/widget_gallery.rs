@@ -2,7 +2,7 @@ use ori::prelude::*;
 
 const LONG_TEXT: &str = include_str!("long_text.txt");
 
-fn popup_ui(cx: Scope) -> View {
+fn popup_ui(cx: Scope) -> IntoView {
     // use an Atom to store the counter value, so that it persists when popup closes
     static COUNTER: Atom<i32> = atom!(0);
 
@@ -18,7 +18,7 @@ fn popup_ui(cx: Scope) -> View {
     }
 }
 
-fn ui(cx: Scope) -> View {
+fn ui(cx: Scope) -> IntoView {
     let counter = signal(cx, 1);
     let checked = signal(cx, false);
     let combovalue = signal(cx, "Item 1");

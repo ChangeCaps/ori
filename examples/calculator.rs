@@ -99,7 +99,7 @@ fn result_bar(
     operator: Signal<Operator>,
     result: Signal<Number>,
     rhs: Signal<Number>,
-) -> View {
+) -> IntoView {
     let text = cx.memo(move || {
         let result = result.get();
         let operator = operator.get();
@@ -126,7 +126,7 @@ fn bar0(
     operator: Signal<Operator>,
     result: Signal<Number>,
     rhs: Signal<Number>,
-) -> View {
+) -> IntoView {
     let clear_all = move |_: &PointerEvent| {
         operator.set(Operator::None);
         result.set(Number::new(0.0));
@@ -185,7 +185,7 @@ fn bar1(
     operator: Signal<Operator>,
     result: Signal<Number>,
     rhs: Signal<Number>,
-) -> View {
+) -> IntoView {
     let multiply = move |_: &PointerEvent| {
         operator.set(Operator::Multiply);
     };
@@ -205,7 +205,7 @@ fn bar2(
     operator: Signal<Operator>,
     result: Signal<Number>,
     rhs: Signal<Number>,
-) -> View {
+) -> IntoView {
     let subtract = move |_: &PointerEvent| {
         operator.set(Operator::Subtract);
     };
@@ -225,7 +225,7 @@ fn bar3(
     operator: Signal<Operator>,
     result: Signal<Number>,
     rhs: Signal<Number>,
-) -> View {
+) -> IntoView {
     let add = move |_: &PointerEvent| {
         operator.set(Operator::Add);
     };
@@ -245,7 +245,7 @@ fn bar4(
     operator: Signal<Operator>,
     result: Signal<Number>,
     rhs: Signal<Number>,
-) -> View {
+) -> IntoView {
     let negate = move |_: &PointerEvent| {
         if result.get().value == 0.0 {
             return;
@@ -310,7 +310,7 @@ fn buttons(
     operator: Signal<Operator>,
     result: Signal<Number>,
     rhs: Signal<Number>,
-) -> View {
+) -> IntoView {
     view! {
         <Div class="buttons column">
             { bar0(cx, operator, result, rhs) }
@@ -410,7 +410,7 @@ fn handle_keyboard_event(
     });
 }
 
-fn top_bar(cx: Scope) -> View {
+fn top_bar(cx: Scope) -> IntoView {
     let minimize = move |_: &PointerEvent| {
         minimize_window(cx);
     };
@@ -427,7 +427,7 @@ fn top_bar(cx: Scope) -> View {
     }
 }
 
-fn ui(cx: Scope) -> View {
+fn ui(cx: Scope) -> IntoView {
     let operator = signal(cx, Operator::None);
     let result = signal(cx, Number::new(0.0));
     let rhs = signal(cx, Number::new(0.0));

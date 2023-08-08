@@ -2,16 +2,6 @@ mod build;
 mod font;
 mod krate;
 mod style;
-mod view;
-
-/// Macro for building a reactive view, with html-like syntax.
-///
-/// For more information see [examples](https://github.com/ChangeCaps/ori/tree/main/examples).
-#[manyhow::manyhow]
-#[proc_macro]
-pub fn view(input: proc_macro::TokenStream) -> manyhow::Result<proc_macro::TokenStream> {
-    view::view(input)
-}
 
 /// Includes a font from a file, or directory.
 #[manyhow::manyhow]

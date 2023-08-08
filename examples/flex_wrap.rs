@@ -1,6 +1,6 @@
 use ori::prelude::*;
 
-fn content(cx: Scope) -> View {
+fn content(cx: Scope) -> IntoView {
     view! {
         <Div style:width=Px(100.0)
             style:height=Px(100.0)
@@ -8,7 +8,7 @@ fn content(cx: Scope) -> View {
     }
 }
 
-fn ui(cx: Scope) -> View {
+fn ui(cx: Scope) -> IntoView {
     view! {
         <Scroll style:width=Pc(100.0)
             style:align-items=AlignItem::Center
