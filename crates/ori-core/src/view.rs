@@ -1,44 +1,30 @@
-use std::sync::Arc;
+use std::any::{Any, TypeId};
 
 use deref_derive::{Deref, DerefMut};
 use glam::Vec2;
-use ori_graphics::{Affine, Frame, Glyphs, PrimitiveKind, Rect};
+use ori_graphics::{Affine, Frame, Glyphs, Primitive, PrimitiveKind, Rect};
 use ori_reactive::Event;
 
-use crate::{AvailableSpace, Context, Node, Padding};
+use crate::{AvailableSpace, Context, Padding};
 
 #[derive(Deref, DerefMut)]
 pub struct EventContext<'a> {
     #[deref]
     pub(crate) context: Context<'a>,
     pub(crate) transform: Affine,
-    pub(crate) size: Vec2,
 }
 
 impl<'a> EventContext<'a> {
     pub(crate) fn new(context: Context<'a>, transform: Affine) -> Self {
-        let size = context.size();
-
-        Self {
-            context,
-            transform,
-            size,
-        }
-    }
-
-    pub fn child(&mut self, index: usize, view: &impl View, event: &Event) {
-        self.context.child(index, |context| {
-            let mut cx = EventContext::new(context, self.transform);
-            view.event(&mut cx, event);
-        })
+        Self { context, transform }
     }
 
     pub fn size(&self) -> Vec2 {
-        self.size
+        self.context.size()
     }
 
     pub fn rect(&self) -> Rect {
-        Rect::new(Vec2::ZERO, self.size)
+        Rect::new(Vec2::ZERO, self.size())
     }
 
     pub fn transform(&self) -> Affine {
@@ -80,7 +66,7 @@ impl<'a> EventContext<'a> {
         padding: Padding,
         f: impl FnOnce(&mut EventContext<'_>) -> T,
     ) -> T {
-        self.with_translation(padding.translation(), f)
+        self.with_translation(padding.translation(self), f)
     }
 }
 
@@ -94,15 +80,6 @@ impl<'a> LayoutContext<'a> {
     pub(crate) fn new(context: Context<'a>) -> Self {
         Self { context }
     }
-
-    pub fn child(&mut self, index: usize, view: &impl View, space: AvailableSpace) -> Vec2 {
-        self.context.child(index, |context| {
-            let mut cx = LayoutContext::new(context);
-            let size = view.layout(&mut cx, space);
-            cx.context.tree.size = Some(size);
-            size
-        })
-    }
 }
 
 #[derive(Deref, DerefMut)]
@@ -110,30 +87,15 @@ pub struct DrawContext<'a> {
     #[deref]
     pub(crate) context: Context<'a>,
     pub(crate) frame: &'a mut Frame,
-    pub(crate) size: Vec2,
 }
 
 impl<'a> DrawContext<'a> {
     pub(crate) fn new(context: Context<'a>, frame: &'a mut Frame) -> Self {
-        let size = context.size();
-        Self {
-            context,
-            frame,
-            size,
-        }
-    }
-
-    pub fn child(&mut self, index: usize, view: &impl View) {
-        self.with_layer(1.0, |cx| {
-            cx.context.child(index, |context| {
-                let mut cx = DrawContext::new(context, cx.frame);
-                view.draw(&mut cx);
-            })
-        })
+        Self { context, frame }
     }
 
     pub fn size(&self) -> Vec2 {
-        self.size
+        self.context.size()
     }
 
     pub fn rect(&self) -> Rect {
@@ -177,7 +139,7 @@ impl<'a> DrawContext<'a> {
         padding: Padding,
         f: impl FnOnce(&mut DrawContext<'_>) -> T,
     ) -> T {
-        self.with_translation(padding.translation(), f)
+        self.with_translation(padding.translation(self), f)
     }
 
     pub fn with_layer<T>(&mut self, z_index: f32, f: impl FnOnce(&mut DrawContext<'_>) -> T) -> T {
@@ -204,7 +166,12 @@ impl<'a> DrawContext<'a> {
         let mesh = self.context.fonts.text_mesh(self.renderer, glyphs, rect);
 
         if let Some(mesh) = mesh {
-            self.draw(mesh);
+            self.frame.draw_primitive(Primitive {
+                kind: PrimitiveKind::Mesh(mesh),
+                z_index: self.frame.z_index,
+                transform: self.frame.transform.round(),
+                clip: self.frame.clip,
+            });
         }
     }
 }
@@ -213,10 +180,6 @@ pub trait IntoView: Sized {
     type View: View;
 
     fn into_view(self) -> Self::View;
-
-    fn into_node(self) -> Node {
-        View::into_node(self.into_view())
-    }
 }
 
 impl<T: View> IntoView for T {
@@ -228,7 +191,7 @@ impl<T: View> IntoView for T {
 }
 
 #[allow(unused_variables)]
-pub trait View: Send + Sync + 'static {
+pub trait View: Any + Send + Sync {
     fn event(&self, cx: &mut EventContext<'_>, event: &Event) {}
 
     fn layout(&self, cx: &mut LayoutContext<'_>, space: AvailableSpace) -> Vec2 {
@@ -236,13 +199,25 @@ pub trait View: Send + Sync + 'static {
     }
 
     fn draw(&self, cx: &mut DrawContext<'_>) {}
+}
 
-    #[doc(hidden)]
-    fn into_node(self) -> Node
-    where
-        Self: Sized,
-    {
-        Node::from_arc(Arc::new(self))
+impl dyn View {
+    pub fn downcast_ref<T: View>(&self) -> Option<&T> {
+        if <dyn View>::type_id(self) == TypeId::of::<T>() {
+            // SAFETY: `T` is the same type as `self`.
+            unsafe { Some(&*(self as *const dyn View as *const T)) }
+        } else {
+            None
+        }
+    }
+
+    pub fn downcast_mut<T: View>(&mut self) -> Option<&mut T> {
+        if <dyn View>::type_id(self) == TypeId::of::<T>() {
+            // SAFETY: `T` is the same type as `self`.
+            unsafe { Some(&mut *(self as *mut dyn View as *mut T)) }
+        } else {
+            None
+        }
     }
 }
 

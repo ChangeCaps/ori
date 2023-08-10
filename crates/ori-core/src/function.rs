@@ -1,7 +1,8 @@
-use ori_reactive::{Modify, Scope, Signal};
+use ori_reactive::{effect::current_effect, prelude::emit, Modify, Scope, Signal};
 
 use crate::{
-    BuildUi, CloseWindow, DragWindow, DynamicNode, OpenWindow, RequestRedrawEvent, Window, WindowId,
+    BuildUi, CloseWindow, DragWindow, OpenWindow, ReactiveNode, RequestAnimationFrame,
+    RequestLayoutEvent, RequestRedrawEvent, Window, WindowId,
 };
 
 /// Returns a signal with the current window.
@@ -42,19 +43,36 @@ pub fn maximize_window(cx: Scope) {
 
 /// Drag the current window, see [`DragWindow`] for more information.
 pub fn drag_window(cx: Scope) {
-    cx.emit(DragWindow::new());
+    emit(cx, DragWindow::new());
 }
 
 /// Request a redraw of the current window.
 pub fn request_redraw(cx: Scope) {
-    cx.emit(RequestRedrawEvent);
+    emit(cx, RequestRedrawEvent);
+}
+
+/// Request a layout of the current window.
+pub fn request_layout(cx: Scope) {
+    emit(cx, RequestLayoutEvent);
+}
+
+/// Request an animation frame.
+///
+/// This will re-evaluate the current effect just before the next draw.
+pub fn request_animation_frame(cx: Scope) {
+    if let Some(callback) = current_effect() {
+        let request = RequestAnimationFrame::new(callback);
+        emit(cx, request);
+        request_redraw(cx);
+    } else {
+        tracing::warn!("animation frame requested outside effect");
+    }
 }
 
 /// Creates a new dynamic [`View`] from a Ui function.
-pub fn dynamic<V>(cx: Scope, mut f: impl BuildUi<V>) -> DynamicNode {
-    DynamicNode::new(cx.owned_memo_scoped(move |cx| {
-        request_redraw(cx);
-
+pub fn reactive<V>(cx: Scope, mut f: impl BuildUi<V>) -> ReactiveNode {
+    ReactiveNode::new(cx.owned_memo_scoped(move |cx| {
+        request_layout(cx);
         f.build(cx)
     }))
 }

@@ -4,23 +4,16 @@ use ori_graphics::{
 };
 use ori_reactive::Event;
 
-use crate::{AvailableSpace, DrawContext, EventContext, IntoView, LayoutContext, StateView};
+use crate::{
+    AvailableSpace, DrawContext, EventContext, Key, LayoutContext, Node, StateView, Style, Styled,
+    Unit,
+};
 
 macro_rules! impl_into_text {
     ($($ty:ty),*) => {$(
-        impl From<$ty> for Text {
+        impl From<$ty> for Node {
             fn from(value: $ty) -> Self {
-                Self {
-                    text: value.to_string(),
-                }
-            }
-        }
-
-        impl IntoView for $ty {
-            type View = Text;
-
-            fn into_view(self) -> Self::View {
-                Text::new(self)
+                Node::from(Text::from(value))
             }
         }
     )*};
@@ -31,14 +24,117 @@ impl_into_text!(
     String
 );
 
-#[derive(Clone, Debug, Default)]
+impl<T: ToString> From<T> for Text {
+    fn from(value: T) -> Self {
+        Self {
+            text: value.to_string(),
+            ..Default::default()
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct Text {
     text: String,
+    font_size: Style<Unit>,
+    font_family: Style<FontFamily>,
+    font_weight: Style<FontWeight>,
+    font_stretch: Style<FontStretch>,
+    font_style: Style<FontStyle>,
+    color: Style<Color>,
+    v_align: Style<TextAlign>,
+    h_align: Style<TextAlign>,
+    line_height: Style<f32>,
+    wrap: Style<TextWrap>,
+}
+
+impl Default for Text {
+    fn default() -> Self {
+        Self {
+            text: Default::default(),
+            font_size: Style::new(Self::FONT_SIZE),
+            font_family: Style::new(Self::FONT_FAMILY),
+            font_weight: Style::new(Self::FONT_WEIGHT),
+            font_stretch: Style::new(Self::FONT_STRETCH),
+            font_style: Style::new(Self::FONT_STYLE),
+            color: Style::new(Self::COLOR),
+            v_align: Style::new(Self::V_ALIGN),
+            h_align: Style::new(Self::H_ALIGN),
+            line_height: Style::new(Self::LINE_HEIGHT),
+            wrap: Style::new(Self::WRAP),
+        }
+    }
 }
 
 impl Text {
+    pub const FONT_SIZE: Key<Unit> = Key::new("text.font-size");
+    pub const FONT_FAMILY: Key<FontFamily> = Key::new("text.font-family");
+    pub const FONT_WEIGHT: Key<FontWeight> = Key::new("text.font-weight");
+    pub const FONT_STRETCH: Key<FontStretch> = Key::new("text.font-stretch");
+    pub const FONT_STYLE: Key<FontStyle> = Key::new("text.font-style");
+    pub const COLOR: Key<Color> = Key::new("text.color");
+    pub const V_ALIGN: Key<TextAlign> = Key::new("text.v-align");
+    pub const H_ALIGN: Key<TextAlign> = Key::new("text.h-align");
+    pub const LINE_HEIGHT: Key<f32> = Key::new("text.line-height");
+    pub const WRAP: Key<TextWrap> = Key::new("text.wrap");
+
     pub fn new(text: impl Into<Text>) -> Self {
         text.into()
+    }
+
+    pub fn text(mut self, text: impl Into<String>) -> Self {
+        self.text = text.into();
+        self
+    }
+
+    pub fn font_size(mut self, font_size: impl Styled<Unit>) -> Self {
+        self.font_size = font_size.style();
+        self
+    }
+
+    pub fn font_family(mut self, font_family: impl Styled<FontFamily>) -> Self {
+        self.font_family = font_family.style();
+        self
+    }
+
+    pub fn font_weight(mut self, font_weight: impl Styled<FontWeight>) -> Self {
+        self.font_weight = font_weight.style();
+        self
+    }
+
+    pub fn font_stretch(mut self, font_stretch: impl Styled<FontStretch>) -> Self {
+        self.font_stretch = font_stretch.style();
+        self
+    }
+
+    pub fn font_style(mut self, font_style: impl Styled<FontStyle>) -> Self {
+        self.font_style = font_style.style();
+        self
+    }
+
+    pub fn color(mut self, color: impl Styled<Color>) -> Self {
+        self.color = color.style();
+        self
+    }
+
+    pub fn v_align(mut self, v_align: impl Styled<TextAlign>) -> Self {
+        self.v_align = v_align.style();
+        self
+    }
+
+    pub fn h_align(mut self, h_align: impl Styled<TextAlign>) -> Self {
+        self.h_align = h_align.style();
+        self
+    }
+
+    pub fn line_height(mut self, line_height: impl Styled<f32>) -> Self {
+        self.line_height = line_height.style();
+        self
+    }
+
+    pub fn wrap(mut self, wrap: impl Styled<TextWrap>) -> Self {
+        self.wrap = wrap.style();
+        self
     }
 }
 
@@ -59,20 +155,21 @@ impl StateView for Text {
     ) -> Vec2 {
         let section = TextSection {
             text: &self.text,
-            font_size: 16.0,
-            font_family: FontFamily::Serif,
-            font_weight: FontWeight::NORMAL,
-            font_stretch: FontStretch::Normal,
-            font_style: FontStyle::Normal,
-            color: Color::BLACK,
-            v_align: TextAlign::Start,
-            h_align: TextAlign::Center,
-            line_height: 1.0,
-            wrap: TextWrap::Word,
+            font_size: cx.unit(self.font_size.get(cx.theme)),
+            font_family: self.font_family.get(cx.theme),
+            font_weight: self.font_weight.get(cx.theme),
+            font_stretch: self.font_stretch.get(cx.theme),
+            font_style: self.font_style.get(cx.theme),
+            color: self.color.get(cx.theme),
+            v_align: self.v_align.get(cx.theme),
+            h_align: self.h_align.get(cx.theme),
+            line_height: self.line_height.get(cx.theme),
+            wrap: self.wrap.get(cx.theme),
             bounds: space.max,
         };
 
         *state = cx.fonts.layout_glyphs(&section);
+
         state.as_ref().map_or(space.min, |glyphs| glyphs.size())
     }
 

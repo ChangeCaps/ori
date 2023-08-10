@@ -1,14 +1,20 @@
-use std::{collections::HashMap, fmt::Debug, time::Instant};
+use std::{
+    collections::HashMap,
+    fmt::Debug,
+    time::{Duration, Instant},
+};
 
 use glam::{UVec2, Vec2};
 use ori_graphics::{FontSource, Fonts, Frame, ImageCache, RenderBackend, Renderer};
-use ori_reactive::{Emitter, Event, EventSink, Scope, Task};
+use ori_reactive::{Emitter, Event, EventSink, Scope, Task, WeakCallback};
 
 use crate::{
-    function::{dynamic, window},
-    AvailableSpace, CloseWindow, DragWindow, ForceLayoutEvent, IntoView, Key, KeyboardEvent,
-    Metrics, Modifiers, Node, OpenWindow, PointerButton, PointerEvent, RequestRedrawEvent, Tree,
-    Window, WindowBackend, WindowClosedEvent, WindowId, WindowResizedEvent,
+    default_theme::default_theme,
+    function::{reactive, window},
+    AvailableSpace, CloseWindow, Code, DragWindow, KeyboardEvent, Metrics, Modifiers, Node,
+    OpenWindow, PointerButton, PointerEvent, RequestAnimationFrame, RequestLayoutEvent,
+    RequestRedrawEvent, Theme, Tree, Window, WindowBackend, WindowClosedEvent, WindowId,
+    WindowResizedEvent,
 };
 
 const TEXT_FONT: &[u8] = include_bytes!("../fonts/NotoSans-Medium.ttf");
@@ -22,7 +28,7 @@ pub trait BuildUi<V>: Sized + Send + Sync + 'static {
     }
 }
 
-impl<V: IntoView, F> BuildUi<V> for F
+impl<V: Into<Node>, F> BuildUi<V> for F
 where
     F: FnMut(Scope) -> V + Send + Sync + 'static,
 {
@@ -43,9 +49,35 @@ struct WindowUi<R: Renderer> {
     event_emitter: Emitter<Event>,
     modifiers: Modifiers,
     pointers: HashMap<u64, Vec2>,
+    animation_frames: Vec<WeakCallback>,
+    needs_layout: bool,
+    last_event: Option<Instant>,
+    last_layout: Option<Instant>,
+    last_draw: Option<Instant>,
 }
 
 impl<R: Renderer> WindowUi<R> {
+    fn event_delta(&mut self) -> Duration {
+        let now = Instant::now();
+        let delta = now - self.last_event.unwrap_or(now);
+        self.last_event = Some(now);
+        delta
+    }
+
+    fn layout_delta(&mut self) -> Duration {
+        let now = Instant::now();
+        let delta = now - self.last_layout.unwrap_or(now);
+        self.last_layout = Some(now);
+        delta
+    }
+
+    fn draw_delta(&mut self) -> Duration {
+        let now = Instant::now();
+        let delta = now - self.last_draw.unwrap_or(now);
+        self.last_draw = Some(now);
+        delta
+    }
+
     /// Queries information about the window that won't be provided by events.
     fn query_window(&mut self, window_backend: &mut impl WindowBackend) {
         let mut new_window = window(self.scope).get_untracked();
@@ -203,6 +235,8 @@ where
     pub frame: Frame,
     /// The font system, see [`Fonts`] for more information.
     pub fonts: Fonts,
+    /// The theme, see [`ThemeLoader`] for more information.
+    pub theme: Theme,
     /// The image cache, see [`ImageCache`] for more information.
     pub image_cache: ImageCache,
     /// The idle callback, see [`Ui::idle`] for more information.
@@ -232,6 +266,7 @@ where
             render_backend,
             frame: Frame::new(),
             fonts,
+            theme: default_theme(),
             image_cache: ImageCache::new(),
             idle_callback: None,
             config: UiConfig::default(),
@@ -304,7 +339,7 @@ where
         scope.with_context(scope.signal(window.clone()));
 
         // create the root view
-        let root = Node::new(dynamic(scope, ui));
+        let root = Node::new(reactive(scope, ui));
 
         let window_ui = WindowUi {
             renderer,
@@ -316,6 +351,11 @@ where
             event_emitter,
             modifiers: Modifiers::default(),
             pointers: HashMap::new(),
+            animation_frames: Vec::new(),
+            needs_layout: true,
+            last_event: None,
+            last_layout: None,
+            last_draw: None,
         };
 
         // now that everything is ready, we can show the window
@@ -357,9 +397,9 @@ where
     }
 
     /// Forces all elements to be relaid out.
-    pub fn force_layout(&mut self) {
-        for id in self.window_ids() {
-            self.event_inner(id, &Event::new(ForceLayoutEvent), true);
+    pub fn request_layout(&mut self) {
+        for (&id, ui) in self.window_ui.iter_mut() {
+            ui.needs_layout = true;
             self.window_backend.request_redraw(id);
         }
     }
@@ -367,6 +407,8 @@ where
     /// Window has been resized.
     pub fn window_resized(&mut self, id: WindowId, width: u32, height: u32) {
         if let Some(ui) = self.window_ui.get_mut(&id) {
+            ui.needs_layout = true;
+
             window(ui.scope).modify().size = UVec2::new(width, height);
             ui.renderer.resize(width, height);
         }
@@ -391,6 +433,10 @@ where
     /// Get the modifiers of a window.
     pub fn get_modfiers(&self, window: WindowId) -> Option<Modifiers> {
         Some(self.window_ui.get(&window)?.modifiers)
+    }
+
+    pub fn needs_layout(&self, window: WindowId) -> bool {
+        (self.window_ui.get(&window)).map_or(false, |ui| ui.needs_layout)
     }
 
     /// Get the modifiers of a window.
@@ -433,6 +479,14 @@ where
         }
     }
 
+    fn emit_animation_frames(&mut self, window: WindowId) {
+        if let Some(ui) = self.window_ui.get_mut(&window) {
+            for callback in ui.animation_frames.drain(..) {
+                callback.emit(&());
+            }
+        }
+    }
+
     /// Handle a pointer being moved.
     pub fn pointer_moved(&mut self, window: WindowId, device: u64, position: Vec2) {
         if let Some(window) = self.window_ui.get_mut(&window) {
@@ -471,6 +525,10 @@ where
             ..Default::default()
         };
 
+        if let Some(window) = self.window_ui.get_mut(&window) {
+            window.pointers.remove(&device);
+        }
+
         self.event_inner(window, &Event::new(event), true);
     }
 
@@ -508,7 +566,7 @@ where
     }
 
     /// Handle a key being pressed or released.
-    pub fn key(&mut self, window: WindowId, key: Key, pressed: bool) {
+    pub fn key(&mut self, window: WindowId, key: Code, pressed: bool) {
         let event = KeyboardEvent {
             key: Some(key),
             pressed,
@@ -579,7 +637,22 @@ where
             return;
         }
 
+        if let Some(event) = event.get::<RequestAnimationFrame>() {
+            if let Some(ui) = self.window_ui.get_mut(&id) {
+                ui.animation_frames.push(event.callback().clone());
+            }
+        }
+
         if event.is::<RequestRedrawEvent>() {
+            self.window_backend.request_redraw(id);
+            return;
+        }
+
+        if event.is::<RequestLayoutEvent>() {
+            if let Some(ui) = self.window_ui.get_mut(&id) {
+                ui.needs_layout = true;
+            }
+
             self.window_backend.request_redraw(id);
             return;
         }
@@ -599,12 +672,16 @@ where
 
             let window = window(ui.scope);
 
+            let delta_time = ui.event_delta();
             let start = Instant::now();
             ori_reactive::effect::delay_effects(|| {
                 ui.root.event_root(
                     &mut self.fonts,
                     &ui.renderer,
                     &mut self.image_cache,
+                    &self.theme,
+                    window,
+                    delta_time,
                     &ui.event_sink,
                     &mut ui.tree,
                     event,
@@ -623,16 +700,22 @@ where
         tracing::trace!("Laying out window {:?}", id);
 
         if let Some(ui) = self.window_ui.get_mut(&id) {
+            ui.needs_layout = false;
+
             ui.query_window(&mut self.window_backend);
             let window = window(ui.scope);
             let size = window.get_untracked().size.as_vec2();
 
+            let delta_time = ui.layout_delta();
             let start = Instant::now();
             ori_reactive::effect::delay_effects(|| {
                 ui.root.layout_root(
                     &mut self.fonts,
                     &ui.renderer,
                     &mut self.image_cache,
+                    &self.theme,
+                    window,
+                    delta_time,
                     &ui.event_sink,
                     &mut ui.tree,
                     AvailableSpace::new(Vec2::ZERO, size),
@@ -656,23 +739,30 @@ where
     pub fn draw(&mut self, id: WindowId) {
         // if reducing pointer events, simulate them now
         self.simulate_pointer_moved(id);
+        self.emit_animation_frames(id);
 
         tracing::trace!("Drawing window {:?}", id);
 
-        // before drawing, we need to make sure the ui is laid out
-        self.layout_inner(id, false);
+        // layout if needed
+        if self.needs_layout(id) {
+            self.layout_inner(id, false);
+        }
 
         if let Some(ui) = self.window_ui.get_mut(&id) {
             self.frame.clear();
 
             let window = window(ui.scope);
 
+            let delta_time = ui.draw_delta();
             let start = Instant::now();
             ori_reactive::effect::delay_effects(|| {
                 ui.root.draw_root(
                     &mut self.fonts,
                     &ui.renderer,
                     &mut self.image_cache,
+                    &self.theme,
+                    window,
+                    delta_time,
                     &ui.event_sink,
                     &mut ui.tree,
                     &mut self.frame,

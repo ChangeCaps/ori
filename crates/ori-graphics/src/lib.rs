@@ -44,6 +44,7 @@ pub mod prelude {
     pub use crate::mesh::{Mesh, Vertex};
     pub use crate::quad::Quad;
     pub use crate::rect::Rect;
+    #[cfg(feature = "text")]
     pub use crate::text::{
         font, FontFamily, FontStretch, FontStyle, FontWeight, TextAlign, TextSection, TextWrap,
     };

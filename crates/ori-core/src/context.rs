@@ -1,24 +1,31 @@
-use std::any::Any;
+use std::{any::Any, time::Duration};
 
 use glam::Vec2;
 use ori_graphics::{Fonts, ImageCache, Renderer};
-use ori_reactive::EventSink;
+use ori_reactive::{EventSink, Signal};
 
-use crate::{RequestRedrawEvent, Tree};
+use crate::{RequestRedrawEvent, Theme, Tree, Unit, Window};
 
 pub struct Context<'a> {
     pub fonts: &'a mut Fonts,
     pub renderer: &'a dyn Renderer,
     pub image_cache: &'a mut ImageCache,
+    pub theme: &'a Theme,
+    pub window: Signal<Window>,
+    pub delta_time: Duration,
     pub(crate) event_sink: &'a EventSink,
     pub(crate) tree: &'a mut Tree,
 }
 
 impl<'a> Context<'a> {
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         fonts: &'a mut Fonts,
         renderer: &'a dyn Renderer,
         image_cache: &'a mut ImageCache,
+        theme: &'a Theme,
+        window: Signal<Window>,
+        delta_time: Duration,
         event_sink: &'a EventSink,
         tree: &'a mut Tree,
     ) -> Self {
@@ -26,6 +33,9 @@ impl<'a> Context<'a> {
             fonts,
             renderer,
             image_cache,
+            theme,
+            window,
+            delta_time,
             event_sink,
             tree,
         }
@@ -36,6 +46,9 @@ impl<'a> Context<'a> {
             fonts: self.fonts,
             renderer: self.renderer,
             image_cache: self.image_cache,
+            theme: self.theme,
+            window: self.window,
+            delta_time: self.delta_time,
             event_sink: self.event_sink,
             tree: self.tree.child(index),
         };
@@ -53,11 +66,20 @@ impl<'a> Context<'a> {
         }
     }
 
+    pub fn unit(&self, unit: Unit) -> f32 {
+        let window = self.window.get();
+        unit.resolve(window.scale, window.size.as_vec2())
+    }
+
     pub fn emit(&self, event: impl Any + Send + Sync) {
         self.event_sink.emit(event);
     }
 
     pub fn request_redraw(&self) {
         self.emit(RequestRedrawEvent);
+    }
+
+    pub fn dt(&self) -> f32 {
+        self.delta_time.as_secs_f32()
     }
 }

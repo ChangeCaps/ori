@@ -24,7 +24,7 @@ pub trait StateView: Send + Sync + 'static {
 }
 
 fn take_state<V: StateView>(view: &V, tree: &mut Tree) -> Box<V::State> {
-    let Some(state) = tree.state.take() else {
+    let Some(state) = tree.take_view_state() else {
         return Box::new(view.build());
     };
 
@@ -41,13 +41,13 @@ impl<T: StateView> View for T {
     fn event(&self, cx: &mut EventContext<'_>, event: &Event) {
         let mut state = take_state(self, cx.tree);
         self.event(&mut state, cx, event);
-        cx.tree.state = Some(state);
+        cx.tree.set_view_state(state);
     }
 
     fn layout(&self, cx: &mut LayoutContext<'_>, space: AvailableSpace) -> Vec2 {
         let mut state = take_state(self, cx.tree);
         let size = self.layout(&mut state, cx, space);
-        cx.tree.state = Some(state);
+        cx.tree.set_view_state(state);
 
         size
     }
@@ -55,6 +55,6 @@ impl<T: StateView> View for T {
     fn draw(&self, cx: &mut DrawContext<'_>) {
         let mut state = take_state(self, cx.tree);
         self.draw(&mut state, cx);
-        cx.tree.state = Some(state);
+        cx.tree.set_view_state(state);
     }
 }

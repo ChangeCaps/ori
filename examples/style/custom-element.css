@@ -1,8 +1,0 @@
-custom-element {
-	custom-radius: 45%;
-	custom-color: #f00;
-}
-
-custom-element:hover {
-	custom-color: #0f0 1s;
-}

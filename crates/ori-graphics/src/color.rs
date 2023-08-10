@@ -180,13 +180,33 @@ impl Color {
         (h, s, l)
     }
 
-    /// Brighten the color by the given amount.
+    /// Linearly interpolate between two colors.
+    ///
+    /// This uses a fractor `t` between `0.0` and `1.0`.
+    /// Where `0.0` is `self` and `1.0` is `other`.
+    pub fn mix(self, other: Self, t: f32) -> Self {
+        other * t + self * (1.0 - t)
+    }
+
+    /// Saturates the color by given `amount`.
+    pub fn saturate(self, amount: f32) -> Self {
+        let (h, s, l, a) = self.to_hsla();
+        Self::hsla(h, s + amount, l, a)
+    }
+
+    /// Desaturates the color by given `amount`.
+    pub fn desaturate(self, amount: f32) -> Self {
+        let (h, s, l, a) = self.to_hsla();
+        Self::hsla(h, s - amount, l, a)
+    }
+
+    /// Brighten the color by the given `amount`.
     pub fn brighten(self, amount: f32) -> Self {
         let (h, s, l, a) = self.to_hsla();
         Self::hsla(h, s, l + amount, a)
     }
 
-    /// Darken the color by the given amount.
+    /// Darken the color by the given `amount`.
     pub fn darken(self, amount: f32) -> Self {
         let (h, s, l, a) = self.to_hsla();
         Self::hsla(h, s, l - amount, a)

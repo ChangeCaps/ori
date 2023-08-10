@@ -7,11 +7,11 @@ use crate::{AvailableSpace, DrawContext, EventContext, LayoutContext, Node, View
 ///
 /// See [`dynamic`](crate::function::dynamic) for more information.
 #[derive(Clone, Debug)]
-pub struct DynamicNode {
+pub struct ReactiveNode {
     signal: OwnedSignal<Node>,
 }
 
-impl DynamicNode {
+impl ReactiveNode {
     /// Creates a new dynamic node.
     ///
     /// See [`dynamic`](crate::function::dynamic) for more information.
@@ -20,7 +20,7 @@ impl DynamicNode {
     }
 }
 
-impl View for DynamicNode {
+impl View for ReactiveNode {
     fn event(&self, cx: &mut EventContext<'_>, event: &Event) {
         self.signal.get().event(cx, event);
     }

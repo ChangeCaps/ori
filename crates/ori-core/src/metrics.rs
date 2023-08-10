@@ -154,7 +154,7 @@ impl Metrics {
             start_time: Instant::now(),
             pointer_moved: InstantMetric::new(100),
             event: DurationMetric::new(100),
-            layout: DurationMetric::new(100),
+            layout: DurationMetric::new(10),
             draw: DurationMetric::new(100),
         }
     }

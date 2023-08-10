@@ -28,7 +28,7 @@ use std::{cell::RefCell, fmt::Debug, ops::DerefMut, panic::Location, sync::Arc};
 
 use parking_lot::Mutex;
 
-use crate::{Callback, Resource, ScopeId, WeakEmitter};
+use crate::{Callback, Resource, ScopeId, WeakCallback, WeakEmitter};
 
 thread_local! {
     static EFFECT_STACK: RefCell<Vec<*mut EffectState>> = Default::default();
@@ -119,6 +119,19 @@ pub fn delay_effects(f: impl FnOnce()) {
     for effect in effects {
         effect.emit(&());
     }
+}
+
+/// Get a [`WeakCallback`] to the currently running effect.
+pub fn current_effect() -> Option<WeakCallback> {
+    EFFECT_STACK.with(|effects| {
+        let effects = effects.borrow();
+
+        // SAFETY: EFFECT_STACK is thread local, and no other mutable references to `effect`
+        // can be created while this function is running.
+        let effect = unsafe { &**effects.last()? };
+
+        Some(effect.callback.downgrade())
+    })
 }
 
 /// Creates a new effect. The effect is managed by the given `scope`, and when the scope is

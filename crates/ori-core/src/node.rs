@@ -1,12 +1,17 @@
 use std::{fmt::Debug, sync::Arc};
 
 use glam::Vec2;
-use ori_graphics::{Affine, Fonts, Frame, ImageCache, Renderer};
-use ori_reactive::{Event, EventSink};
+use ori_reactive::Event;
 
-use crate::{
-    AvailableSpace, Context, DrawContext, EventContext, IntoView, LayoutContext, Tree, View,
-};
+use crate::{AvailableSpace, DrawContext, EventContext, LayoutContext, Padding, View};
+
+impl<T: View> From<T> for Node {
+    fn from(view: T) -> Self {
+        Self {
+            view: Arc::new(view),
+        }
+    }
+}
 
 #[derive(Clone)]
 pub struct Node {
@@ -20,8 +25,8 @@ impl Default for Node {
 }
 
 impl Node {
-    pub fn new(view: impl IntoView) -> Self {
-        view.into_node()
+    pub fn new(view: impl Into<Node>) -> Self {
+        view.into()
     }
 
     pub fn from_arc(view: Arc<dyn View>) -> Self {
@@ -32,66 +37,74 @@ impl Node {
         Self { view: Arc::new(()) }
     }
 
-    pub(crate) fn event_root(
-        &self,
-        fonts: &mut Fonts,
-        renderer: &dyn Renderer,
-        image_cache: &mut ImageCache,
-        event_sink: &EventSink,
-        tree: &mut Tree,
-        event: &Event,
-    ) {
-        let context = Context::new(fonts, renderer, image_cache, event_sink, tree);
-        let mut cx = EventContext::new(context, Affine::IDENTITY);
-        self.view.event(&mut cx, event);
+    pub fn view(&self) -> &dyn View {
+        self.view.as_ref()
     }
 
-    pub(crate) fn layout_root(
-        &self,
-        fonts: &mut Fonts,
-        renderer: &dyn Renderer,
-        image_cache: &mut ImageCache,
-        event_sink: &EventSink,
-        tree: &mut Tree,
-        space: AvailableSpace,
-    ) -> Vec2 {
-        let context = Context::new(fonts, renderer, image_cache, event_sink, tree);
-        let mut cx = LayoutContext::new(context);
-        let size = self.view.layout(&mut cx, space);
-        tree.size = Some(size);
-        size
-    }
-
-    pub(crate) fn draw_root(
-        &self,
-        fonts: &mut Fonts,
-        renderer: &dyn Renderer,
-        image_cache: &mut ImageCache,
-        event_sink: &EventSink,
-        tree: &mut Tree,
-        frame: &mut Frame,
-    ) {
-        let context = Context::new(fonts, renderer, image_cache, event_sink, tree);
-        let mut cx = DrawContext::new(context, frame);
-        self.view.draw(&mut cx);
+    pub fn downcast_ref<T: View>(&self) -> Option<&T> {
+        self.view.downcast_ref()
     }
 }
 
-impl View for Node {
-    fn event(&self, cx: &mut EventContext<'_>, event: &Event) {
-        self.view.event(cx, event);
+impl Node {
+    pub fn event_indexed(&self, index: usize, cx: &mut EventContext<'_>, event: &Event) {
+        cx.context.child(index, |context| {
+            let mut cx = EventContext::new(context, cx.transform);
+            self.view.event(&mut cx, event);
+        });
     }
 
-    fn layout(&self, cx: &mut LayoutContext<'_>, space: AvailableSpace) -> Vec2 {
-        self.view.layout(cx, space)
+    pub fn layout_indexed(
+        &self,
+        index: usize,
+        cx: &mut LayoutContext<'_>,
+        space: AvailableSpace,
+    ) -> Vec2 {
+        cx.context.child(index, |context| {
+            let mut cx = LayoutContext::new(context);
+            let size = self.view.layout(&mut cx, space);
+            cx.tree.set_size(size);
+            size
+        })
     }
 
-    fn draw(&self, cx: &mut DrawContext<'_>) {
-        self.view.draw(cx);
+    pub fn draw_indexed(&self, index: usize, cx: &mut DrawContext<'_>) {
+        cx.with_layer(1.0, |cx| {
+            cx.context.child(index, |context| {
+                let mut cx = DrawContext::new(context, cx.frame);
+                self.view.draw(&mut cx);
+            });
+        });
     }
 
-    fn into_node(self) -> Node {
-        self
+    pub fn event_padded(&self, cx: &mut EventContext<'_>, event: &Event, padding: Padding) {
+        cx.with_padding(padding, |cx| self.event(cx, event));
+    }
+
+    pub fn layout_padded(
+        &self,
+        cx: &mut LayoutContext<'_>,
+        space: AvailableSpace,
+        padding: Padding,
+    ) -> Vec2 {
+        let size = padding.size(cx);
+        self.layout(cx, space.shrink(size)) + size
+    }
+
+    pub fn draw_padded(&self, cx: &mut DrawContext<'_>, padding: Padding) {
+        cx.with_padding(padding, |cx| self.draw(cx));
+    }
+
+    pub fn event(&self, cx: &mut EventContext<'_>, event: &Event) {
+        self.event_indexed(0, cx, event);
+    }
+
+    pub fn layout(&self, cx: &mut LayoutContext<'_>, space: AvailableSpace) -> Vec2 {
+        self.layout_indexed(0, cx, space)
+    }
+
+    pub fn draw(&self, cx: &mut DrawContext<'_>) {
+        self.draw_indexed(0, cx);
     }
 }
 

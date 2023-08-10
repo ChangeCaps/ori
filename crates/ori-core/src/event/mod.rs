@@ -1,12 +1,12 @@
+mod animation;
 mod cursor;
 mod keyboard;
-mod layout;
 mod pointer;
 mod window;
 
+pub use animation::*;
 pub use cursor::*;
 pub use keyboard::*;
-pub use layout::*;
 pub use pointer::*;
 pub use window::*;
 

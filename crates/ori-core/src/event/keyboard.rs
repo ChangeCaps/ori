@@ -6,7 +6,7 @@ pub struct KeyboardEvent {
     /// Whether the key was pressed or released.
     pub pressed: bool,
     /// The key that was pressed or released.
-    pub key: Option<Key>,
+    pub key: Option<Code>,
     /// The text that was entered.
     pub text: Option<String>,
     /// The modifiers that were active.
@@ -15,12 +15,12 @@ pub struct KeyboardEvent {
 
 impl KeyboardEvent {
     /// Check if the `key` is pressed.
-    pub fn is_pressed(&self, key: Key) -> bool {
+    pub fn is_pressed(&self, key: Code) -> bool {
         self.pressed && self.key == Some(key)
     }
 
     /// Check if the `key` is released.
-    pub fn is_released(&self, key: Key) -> bool {
+    pub fn is_released(&self, key: Code) -> bool {
         !self.pressed && self.key == Some(key)
     }
 
@@ -38,7 +38,7 @@ impl KeyboardEvent {
 /// A keyboard key.
 #[allow(missing_docs)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum Key {
+pub enum Code {
     // Alphabetical keys
     A,
     B,
@@ -123,7 +123,7 @@ pub enum Key {
     Meta,
 }
 
-impl Key {
+impl Code {
     pub const fn as_digit(self) -> Option<u8> {
         match self {
             Self::Key0 => Some(0),

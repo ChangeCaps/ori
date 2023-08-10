@@ -8,22 +8,23 @@ Ori is a reactive ui framework for creating native applications for rust.
 use ori::prelude::*;
 
 // define the ui
-fn ui(cx: Scope) -> View {
+fn ui(cx: Scope) -> impl View {
     // create a signal that will hold the state of the counter
     let counter = signal(cx, 0);
 
-    // render the ui using the view! macro
-    view! {
-        <Button on:click=move |_| *counter.modify() += 1>
-            "Click me!"
-        </Button>
-        { format!("Clicked {} times", counter.get()) }
-    }
+    // we use the reactive! macro to create a reactive ui component
+    let text = reactive!(format!("Clicked {} times", counter.get()));
+
+    // we create a button that increments the counter when pressed
+    let button = Button::new(text).on_press(move |_| *counter.modify() += 1);
+
+    // we center the button in the window
+    Align::center(button)
 }
 
 fn main() {
-    // configure and start the application
-    App::new(ui).run();
+    // configure and run the application
+    App::new(ui).title("Readme (examples/readme.rs)").run();
 }
 ```
 

@@ -1,23 +1,21 @@
 use ori::prelude::*;
 
-fn ui(_cx: Scope) -> IntoView {
-    let mut div = Div::new().class("row");
+fn ui(_cx: Scope) -> impl View {
+    let mut row = Stack::vstack();
 
     for _ in 0..40 {
-        let mut child = Div::new().class("column");
+        let mut column = Stack::hstack();
 
         for _ in 0..40 {
-            child.add_child(Button::new(Text::new("A")));
+            column.push(Button::new(Text::new("A")));
         }
 
-        div.add_child(child);
+        row.push(column);
     }
 
-    IntoView::new(div)
+    row
 }
 
 fn main() {
-    App::new(ui)
-        .style(style!("examples/style/performance-test.css"))
-        .run();
+    App::new(ui).run();
 }

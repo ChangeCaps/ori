@@ -9,6 +9,10 @@ use crate::{BuildUi, Node, UiFunction, Window, WindowId};
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub struct RequestRedrawEvent;
 
+/// An event that requests a layout.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub struct RequestLayoutEvent;
+
 /// An event that's emitted when the window is resized.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct WindowResizedEvent {

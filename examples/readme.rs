@@ -1,4 +1,5 @@
-//! This is the example from the readme.
+//! This is the example from README.md.
+
 use ori::prelude::*;
 
 // define the ui
@@ -6,16 +7,17 @@ fn ui(cx: Scope) -> impl View {
     // create a signal that will hold the state of the counter
     let counter = signal(cx, 0);
 
-    let text = dynamic(cx, move |_| {
-        Text::new(format!("Clicked {} times", counter.get()))
-    });
+    // we use the reactive! macro to create a reactive ui component
+    let text = reactive!(format!("Clicked {} times", counter.get()));
 
+    // we create a button that increments the counter when pressed
     let button = Button::new(text).on_press(move |_| *counter.modify() += 1);
 
-    row![FlexChild::new(button).flex(1.0)]
+    // we center the button in the window
+    Align::center(button)
 }
 
 fn main() {
-    // configure and start the application
-    App::new(ui).run();
+    // configure and run the application
+    App::new(ui).title("Readme (examples/readme.rs)").run();
 }
