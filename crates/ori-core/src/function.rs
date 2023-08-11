@@ -69,7 +69,7 @@ pub fn request_animation_frame(cx: Scope) {
     }
 }
 
-/// Creates a new dynamic [`View`] from a Ui function.
+/// Creates a new reactive [`View`](crate::View) from a Ui function.
 pub fn reactive<V>(cx: Scope, mut f: impl BuildUi<V>) -> ReactiveNode {
     ReactiveNode::new(cx.owned_memo_scoped(move |cx| {
         request_layout(cx);

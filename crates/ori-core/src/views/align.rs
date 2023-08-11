@@ -8,15 +8,15 @@ use crate::{
 
 #[derive(Clone, Debug)]
 pub struct Align {
-    content: Node,
-    size: Size,
-    alignment: Vec2,
+    pub content: Node,
+    pub size: Size,
+    pub alignment: Vec2,
 }
 
 impl Align {
     pub fn new(alignment: impl Into<Vec2>, view: impl Into<Node>) -> Self {
         Self {
-            content: Node::from(view.into()),
+            content: Node::new(view),
             size: Size::parent(),
             alignment: alignment.into(),
         }

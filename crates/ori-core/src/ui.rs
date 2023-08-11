@@ -235,7 +235,7 @@ where
     pub frame: Frame,
     /// The font system, see [`Fonts`] for more information.
     pub fonts: Fonts,
-    /// The theme, see [`ThemeLoader`] for more information.
+    /// The theme, see [`Theme`] for more information.
     pub theme: Theme,
     /// The image cache, see [`ImageCache`] for more information.
     pub image_cache: ImageCache,

@@ -49,14 +49,20 @@ impl Flex {
 
 #[derive(Clone, Debug)]
 pub struct Stack {
-    content: Vec<Flex>,
+    pub content: Vec<Flex>,
     pub size: Size,
     pub axis: Axis,
     pub justify_content: JustifyContent,
     pub align_items: AlignItems,
     pub align_content: AlignContent,
-    pub gap_row: Unit,
     pub gap_column: Unit,
+    pub gap_row: Unit,
+}
+
+impl Default for Stack {
+    fn default() -> Self {
+        Self::column()
+    }
 }
 
 impl Stack {
@@ -68,8 +74,8 @@ impl Stack {
             justify_content: JustifyContent::Start,
             align_items: AlignItems::Start,
             align_content: AlignContent::Start,
-            gap_row: Unit::Em(0.5),
             gap_column: Unit::Em(0.5),
+            gap_row: Unit::Em(0.5),
         }
     }
 
@@ -77,12 +83,12 @@ impl Stack {
         Self::new(Axis::Row)
     }
 
-    pub const fn hstack() -> Self {
-        Self::row()
-    }
-
     pub const fn column() -> Self {
         Self::new(Axis::Column)
+    }
+
+    pub const fn hstack() -> Self {
+        Self::row()
     }
 
     pub const fn vstack() -> Self {

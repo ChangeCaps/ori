@@ -35,17 +35,17 @@ impl<T: ToString> From<T> for Text {
 
 #[derive(Clone, Debug)]
 pub struct Text {
-    text: String,
-    font_size: Style<Unit>,
-    font_family: Style<FontFamily>,
-    font_weight: Style<FontWeight>,
-    font_stretch: Style<FontStretch>,
-    font_style: Style<FontStyle>,
-    color: Style<Color>,
-    v_align: Style<TextAlign>,
-    h_align: Style<TextAlign>,
-    line_height: Style<f32>,
-    wrap: Style<TextWrap>,
+    pub text: String,
+    pub font_size: Style<Unit>,
+    pub font_family: Style<FontFamily>,
+    pub font_weight: Style<FontWeight>,
+    pub font_stretch: Style<FontStretch>,
+    pub font_style: Style<FontStyle>,
+    pub color: Style<Color>,
+    pub v_align: Style<TextAlign>,
+    pub h_align: Style<TextAlign>,
+    pub line_height: Style<f32>,
+    pub wrap: Style<TextWrap>,
 }
 
 impl Default for Text {

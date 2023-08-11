@@ -5,7 +5,7 @@ use crate::{AvailableSpace, DrawContext, EventContext, LayoutContext, Node, Padd
 
 #[derive(Clone, Debug)]
 pub struct Pad {
-    content: Node,
+    pub content: Node,
     pub padding: Padding,
 }
 

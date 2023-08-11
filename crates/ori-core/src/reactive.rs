@@ -5,7 +5,7 @@ use crate::{AvailableSpace, DrawContext, EventContext, LayoutContext, Node, View
 
 /// A node that can be dynamically changed reactively.
 ///
-/// See [`dynamic`](crate::function::dynamic) for more information.
+/// See [`reactive`](crate::function::reactive) for more information.
 #[derive(Clone, Debug)]
 pub struct ReactiveNode {
     signal: OwnedSignal<Node>,
@@ -14,7 +14,7 @@ pub struct ReactiveNode {
 impl ReactiveNode {
     /// Creates a new dynamic node.
     ///
-    /// See [`dynamic`](crate::function::dynamic) for more information.
+    /// See [`reactive`](crate::function::reactive) for more information.
     pub fn new(signal: OwnedSignal<Node>) -> Self {
         Self { signal }
     }
