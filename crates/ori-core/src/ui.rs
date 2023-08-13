@@ -11,7 +11,6 @@ use ori_graphics::{
 use ori_reactive::{Emitter, Event, EventSink, EventTask, Scope, WeakCallback};
 
 use crate::{
-    default_theme::default_theme,
     function::{reactive, window},
     AvailableSpace, CloseWindow, Code, DragWindow, KeyboardEvent, Metrics, Modifiers, Node,
     OpenWindow, Palette, PointerButton, PointerEvent, RequestAnimationFrame, RequestLayoutEvent,
@@ -21,9 +20,12 @@ use crate::{
 
 const TEXT_FONT: &[u8] = include_bytes!("../fonts/NotoSans-Medium.ttf");
 
+/// A trait for building user interfaces.
 pub trait BuildUi<V>: Sized + Send + Sync + 'static {
+    /// Build the user interface.
     fn build(&mut self, cx: Scope) -> Node;
 
+    /// Convert this builder into a function.
     fn function(mut self) -> UiFunction {
         Box::new(move |scope| self.build(scope))
     }
@@ -93,6 +95,14 @@ impl<R: Renderer> WindowUi<R> {
             self.window.size = new_window.size;
 
             window(self.scope).set(new_window);
+        }
+    }
+
+    fn update_cursor(&mut self) {
+        let cursor = self.tree.get_cursor();
+
+        if window(self.scope).get_untracked().cursor != cursor {
+            window(self.scope).modify().cursor = cursor;
         }
     }
 
@@ -262,9 +272,8 @@ where
     pub fn new(window_backend: W, render_backend: R) -> Self {
         let fonts = Fonts::new();
 
-        let mut theme = Theme::new();
-        theme.extend(Palette::light().to_theme());
-        theme.extend(default_theme());
+        let mut theme = Theme::builtin();
+        theme.extend(Palette::light().into());
 
         Self {
             window_backend,
@@ -684,7 +693,7 @@ where
                     &ui.renderer,
                     &mut self.image_cache,
                     &self.theme,
-                    window,
+                    &window.get(),
                     delta_time,
                     &ui.event_sink,
                     &mut ui.tree,
@@ -694,6 +703,7 @@ where
             self.metrics.event.event(start.elapsed());
 
             if update_window {
+                ui.update_cursor();
                 ui.update_window(&mut self.window_backend, &window.get());
             }
         }
@@ -718,7 +728,7 @@ where
                     &ui.renderer,
                     &mut self.image_cache,
                     &self.theme,
-                    window,
+                    &window.get(),
                     delta_time,
                     &ui.event_sink,
                     &mut ui.tree,
@@ -728,6 +738,7 @@ where
             self.metrics.layout.event(start.elapsed());
 
             if update_window {
+                ui.update_cursor();
                 ui.update_window(&mut self.window_backend, &window.get());
             }
         }
@@ -765,7 +776,7 @@ where
                     &ui.renderer,
                     &mut self.image_cache,
                     &self.theme,
-                    window,
+                    &window.get(),
                     delta_time,
                     &ui.event_sink,
                     &mut ui.tree,
@@ -774,10 +785,10 @@ where
             });
             self.metrics.draw.event(start.elapsed());
 
-            let window = window.get();
-            ui.update_window(&mut self.window_backend, &window);
+            ui.update_cursor();
+            ui.update_window(&mut self.window_backend, &window.get());
 
-            let clear_color = window.clear_color;
+            let clear_color = window.get().clear_color;
             (ui.renderer).render_frame(&self.frame, clear_color);
         }
     }
@@ -788,15 +799,18 @@ where
     W: WindowBackend,
     R: RenderBackend<Surface = <W as WindowBackend>::Surface>,
 {
+    /// Get a mutable reference to the [`Ui`] instance.
     fn ui(&mut self) -> &mut Ui<W, R>;
 
+    /// Extend the theme, see [`Theme`].
     fn theme(mut self, theme: Theme) -> Self {
         self.ui().theme.extend(theme);
         self
     }
 
+    /// Set the color palette, see [`Palette`].
     fn palette(self, palette: Palette) -> Self {
-        self.theme(palette.to_theme())
+        self.theme(palette.into())
     }
 
     /// Loads a font from `source`, see [`font`](ori_graphics::font).

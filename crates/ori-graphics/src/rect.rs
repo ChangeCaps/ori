@@ -242,3 +242,31 @@ impl Rect {
         }
     }
 }
+
+impl<T: Copy> Add<T> for Rect
+where
+    Vec2: Add<T, Output = Vec2>,
+{
+    type Output = Self;
+
+    fn add(self, amount: T) -> Self {
+        Self {
+            min: self.min + amount,
+            max: self.max + amount,
+        }
+    }
+}
+
+impl<T: Copy> Sub<T> for Rect
+where
+    Vec2: Sub<T, Output = Vec2>,
+{
+    type Output = Self;
+
+    fn sub(self, amount: T) -> Self {
+        Self {
+            min: self.min - amount,
+            max: self.max - amount,
+        }
+    }
+}

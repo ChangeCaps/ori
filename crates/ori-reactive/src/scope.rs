@@ -196,9 +196,9 @@ impl Scope {
 
     /// Spawns a future on this scope.
     ///
-    /// It will be polled once, when spawned, and when awakened will emit a [`Task`] to the
+    /// It will be polled once, when spawned, and when awakened will emit a [`EventTask`] to the
     /// [`EventSink`] of this scope.
-    pub fn spawn(self, future: impl Future<Output = ()> + Send + 'static) {
+    pub fn spawn_future(self, future: impl Future<Output = ()> + Send + 'static) {
         EventTask::spawn(self.event_sink(), future);
     }
 

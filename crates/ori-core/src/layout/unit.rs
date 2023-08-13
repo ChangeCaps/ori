@@ -2,6 +2,7 @@ use std::{
     fmt::Display,
     hash::{Hash, Hasher},
     mem,
+    ops::{Mul, MulAssign},
 };
 
 use ori_graphics::math::Vec2;
@@ -63,6 +64,18 @@ impl Unit {
     pub const ZERO: Self = Px(0.0);
     pub const INFINITY: Self = Px(f32::INFINITY);
 
+    /// Returns true if the unit is zero.
+    pub fn is_zero(self) -> bool {
+        match self {
+            Px(value) => value == 0.0,
+            Pt(value) => value == 0.0,
+            Vw(value) => value == 0.0,
+            Vh(value) => value == 0.0,
+            Em(value) => value == 0.0,
+        }
+    }
+
+    /// Resolves the unit to pixels.
     pub fn resolve(self, scale: f32, window_size: Vec2) -> f32 {
         match self {
             Px(value) => value,
@@ -73,10 +86,12 @@ impl Unit {
         }
     }
 
+    /// Returns the unit in pixels.
     pub fn get(self, cx: &Context<'_>) -> f32 {
         cx.unit(self)
     }
 
+    /// Retrieves the inner [`f32`].
     pub fn as_f32(self) -> f32 {
         match self {
             Px(value) => value,
@@ -85,6 +100,26 @@ impl Unit {
             Vh(value) => value,
             Em(value) => value,
         }
+    }
+}
+
+impl Mul<f32> for Unit {
+    type Output = Self;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        match self {
+            Px(value) => Px(value * rhs),
+            Pt(value) => Pt(value * rhs),
+            Vw(value) => Vw(value * rhs),
+            Vh(value) => Vh(value * rhs),
+            Em(value) => Em(value * rhs),
+        }
+    }
+}
+
+impl MulAssign<f32> for Unit {
+    fn mul_assign(&mut self, rhs: f32) {
+        *self = *self * rhs;
     }
 }
 

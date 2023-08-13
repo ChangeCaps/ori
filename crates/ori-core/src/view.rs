@@ -72,7 +72,7 @@ impl<'a> EventContext<'a> {
         padding: Padding,
         f: impl FnOnce(&mut EventContext<'_>) -> T,
     ) -> T {
-        self.with_translation(padding.translation(self), f)
+        self.with_translation(padding.offset(self), f)
     }
 }
 
@@ -158,7 +158,7 @@ impl<'a> DrawContext<'a> {
         padding: Padding,
         f: impl FnOnce(&mut DrawContext<'_>) -> T,
     ) -> T {
-        self.with_translation(padding.translation(self), f)
+        self.with_translation(padding.offset(self), f)
     }
 
     pub fn with_layer<T>(&mut self, z_index: f32, f: impl FnOnce(&mut DrawContext<'_>) -> T) -> T {
@@ -179,6 +179,10 @@ impl<'a> DrawContext<'a> {
 
     pub fn draw(&mut self, primitive: impl Into<PrimitiveKind>) {
         self.frame.draw(primitive);
+    }
+
+    pub fn draw_rounded(&mut self, primitive: impl Into<PrimitiveKind>) {
+        self.frame.draw_rounded(primitive);
     }
 
     pub fn draw_text(&mut self, glyphs: &Glyphs, rect: Rect) {

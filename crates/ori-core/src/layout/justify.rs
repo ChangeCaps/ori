@@ -1,16 +1,24 @@
 pub type AlignContent = JustifyContent;
 
+/// The justify content of a stack container.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum JustifyContent {
+    /// Items are packed toward the start of the stack.
     Start,
+    /// Items are packed toward the end of the stack.
     End,
+    /// Items are packed toward the center of the stack.
     Center,
+    /// Items are evenly distributed in the stack, with equal-size spaces between them.
     SpaceBetween,
+    /// Items are evenly distributed in the stack, with half-size spaces on either end.
     SpaceAround,
+    /// Items are evenly distributed in the stack.
     SpaceEvenly,
 }
 
 impl JustifyContent {
+    /// Layout the items in a stack container.
     pub fn layout(
         self,
         sizes: impl ExactSizeIterator<Item = f32> + Clone,

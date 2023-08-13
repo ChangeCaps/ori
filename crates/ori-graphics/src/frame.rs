@@ -8,7 +8,7 @@ pub enum PrimitiveKind {
 
 impl From<Quad> for PrimitiveKind {
     fn from(quad: Quad) -> Self {
-        Self::Quad(quad.round())
+        Self::Quad(quad)
     }
 }
 
@@ -76,6 +76,16 @@ impl Frame {
             kind: primitive.into(),
             z_index: self.z_index,
             transform: self.transform,
+            clip: self.clip,
+        });
+    }
+
+    /// Draw a [`PrimitiveKind`] to the frame, with a rounded transform.
+    pub fn draw_rounded(&mut self, primitive: impl Into<PrimitiveKind>) {
+        self.draw_primitive(Primitive {
+            kind: primitive.into(),
+            z_index: self.z_index,
+            transform: self.transform.round(),
             clip: self.clip,
         });
     }

@@ -41,7 +41,7 @@ impl Padding {
     }
 
     /// Get the translation of the padding, i.e. `left` and `top`.
-    pub fn translation(self, cx: &Context<'_>) -> Vec2 {
+    pub fn offset(self, cx: &Context<'_>) -> Vec2 {
         Vec2::new(self.left.get(cx), self.top.get(cx))
     }
 }

@@ -1,16 +1,16 @@
 use std::{any::Any, future::Future, time::Duration};
 
 use ori_graphics::{math::Vec2, Fonts, ImageCache, Renderer};
-use ori_reactive::{EventSink, EventTask, Signal};
+use ori_reactive::{EventSink, EventTask};
 
-use crate::{RequestRedrawEvent, Theme, Tree, Unit, Window};
+use crate::{Cursor, RequestLayoutEvent, RequestRedrawEvent, Theme, Tree, Unit, Window};
 
 pub struct Context<'a> {
     pub fonts: &'a mut Fonts,
     pub renderer: &'a dyn Renderer,
     pub image_cache: &'a mut ImageCache,
     pub theme: &'a Theme,
-    pub window: Signal<Window>,
+    pub window: &'a Window,
     pub delta_time: Duration,
     pub(crate) event_sink: &'a EventSink,
     pub(crate) tree: &'a mut Tree,
@@ -23,7 +23,7 @@ impl<'a> Context<'a> {
         renderer: &'a dyn Renderer,
         image_cache: &'a mut ImageCache,
         theme: &'a Theme,
-        window: Signal<Window>,
+        window: &'a Window,
         delta_time: Duration,
         event_sink: &'a EventSink,
         tree: &'a mut Tree,
@@ -80,9 +80,12 @@ impl<'a> Context<'a> {
         EventTask::spawn(self.event_sink.clone(), future);
     }
 
+    pub fn set_cursor(&mut self, cursor: Option<Cursor>) {
+        self.tree.set_cursor(cursor);
+    }
+
     pub fn unit(&self, unit: Unit) -> f32 {
-        let window = self.window.get();
-        unit.resolve(window.scale, window.size.as_vec2())
+        unit.resolve(self.window.scale, self.window.size.as_vec2())
     }
 
     pub fn emit(&self, event: impl Any + Send + Sync) {
@@ -91,6 +94,10 @@ impl<'a> Context<'a> {
 
     pub fn request_redraw(&self) {
         self.emit(RequestRedrawEvent);
+    }
+
+    pub fn request_layout(&self) {
+        self.emit(RequestLayoutEvent);
     }
 
     pub fn dt(&self) -> f32 {

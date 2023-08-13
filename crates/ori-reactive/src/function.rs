@@ -53,7 +53,7 @@ pub fn context<C: Any + Clone + Send + Sync>(cx: Scope) -> C {
 
 /// Spawns a future on the [`Scope`].
 pub fn spawn_future(cx: Scope, task: impl Future<Output = ()> + Send + 'static) {
-    cx.spawn(task)
+    cx.spawn_future(task)
 }
 
 /// Creates a new [`Signal`] with the given value on the [`Scope`].

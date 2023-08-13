@@ -1,4 +1,5 @@
 use std::{
+    fmt::Debug,
     future::Future,
     pin::Pin,
     sync::mpsc::{channel, Receiver},
@@ -19,13 +20,24 @@ type SuspenseFuture = Pin<Box<dyn Future<Output = Node> + Send>>;
 ///
 /// The content is created by a future that is spawned when the view is first
 /// drawn. While the future is running, the view displays a fallback.
+#[derive(Default)]
 pub struct Suspense {
     future: Mutex<Option<SuspenseFuture>>,
     receiver: Option<Receiver<Node>>,
     content: Node,
 }
 
+impl Debug for Suspense {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Suspense")
+            .field("receiver", &self.receiver)
+            .field("content", &self.content)
+            .finish()
+    }
+}
+
 impl Suspense {
+    /// Create a new suspense view.
     pub fn new(content: impl Future<Output = Node> + Send + 'static) -> Self {
         Self {
             future: Mutex::new(Some(Box::pin(content))),
@@ -34,17 +46,14 @@ impl Suspense {
         }
     }
 
+    /// Set the fallback content to display while the future is running.
     pub fn fallback(mut self, fallback: impl Into<Node>) -> Self {
         self.content = fallback.into();
         self
     }
 
-    fn take_content(&self) -> Option<SuspenseFuture> {
-        self.future.lock().take()
-    }
-
     fn spawn_content(&mut self, cx: &mut Context<'_>) {
-        if let Some(content) = self.take_content() {
+        if let Some(content) = self.future.lock().take() {
             let (tx, rx) = channel();
             let event_sink = cx.event_sink.clone();
             self.receiver = Some(rx);
@@ -64,24 +73,26 @@ impl Suspense {
             }
         }
     }
+
+    fn prepare(&mut self, cx: &mut Context<'_>) {
+        self.spawn_content(cx);
+        self.recv();
+    }
 }
 
 impl View for Suspense {
     fn event(&mut self, cx: &mut EventContext<'_>, event: &Event) {
-        self.spawn_content(cx);
-        self.recv();
+        self.prepare(cx);
         self.content.event(cx, event);
     }
 
     fn layout(&mut self, cx: &mut LayoutContext<'_>, space: AvailableSpace) -> Vec2 {
-        self.spawn_content(cx);
-        self.recv();
+        self.prepare(cx);
         self.content.layout(cx, space)
     }
 
     fn draw(&mut self, cx: &mut DrawContext<'_>) {
-        self.spawn_content(cx);
-        self.recv();
+        self.prepare(cx);
         self.content.draw(cx);
     }
 }

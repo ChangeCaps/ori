@@ -25,8 +25,8 @@ impl ReactiveNode {
         }
     }
 
-    pub fn recv(&mut self) {
-        if let Ok(content) = self.receiver.try_recv() {
+    fn recv(&mut self) {
+        while let Ok(content) = self.receiver.try_recv() {
             self.content = content;
         }
     }

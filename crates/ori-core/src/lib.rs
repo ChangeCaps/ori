@@ -2,17 +2,15 @@
 
 mod border;
 mod context;
-mod default_theme;
+mod draw;
 mod event;
 pub mod function;
 mod layout;
 mod metrics;
 mod node;
-mod palette;
 mod reactive;
 mod root;
 mod state;
-mod style;
 mod theme;
 mod tree;
 mod ui;
@@ -22,14 +20,13 @@ mod window;
 
 pub use border::*;
 pub use context::*;
+pub use draw::*;
 pub use event::*;
 pub use layout::*;
 pub use metrics::*;
 pub use node::*;
-pub use palette::*;
 pub use reactive::*;
 pub use state::*;
-pub use style::*;
 pub use theme::*;
 pub use tree::*;
 pub use ui::*;
@@ -51,9 +48,7 @@ pub mod prelude {
     pub use crate::layout::*;
     pub use crate::math::*;
     pub use crate::node::Node;
-    pub use crate::palette::Palette;
-    pub use crate::style::{Key, Style, Styled};
-    pub use crate::theme::Theme;
+    pub use crate::theme::{Key, Palette, Style, Styled, Theme};
     pub use crate::ui::UiBuilder;
     pub use crate::view::{DrawContext, EventContext, IntoView, LayoutContext, View};
     pub use crate::views::*;

@@ -1,3 +1,5 @@
+use std::ops::{Mul, MulAssign};
+
 use crate::{Context, Unit};
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -31,6 +33,25 @@ impl BorderWidth {
             self.bottom.get(cx),
             self.left.get(cx),
         ]
+    }
+}
+
+impl Mul<f32> for BorderWidth {
+    type Output = Self;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        Self::new(
+            self.top * rhs,
+            self.right * rhs,
+            self.bottom * rhs,
+            self.left * rhs,
+        )
+    }
+}
+
+impl MulAssign<f32> for BorderWidth {
+    fn mul_assign(&mut self, rhs: f32) {
+        *self = *self * rhs;
     }
 }
 
@@ -70,5 +91,24 @@ impl BorderRadius {
             self.bottom_right.get(cx),
             self.bottom_left.get(cx),
         ]
+    }
+}
+
+impl Mul<f32> for BorderRadius {
+    type Output = Self;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        Self::new(
+            self.top_left * rhs,
+            self.top_right * rhs,
+            self.bottom_right * rhs,
+            self.bottom_left * rhs,
+        )
+    }
+}
+
+impl MulAssign<f32> for BorderRadius {
+    fn mul_assign(&mut self, rhs: f32) {
+        *self = *self * rhs;
     }
 }

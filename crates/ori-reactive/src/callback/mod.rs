@@ -4,6 +4,7 @@ pub use emitter::*;
 
 use std::{
     fmt::Debug,
+    marker::PhantomData,
     mem,
     panic::Location,
     sync::{Arc, Weak},
@@ -12,16 +13,15 @@ use std::{
 use parking_lot::Mutex;
 
 type RawCallback<'a, T> = dyn FnMut(&T) + Send + 'a;
-type CallbackPtr<T> = *const T;
+type CallbackPtr<T> = *const PhantomData<T>;
 
 /// A callback that can be called from any thread.
-#[derive(Clone)]
-pub struct Callback<'a, T = ()> {
+pub struct Callback<'a, T: ?Sized = ()> {
     location: &'static Location<'static>,
     callback: Arc<Mutex<RawCallback<'a, T>>>,
 }
 
-impl<'a, T> Callback<'a, T> {
+impl<'a, T: ?Sized> Callback<'a, T> {
     /// Creates a new callback.
     #[track_caller]
     pub fn new(callback: impl FnMut(&T) + Send + 'a) -> Self {
@@ -57,7 +57,7 @@ impl<'a, T> Callback<'a, T> {
 
     /// Returns the raw pointer to the callback.
     pub fn as_ptr(&self) -> CallbackPtr<T> {
-        Arc::as_ptr(&self.callback) as *const T
+        Arc::as_ptr(&self.callback) as CallbackPtr<T>
     }
 
     /// Calls the callback.
@@ -71,13 +71,13 @@ impl<'a, T> Callback<'a, T> {
     }
 }
 
-impl<'a, T> Default for Callback<'a, T> {
+impl<'a, T: ?Sized> Default for Callback<'a, T> {
     fn default() -> Self {
         Callback::new(|_| {})
     }
 }
 
-impl<'a, T> Debug for Callback<'a, T> {
+impl<'a, T: ?Sized> Debug for Callback<'a, T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Callback")
             .field("location", &self.location)
@@ -85,16 +85,31 @@ impl<'a, T> Debug for Callback<'a, T> {
     }
 }
 
+impl<'a, T: ?Sized> Clone for Callback<'a, T> {
+    fn clone(&self) -> Self {
+        Self {
+            location: self.location,
+            callback: self.callback.clone(),
+        }
+    }
+}
+
+impl<'a, T: ?Sized, F: FnMut(&T) + Send + 'a> From<F> for Callback<'a, T> {
+    fn from(callback: F) -> Self {
+        Self::new(callback)
+    }
+}
+
 /// A weak reference to a [`Callback`].
 ///
 /// This is usually created by [`Callback::downgrade`].
 #[derive(Clone)]
-pub struct WeakCallback<T = ()> {
+pub struct WeakCallback<T: ?Sized = ()> {
     location: &'static Location<'static>,
     callback: Weak<Mutex<RawCallback<'static, T>>>,
 }
 
-impl<T> WeakCallback<T> {
+impl<T: ?Sized> WeakCallback<T> {
     /// Creates a new weak callback from a weak reference.
     #[track_caller]
     pub fn new(weak: Weak<Mutex<RawCallback<'static, T>>>) -> Self {
@@ -136,7 +151,7 @@ impl<T> WeakCallback<T> {
     }
 }
 
-impl<T> Default for WeakCallback<T> {
+impl<T: ?Sized> Default for WeakCallback<T> {
     #[track_caller]
     fn default() -> Self {
         // FIXME: this is a hack to get a valid pointer
@@ -145,7 +160,7 @@ impl<T> Default for WeakCallback<T> {
     }
 }
 
-impl<T> Debug for WeakCallback<T> {
+impl<T: ?Sized> Debug for WeakCallback<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("WeakCallback")
             .field("location", &self.location)

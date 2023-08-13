@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use ori_graphics::{math::Vec2, Affine, Fonts, Frame, ImageCache, Renderer};
-use ori_reactive::{Event, EventSink, Signal};
+use ori_reactive::{Event, EventSink};
 
 use crate::{
     AvailableSpace, Context, DrawContext, EventContext, LayoutContext, Node, Theme, Tree, Window,
@@ -15,7 +15,7 @@ impl Node {
         renderer: &dyn Renderer,
         image_cache: &mut ImageCache,
         theme: &Theme,
-        window: Signal<Window>,
+        window: &Window,
         delta_time: Duration,
         event_sink: &EventSink,
         tree: &mut Tree,
@@ -42,7 +42,7 @@ impl Node {
         renderer: &dyn Renderer,
         image_cache: &mut ImageCache,
         theme: &Theme,
-        window: Signal<Window>,
+        window: &Window,
         delta_time: Duration,
         event_sink: &EventSink,
         tree: &mut Tree,
@@ -69,7 +69,7 @@ impl Node {
         renderer: &dyn Renderer,
         image_cache: &mut ImageCache,
         theme: &Theme,
-        window: Signal<Window>,
+        window: &Window,
         delta_time: Duration,
         event_sink: &EventSink,
         tree: &mut Tree,

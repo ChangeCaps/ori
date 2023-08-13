@@ -110,22 +110,22 @@ impl Mesh {
         let mut mesh = Mesh::new();
 
         let tl = Vertex {
-            position: rect.top_left().round(),
+            position: rect.top_left(),
             uv: Vec2::ZERO,
             color: Color::WHITE,
         };
         let tr = Vertex {
-            position: rect.top_right().round(),
+            position: rect.top_right(),
             uv: Vec2::new(1.0, 0.0),
             color: Color::WHITE,
         };
         let br = Vertex {
-            position: rect.bottom_right().round(),
+            position: rect.bottom_right(),
             uv: Vec2::ONE,
             color: Color::WHITE,
         };
         let bl = Vertex {
-            position: rect.bottom_left().round(),
+            position: rect.bottom_left(),
             uv: Vec2::new(0.0, 1.0),
             color: Color::WHITE,
         };

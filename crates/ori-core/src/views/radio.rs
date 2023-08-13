@@ -1,73 +1,65 @@
 use std::sync::Arc;
 
-use ori_graphics::{math::Vec2, Color, Curve, Quad};
+use ori_graphics::{math::Vec2, Color, Quad, Rect};
 use ori_reactive::{Event, OwnedSignal};
 
 use crate::{
-    AvailableSpace, BorderRadius, BorderWidth, Context, DrawContext, EventContext, Key,
-    LayoutContext, PointerEvent, StateView, Style, Styled, Transition, Unit,
+    AvailableSpace, Context, DrawContext, EventContext, Key, LayoutContext, PointerEvent,
+    StateView, Style, Styled, Transition, Unit,
 };
 
 use super::PointerCallback;
 
-/// A check box view.
+/// A radio button view.
 #[derive(Clone)]
-pub struct CheckBox {
-    /// The whether the box is checked.
-    pub checked: OwnedSignal<bool>,
-    /// The event to fire when the box is pressed.
+pub struct Radio {
+    /// The content of the button.
+    pub selected: OwnedSignal<bool>,
+    /// The event to fire when the button is pressed.
     pub on_press: Option<PointerCallback>,
-    /// The event to fire when the box is released.
+    /// The event to fire when the button is released.
     pub on_release: Option<PointerCallback>,
-    /// The transition of the box.
+    /// The transition of the button.
     pub trans: Transition,
-    /// The size of the box.
-    pub size: Style<Unit>,
-    /// The color of the check mark.
+    /// The radius of the button.
+    pub radius: Style<Unit>,
+    /// The color of the button.
     pub color: Style<Color>,
-    /// The stroke thickness of the check mark.
-    pub stroke: Style<Unit>,
-    /// The background color of the box.
+    /// The background color of the button.
     pub background: Style<Color>,
-    /// The border width of the box.
-    pub border_width: Style<BorderWidth>,
-    /// The border radius of the box.
-    pub border_radius: Style<BorderRadius>,
-    /// The border color of the box.
+    /// The border width of the button.
+    pub border_width: Style<Unit>,
+    /// The border color of the button.
     pub border_color: Style<Color>,
 }
 
-impl Default for CheckBox {
+impl Default for Radio {
     fn default() -> Self {
         Self {
-            checked: OwnedSignal::new(false),
+            selected: OwnedSignal::new(false),
             on_press: None,
             on_release: None,
             trans: Transition::smooth(0.1),
-            size: Style::new(Self::SIZE),
+            radius: Style::new(Self::RADIUS),
             color: Style::new(Self::COLOR),
-            stroke: Style::new(Self::STROKE),
             background: Style::new(Self::BACKGROUND),
             border_width: Style::new(Self::BORDER_WIDTH),
-            border_radius: Style::new(Self::BORDER_RADIUS),
             border_color: Style::new(Self::BORDER_COLOR),
         }
     }
 }
 
-impl CheckBox {
-    pub const SIZE: Key<Unit> = Key::new("check-box.size");
-    pub const COLOR: Key<Color> = Key::new("check-box.color");
-    pub const STROKE: Key<Unit> = Key::new("check-box.stroke");
-    pub const BACKGROUND: Key<Color> = Key::new("check-box.background");
-    pub const BORDER_WIDTH: Key<BorderWidth> = Key::new("check-box.border-width");
-    pub const BORDER_RADIUS: Key<BorderRadius> = Key::new("check-box.border-radius");
-    pub const BORDER_COLOR: Key<Color> = Key::new("check-box.border-color");
+impl Radio {
+    pub const RADIUS: Key<Unit> = Key::new("radio.radius");
+    pub const COLOR: Key<Color> = Key::new("radio.color");
+    pub const BACKGROUND: Key<Color> = Key::new("radio.background");
+    pub const BORDER_WIDTH: Key<Unit> = Key::new("radio.border-width");
+    pub const BORDER_COLOR: Key<Color> = Key::new("radio.border-color");
 
-    /// Create a new check box.
-    pub fn new(checked: impl Into<OwnedSignal<bool>>) -> Self {
+    /// Create a new radio button.
+    pub fn new(selected: impl Into<OwnedSignal<bool>>) -> Self {
         Self {
-            checked: checked.into(),
+            selected: selected.into(),
             ..Default::default()
         }
     }
@@ -87,49 +79,37 @@ impl CheckBox {
         self
     }
 
-    /// Set the transition of the box.
+    /// Set the transition of the button.
     pub fn transition(mut self, transition: impl Into<Transition>) -> Self {
         self.trans = transition.into();
         self
     }
 
-    /// Set the size of the box.
-    pub fn size(mut self, size: impl Styled<Unit>) -> Self {
-        self.size = size.style();
+    /// Set the radius of the button.
+    pub fn radius(mut self, radius: impl Styled<Unit>) -> Self {
+        self.radius = radius.style();
         self
     }
 
-    /// Set the color of the check mark.
+    /// Set the color of the button.
     pub fn color(mut self, color: impl Styled<Color>) -> Self {
         self.color = color.style();
         self
     }
 
-    /// Set the stroke thickness of the check mark.
-    pub fn stroke(mut self, stroke: impl Styled<Unit>) -> Self {
-        self.stroke = stroke.style();
-        self
-    }
-
-    /// Set the background color of the box.
+    /// Set the background color of the button.
     pub fn background(mut self, background: impl Styled<Color>) -> Self {
         self.background = background.style();
         self
     }
 
-    /// Set the border width of the box.
-    pub fn border_width(mut self, border_width: impl Styled<BorderWidth>) -> Self {
+    /// Set the border width of the button.
+    pub fn border_width(mut self, border_width: impl Styled<Unit>) -> Self {
         self.border_width = border_width.style();
         self
     }
 
-    /// Set the border radius of the box.
-    pub fn border_radius(mut self, border_radius: impl Styled<BorderRadius>) -> Self {
-        self.border_radius = border_radius.style();
-        self
-    }
-
-    /// Set the border color of the box.
+    /// Set the border color of the button.
     pub fn border_color(mut self, border_color: impl Styled<Color>) -> Self {
         self.border_color = border_color.style();
         self
@@ -137,7 +117,7 @@ impl CheckBox {
 
     fn handle_pointer_event(
         &self,
-        state: &mut CheckBoxState,
+        state: &mut RadioState,
         cx: &mut EventContext<'_>,
         event: &PointerEvent,
     ) -> bool {
@@ -148,15 +128,13 @@ impl CheckBox {
 
         if state.hovered != hovered {
             state.hovered = hovered;
-            cx.request_redraw();
+            handled = true;
         }
 
         if state.hovered && event.is_press() {
             state.pressed = true;
             cx.request_redraw();
             handled = true;
-
-            self.checked.set(!self.checked.get());
 
             if let Some(on_press) = &self.on_press {
                 on_press(event);
@@ -177,17 +155,17 @@ impl CheckBox {
 
 #[doc(hidden)]
 #[derive(Default)]
-pub struct CheckBoxState {
-    pub hovered: bool,
-    pub pressed: bool,
-    pub trans: f32,
+pub struct RadioState {
+    pressed: bool,
+    hovered: bool,
+    trans: f32,
 }
 
-impl StateView for CheckBox {
-    type State = CheckBoxState;
+impl StateView for Radio {
+    type State = RadioState;
 
     fn build(&mut self, _cx: &mut Context<'_>) -> Self::State {
-        CheckBoxState::default()
+        RadioState::default()
     }
 
     fn event(&mut self, state: &mut Self::State, cx: &mut EventContext<'_>, event: &Event) {
@@ -195,8 +173,10 @@ impl StateView for CheckBox {
             return;
         }
 
-        if let Some(event) = event.get::<PointerEvent>() {
-            self.handle_pointer_event(state, cx, event);
+        if let Some(pointer_event) = event.get::<PointerEvent>() {
+            if self.handle_pointer_event(state, cx, pointer_event) {
+                event.handle();
+            }
         }
     }
 
@@ -206,12 +186,13 @@ impl StateView for CheckBox {
         cx: &mut LayoutContext<'_>,
         space: AvailableSpace,
     ) -> Vec2 {
-        let size = self.size.get(cx.theme).get(cx);
-        space.fit(Vec2::splat(size))
+        let radius = self.radius.get(cx.theme).get(cx);
+        let size = Vec2::splat(radius * 2.0);
+        space.fit(size)
     }
 
     fn draw(&mut self, state: &mut Self::State, cx: &mut DrawContext<'_>) {
-        let checked = self.checked.get();
+        let selected = self.selected.get();
 
         let color = self.color.get(cx.theme);
         let background = self.background.get(cx.theme);
@@ -222,23 +203,30 @@ impl StateView for CheckBox {
             cx.request_redraw();
         }
 
+        let radius = self.radius.get(cx.theme).get(cx);
+        let border_width = self.border_width.get(cx.theme).get(cx);
+
         cx.draw(Quad {
             rect: cx.rect(),
             background_color: background,
             background_image: None,
-            border_radius: self.border_radius.get(cx.theme).get(cx),
-            border_width: self.border_width.get(cx.theme).get(cx),
+            border_radius: [radius; 4],
+            border_width: [border_width; 4],
             border_color: border.mix(border_alt, self.trans.get(state.trans)),
         });
 
-        if checked {
-            let mut curve = Curve::new();
-            curve.add_point(Vec2::new(0.2, 0.5) * cx.size());
-            curve.add_point(Vec2::new(0.4, 0.7) * cx.size());
-            curve.add_point(Vec2::new(0.8, 0.3) * cx.size());
+        if selected {
+            let inner_radius = radius / 2.0;
+            let size = cx.size();
 
-            let stroke = self.stroke.get(cx.theme).get(cx);
-            cx.draw(curve.stroke(stroke, color));
+            cx.draw(Quad {
+                rect: Rect::min_size(size / 4.0, size / 2.0),
+                background_color: color,
+                background_image: None,
+                border_radius: [inner_radius; 4],
+                border_width: [0.0; 4],
+                border_color: Color::TRANSPARENT,
+            });
         }
     }
 }

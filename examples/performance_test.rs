@@ -1,19 +1,13 @@
 use ori::prelude::*;
 
 fn ui(_cx: Scope) -> impl View {
-    let mut row = Stack::vstack();
+    let mut row = Stack::hstack();
 
-    for _ in 0..40 {
-        let mut column = Stack::hstack();
-
-        for _ in 0..40 {
-            column.push(Button::new(Icon::new("steam")));
-        }
-
-        row.push(column);
+    for _ in 0..2000 {
+        row.push(Button::new(Icon::new("steam")));
     }
 
-    row
+    Align::center(row)
 }
 
 fn main() {

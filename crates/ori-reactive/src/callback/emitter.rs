@@ -10,17 +10,17 @@ use crate::{Callback, WeakCallback};
 
 use super::CallbackPtr;
 
-struct CallbackSet<T> {
+struct CallbackSet<T: ?Sized> {
     callbacks: Vec<WeakCallback<T>>,
 }
 
-impl<T> Default for CallbackSet<T> {
+impl<T: ?Sized> Default for CallbackSet<T> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T> CallbackSet<T> {
+impl<T: ?Sized> CallbackSet<T> {
     fn new() -> Self {
         Self {
             callbacks: Vec::new(),
@@ -57,7 +57,7 @@ impl<T> CallbackSet<T> {
     }
 }
 
-impl<T> IntoIterator for CallbackSet<T> {
+impl<T: ?Sized> IntoIterator for CallbackSet<T> {
     type Item = WeakCallback<T>;
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
@@ -66,7 +66,7 @@ impl<T> IntoIterator for CallbackSet<T> {
     }
 }
 
-impl<T> Debug for CallbackSet<T> {
+impl<T: ?Sized> Debug for CallbackSet<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CallbackCollection")
             .field("callbacks", &self.callbacks)
@@ -80,11 +80,11 @@ type Callbacks<T> = Mutex<CallbackSet<T>>;
 ///
 /// This is used to store a list of callbacks and call them all.
 /// All the callbacks are weak, so they must be kept alive by the user.
-pub struct Emitter<T = ()> {
+pub struct Emitter<T: ?Sized = ()> {
     callbacks: Arc<Callbacks<T>>,
 }
 
-impl<T> Default for Emitter<T> {
+impl<T: ?Sized> Default for Emitter<T> {
     fn default() -> Self {
         Self {
             callbacks: Arc::new(Mutex::new(CallbackSet::new())),
@@ -92,7 +92,7 @@ impl<T> Default for Emitter<T> {
     }
 }
 
-impl<T> Clone for Emitter<T> {
+impl<T: ?Sized> Clone for Emitter<T> {
     fn clone(&self) -> Self {
         Self {
             callbacks: self.callbacks.clone(),
@@ -100,7 +100,7 @@ impl<T> Clone for Emitter<T> {
     }
 }
 
-impl<T> Emitter<T> {
+impl<T: ?Sized> Emitter<T> {
     /// Creates an empty callback emitter.
     pub fn new() -> Self {
         Self::default()
@@ -181,7 +181,7 @@ impl Emitter {
     }
 }
 
-impl<T> Debug for Emitter<T> {
+impl<T: ?Sized> Debug for Emitter<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CallbackEmitter")
             .field("callbacks", &self.callbacks)
@@ -192,11 +192,11 @@ impl<T> Debug for Emitter<T> {
 /// A weak reference to an [`Emitter`].
 ///
 /// This is usually created by [`Emitter::downgrade`].
-pub struct WeakEmitter<T = ()> {
+pub struct WeakEmitter<T: ?Sized = ()> {
     callbacks: Weak<Callbacks<T>>,
 }
 
-impl<T> WeakEmitter<T> {
+impl<T: ?Sized> WeakEmitter<T> {
     /// Tries to upgrade the weak callback emitter to a [`Emitter`].
     pub fn upgrade(&self) -> Option<Emitter<T>> {
         Some(Emitter {
@@ -205,7 +205,7 @@ impl<T> WeakEmitter<T> {
     }
 }
 
-impl<T> Clone for WeakEmitter<T> {
+impl<T: ?Sized> Clone for WeakEmitter<T> {
     fn clone(&self) -> Self {
         Self {
             callbacks: self.callbacks.clone(),
@@ -220,7 +220,7 @@ impl WeakEmitter {
     }
 }
 
-impl<T> Debug for WeakEmitter<T> {
+impl<T: ?Sized> Debug for WeakEmitter<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("WeakCallbackEmitter")
             .field("callbacks", &self.callbacks)

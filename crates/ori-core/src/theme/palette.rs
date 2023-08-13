@@ -54,8 +54,8 @@ impl Palette {
             text: Color::hsl(0.0, 0.0, 0.2),
             background: Color::hsl(0.0, 0.0, 1.0),
             primary: Color::hsl(221.0, 1.0, 0.78),
-            secondary: Color::hsl(0.0, 0.0, 0.98),
-            accent: Color::hsl(334.0, 0.76, 0.47),
+            secondary: Color::hsl(100.0, 0.03, 0.83),
+            accent: Color::hsl(150.0, 0.82, 0.47),
         }
     }
 
@@ -108,6 +108,12 @@ impl Palette {
         dark(theme, Self::ACCENT_DARK, Self::ACCENT, f);
         bright(theme, Self::ACCENT_BRIGHT, Self::ACCENT, f);
         brighter(theme, Self::ACCENT_BRIGHTER, Self::ACCENT, f);
+    }
+}
+
+impl From<Palette> for Theme {
+    fn from(palette: Palette) -> Self {
+        palette.to_theme()
     }
 }
 

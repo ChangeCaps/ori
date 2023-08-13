@@ -6,10 +6,16 @@ use crate::{
     JustifyContent, LayoutContext, Length, Node, Size, StateView, Unit,
 };
 
+/// A flexible child of a [`Stack`].
 #[derive(Debug)]
 pub struct Flex {
+    /// The content of the flex child.
     pub content: Node,
+    /// The flex value of the child.
+    ///
+    /// If this is `0.0`, the child will be inflexible.
     pub flex: f32,
+    /// The alignment of the child.
     pub align: Option<AlignSelf>,
 }
 
@@ -20,6 +26,7 @@ impl<T: Into<Node>> From<T> for Flex {
 }
 
 impl Flex {
+    /// Create a new flex child.
     pub fn new(flex: f32, view: impl Into<Node>) -> Self {
         Self {
             content: view.into(),
@@ -28,11 +35,13 @@ impl Flex {
         }
     }
 
+    /// Set the flex value of the child.
     pub fn flex(mut self, flex: f32) -> Self {
         self.flex = flex;
         self
     }
 
+    /// Set the self-alignment of the child.
     pub fn align(mut self, align: impl Into<Option<AlignSelf>>) -> Self {
         self.align = align.into();
         self
@@ -47,15 +56,30 @@ impl Flex {
     }
 }
 
+/// A stack of views.
+///
+/// This is a container view that lays out its children in a row or column.
+/// Stack draws a lot of parallels to [CSS flexbox], but it is not a direct
+/// implementation of it.
+///
+/// [CSS flexbox]: https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Flexible_Box_Layout
 #[derive(Debug)]
 pub struct Stack {
+    /// The content of the stack.
     pub content: Vec<Flex>,
+    /// The size of the stack.
     pub size: Size,
+    /// The axis of the stack.
     pub axis: Axis,
+    /// The justification of the stack.
     pub justify_content: JustifyContent,
+    /// The alignment of the stack.
     pub align_items: AlignItems,
+    /// The alignment of the stack's lines.
     pub align_content: AlignContent,
+    /// The gap between columns.
     pub gap_column: Unit,
+    /// The gap between rows.
     pub gap_row: Unit,
 }
 
@@ -66,6 +90,7 @@ impl Default for Stack {
 }
 
 impl Stack {
+    /// Create a new stack, with the given axis.
     pub const fn new(axis: Axis) -> Self {
         Self {
             content: Vec::new(),
@@ -79,72 +104,87 @@ impl Stack {
         }
     }
 
+    /// Create a new row stack.
     pub const fn row() -> Self {
         Self::new(Axis::Row)
     }
 
+    /// Create a new column stack.
     pub const fn column() -> Self {
         Self::new(Axis::Column)
     }
 
+    /// Create a new horizontal stack.
     pub const fn hstack() -> Self {
         Self::row()
     }
 
+    /// Create a new vertical stack.
     pub const fn vstack() -> Self {
         Self::column()
     }
 
+    /// Set the size of the stack.
     pub fn size(mut self, size: impl Into<Size>) -> Self {
         self.size = size.into();
         self
     }
 
+    /// Set the width of the stack.
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.size.width = width.into();
         self
     }
 
+    /// Set the height of the stack.
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.size.height = height.into();
         self
     }
 
+    /// Set the justify content of the stack.
     pub fn justify_content(mut self, justify_content: JustifyContent) -> Self {
         self.justify_content = justify_content;
         self
     }
 
+    /// Set the align items of the stack.
     pub fn align_items(mut self, align_items: AlignItems) -> Self {
         self.align_items = align_items;
         self
     }
 
+    /// Set the align content of the stack.
     pub fn align_content(mut self, align_content: AlignContent) -> Self {
         self.align_content = align_content;
         self
     }
 
+    /// Set the gap between the children of the stack.
     pub fn gap(mut self, gap: impl Into<Unit>) -> Self {
         self.gap_column = gap.into();
         self.gap_row = self.gap_column;
         self
     }
 
+    /// Set the gap between the columns of the stack.
     pub fn gap_column(mut self, gap: impl Into<Unit>) -> Self {
         self.gap_column = gap.into();
         self
     }
 
+    /// Set the gap between the rows of the stack.
     pub fn gap_row(mut self, gap: impl Into<Unit>) -> Self {
         self.gap_row = gap.into();
         self
     }
 
+    /// Push a child onto the stack.
     pub fn push(&mut self, child: impl Into<Flex>) {
         self.content.push(child.into());
     }
 
+    /// Push a child onto the stack, and return the stack.
     pub fn with(mut self, child: impl Into<Flex>) -> Self {
         self.push(child);
         self
