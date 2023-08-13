@@ -4,7 +4,7 @@ use std::{
     mem,
 };
 
-use ori_graphics::prelude::Vec2;
+use ori_graphics::math::Vec2;
 pub use Unit::*;
 
 use crate::Context;

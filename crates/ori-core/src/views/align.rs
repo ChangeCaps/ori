@@ -1,12 +1,12 @@
-use glam::Vec2;
-use ori_graphics::Rect;
+use ori_graphics::{math::Vec2, Rect};
 use ori_reactive::Event;
 
 use crate::{
-    AvailableSpace, DrawContext, EventContext, LayoutContext, Length, Node, Size, StateView,
+    AvailableSpace, Context, DrawContext, EventContext, LayoutContext, Length, Node, Size,
+    StateView,
 };
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Align {
     pub content: Node,
     pub size: Size,
@@ -86,18 +86,18 @@ impl Align {
 impl StateView for Align {
     type State = Vec2;
 
-    fn build(&self) -> Self::State {
+    fn build(&mut self, _cx: &mut Context<'_>) -> Self::State {
         Vec2::ZERO
     }
 
-    fn event(&self, state: &mut Self::State, cx: &mut EventContext<'_>, event: &Event) {
+    fn event(&mut self, state: &mut Self::State, cx: &mut EventContext<'_>, event: &Event) {
         cx.with_translation(self.contet_offset(state, cx.rect()), |cx| {
             self.content.event(cx, event);
         });
     }
 
     fn layout(
-        &self,
+        &mut self,
         state: &mut Self::State,
         cx: &mut LayoutContext<'_>,
         space: AvailableSpace,
@@ -105,10 +105,10 @@ impl StateView for Align {
         let content = self.content.layout(cx, self.size.content_space(cx, space));
         *state = content;
 
-        space.constrain(self.size.get(cx, content, space))
+        space.fit(self.size.get(cx, content, space))
     }
 
-    fn draw(&self, state: &mut Self::State, cx: &mut DrawContext<'_>) {
+    fn draw(&mut self, state: &mut Self::State, cx: &mut DrawContext<'_>) {
         cx.with_translation(self.contet_offset(state, cx.rect()), |cx| {
             self.content.draw(cx);
         });

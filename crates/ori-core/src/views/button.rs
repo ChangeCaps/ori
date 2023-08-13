@@ -1,17 +1,15 @@
 use std::sync::Arc;
 
-use glam::Vec2;
-use ori_graphics::{Color, Quad};
+use ori_graphics::{math::Vec2, Color, Quad};
 use ori_reactive::Event;
 
 use crate::{
-    AvailableSpace, DrawContext, EventContext, Key, LayoutContext, Node, Padding, PointerEvent,
-    StateView, Style, Styled, Unit,
+    AvailableSpace, BorderRadius, BorderWidth, Context, DrawContext, EventContext, Key,
+    LayoutContext, Node, Padding, PointerEvent, StateView, Style, Styled, Unit,
 };
 
 type OnPointerEvent = Arc<dyn Fn(&PointerEvent) + Send + Sync>;
 
-#[derive(Clone)]
 pub struct Button {
     pub content: Node,
     pub on_press: Option<OnPointerEvent>,
@@ -20,8 +18,8 @@ pub struct Button {
     pub padding: Padding,
     pub color: Style<Color>,
     pub hover_color: Option<Style<Color>>,
-    pub border_width: Style<[f32; 4]>,
-    pub border_radius: Style<[f32; 4]>,
+    pub border_width: Style<BorderWidth>,
+    pub border_radius: Style<BorderRadius>,
     pub border_color: Style<Color>,
 }
 
@@ -32,7 +30,7 @@ impl Default for Button {
             on_press: None,
             on_release: None,
             transition_time: 0.05,
-            padding: Padding::uniform(Unit::Em(0.5)),
+            padding: Padding::all(Unit::Em(0.5)),
             color: Style::new(Self::COLOR),
             hover_color: None,
             border_width: Style::new(Self::BORDER_WIDTH),
@@ -44,8 +42,8 @@ impl Default for Button {
 
 impl Button {
     pub const COLOR: Key<Color> = Key::new("button.color");
-    pub const BORDER_WIDTH: Key<[f32; 4]> = Key::new("button.border-width");
-    pub const BORDER_RADIUS: Key<[f32; 4]> = Key::new("button.border-radius");
+    pub const BORDER_WIDTH: Key<BorderWidth> = Key::new("button.border-width");
+    pub const BORDER_RADIUS: Key<BorderRadius> = Key::new("button.border-radius");
     pub const BORDER_COLOR: Key<Color> = Key::new("button.border-color");
 
     pub fn new(content: impl Into<Node>) -> Self {
@@ -88,12 +86,12 @@ impl Button {
         self
     }
 
-    pub fn border_width(mut self, border_width: impl Styled<[f32; 4]>) -> Self {
+    pub fn border_width(mut self, border_width: impl Styled<BorderWidth>) -> Self {
         self.border_width = border_width.style();
         self
     }
 
-    pub fn border_radius(mut self, border_radius: impl Styled<[f32; 4]>) -> Self {
+    pub fn border_radius(mut self, border_radius: impl Styled<BorderRadius>) -> Self {
         self.border_radius = border_radius.style();
         self
     }
@@ -127,7 +125,7 @@ impl Button {
                 on_press(event);
                 handled = true;
             }
-        } else if event.is_release() {
+        } else if state.pressed && event.is_release() {
             state.pressed = false;
             cx.request_redraw();
 
@@ -152,11 +150,11 @@ pub struct ButtonState {
 impl StateView for Button {
     type State = ButtonState;
 
-    fn build(&self) -> Self::State {
+    fn build(&mut self, _cx: &mut Context<'_>) -> Self::State {
         Default::default()
     }
 
-    fn event(&self, state: &mut Self::State, cx: &mut EventContext<'_>, event: &Event) {
+    fn event(&mut self, state: &mut Self::State, cx: &mut EventContext<'_>, event: &Event) {
         cx.with_padding(self.padding, |cx| {
             self.content.event(cx, event);
         });
@@ -173,7 +171,7 @@ impl StateView for Button {
     }
 
     fn layout(
-        &self,
+        &mut self,
         _state: &mut Self::State,
         cx: &mut LayoutContext<'_>,
         space: AvailableSpace,
@@ -181,11 +179,11 @@ impl StateView for Button {
         self.content.layout_padded(cx, space, self.padding)
     }
 
-    fn draw(&self, state: &mut Self::State, cx: &mut DrawContext<'_>) {
+    fn draw(&mut self, state: &mut Self::State, cx: &mut DrawContext<'_>) {
         let color = self.color.get(cx.theme);
         let hover = match self.hover_color {
             Some(ref hover_color) => hover_color.get(cx.theme),
-            None => color.darken(0.05),
+            None => color.brighten(0.05),
         };
 
         if state.hovered && state.transition < 1.0 {
@@ -202,8 +200,8 @@ impl StateView for Button {
             rect: cx.rect(),
             background_color: color.mix(hover, state.transition),
             background_image: None,
-            border_radius: self.border_radius.get(cx.theme),
-            border_width: self.border_width.get(cx.theme),
+            border_radius: self.border_radius.get(cx.theme).get(cx),
+            border_width: self.border_width.get(cx.theme).get(cx),
             border_color: self.border_color.get(cx.theme),
         });
 

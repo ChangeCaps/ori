@@ -7,7 +7,7 @@ fn ui(_cx: Scope) -> impl View {
         let mut column = Stack::hstack();
 
         for _ in 0..40 {
-            column.push(Button::new(Text::new("A")));
+            column.push(Button::new(Icon::new("steam")));
         }
 
         row.push(column);

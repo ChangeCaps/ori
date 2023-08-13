@@ -1,12 +1,12 @@
-use glam::Vec2;
 use ori_graphics::{
-    Color, FontFamily, FontStretch, FontStyle, FontWeight, Glyphs, TextAlign, TextSection, TextWrap,
+    math::Vec2, Color, FontFamily, FontStretch, FontStyle, FontWeight, Glyphs, TextAlign,
+    TextSection, TextWrap,
 };
 use ori_reactive::Event;
 
 use crate::{
-    AvailableSpace, DrawContext, EventContext, Key, LayoutContext, Node, StateView, Style, Styled,
-    Unit,
+    AvailableSpace, Context, DrawContext, EventContext, Key, LayoutContext, Node, StateView, Style,
+    Styled, Unit,
 };
 
 macro_rules! impl_into_text {
@@ -141,14 +141,14 @@ impl Text {
 impl StateView for Text {
     type State = Option<Glyphs>;
 
-    fn build(&self) -> Self::State {
+    fn build(&mut self, _cx: &mut Context<'_>) -> Self::State {
         None
     }
 
-    fn event(&self, _state: &mut Self::State, _cx: &mut EventContext<'_>, _event: &Event) {}
+    fn event(&mut self, _state: &mut Self::State, _cx: &mut EventContext<'_>, _event: &Event) {}
 
     fn layout(
-        &self,
+        &mut self,
         state: &mut Self::State,
         cx: &mut LayoutContext<'_>,
         space: AvailableSpace,
@@ -173,7 +173,7 @@ impl StateView for Text {
         state.as_ref().map_or(space.min, |glyphs| glyphs.size())
     }
 
-    fn draw(&self, state: &mut Self::State, cx: &mut DrawContext<'_>) {
+    fn draw(&mut self, state: &mut Self::State, cx: &mut DrawContext<'_>) {
         if let Some(glyphs) = state {
             cx.draw_text(glyphs, cx.rect());
         }

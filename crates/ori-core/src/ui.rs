@@ -4,21 +4,22 @@ use std::{
     time::{Duration, Instant},
 };
 
-use glam::{UVec2, Vec2};
-use ori_graphics::{FontSource, Fonts, Frame, ImageCache, RenderBackend, Renderer};
-use ori_reactive::{Emitter, Event, EventSink, Scope, Task, WeakCallback};
+use ori_graphics::{
+    math::{UVec2, Vec2},
+    FontSource, Fonts, Frame, ImageCache, RenderBackend, Renderer,
+};
+use ori_reactive::{Emitter, Event, EventSink, EventTask, Scope, WeakCallback};
 
 use crate::{
     default_theme::default_theme,
     function::{reactive, window},
     AvailableSpace, CloseWindow, Code, DragWindow, KeyboardEvent, Metrics, Modifiers, Node,
-    OpenWindow, PointerButton, PointerEvent, RequestAnimationFrame, RequestLayoutEvent,
+    OpenWindow, Palette, PointerButton, PointerEvent, RequestAnimationFrame, RequestLayoutEvent,
     RequestRedrawEvent, Theme, Tree, Window, WindowBackend, WindowClosedEvent, WindowId,
     WindowResizedEvent,
 };
 
 const TEXT_FONT: &[u8] = include_bytes!("../fonts/NotoSans-Medium.ttf");
-const ICON_FONT: &[u8] = include_bytes!("../fonts/MaterialIcons-Regular.ttf");
 
 pub trait BuildUi<V>: Sized + Send + Sync + 'static {
     fn build(&mut self, cx: Scope) -> Node;
@@ -261,12 +262,16 @@ where
     pub fn new(window_backend: W, render_backend: R) -> Self {
         let fonts = Fonts::new();
 
+        let mut theme = Theme::new();
+        theme.extend(Palette::light().to_theme());
+        theme.extend(default_theme());
+
         Self {
             window_backend,
             render_backend,
             frame: Frame::new(),
             fonts,
-            theme: default_theme(),
+            theme,
             image_cache: ImageCache::new(),
             idle_callback: None,
             config: UiConfig::default(),
@@ -280,7 +285,6 @@ where
     pub fn load_default_fonts(&mut self) {
         self.fonts.load_system_fonts();
         self.fonts.load_font_data(TEXT_FONT.to_vec());
-        self.fonts.load_font_data(ICON_FONT.to_vec());
     }
 
     /// Returns the number of windows.
@@ -606,7 +610,7 @@ where
     ///
     /// This should be called every time an [`Event`] is received from the [`EventSink`].
     pub fn event(&mut self, target: W::Target<'_>, id: WindowId, event: &Event) {
-        if let Some(task) = event.get::<Task>() {
+        if let Some(task) = event.get::<EventTask>() {
             task.poll();
             return;
         }
@@ -785,6 +789,15 @@ where
     R: RenderBackend<Surface = <W as WindowBackend>::Surface>,
 {
     fn ui(&mut self) -> &mut Ui<W, R>;
+
+    fn theme(mut self, theme: Theme) -> Self {
+        self.ui().theme.extend(theme);
+        self
+    }
+
+    fn palette(self, palette: Palette) -> Self {
+        self.theme(palette.to_theme())
+    }
 
     /// Loads a font from `source`, see [`font`](ori_graphics::font).
     fn font(mut self, font: impl Into<FontSource>) -> Self {

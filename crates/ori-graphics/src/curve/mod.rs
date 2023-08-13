@@ -201,13 +201,15 @@ impl Curve {
                 let center = self.points[i];
                 let next = self.points[i + 1];
 
-                let prev_center = (center - prev).normalize();
-                let center_next = (next - center).normalize();
+                let a = (center - prev).normalize();
+                let b = (next - center).normalize();
 
-                let hat_a = Vec2::new(prev_center.y, -prev_center.x);
-                let hat_b = Vec2::new(center_next.y, -center_next.x);
+                let hat_a = Vec2::new(a.y, -a.x);
+                let hat_b = Vec2::new(b.y, -b.x);
+                let offset = (hat_a + hat_b).normalize();
+                let angle = offset.angle_between(hat_a) / 2.0;
 
-                let offset = (hat_a + hat_b).normalize() * thickness;
+                let offset = offset * thickness * (1.0 + angle.tan());
 
                 let vertex_a = Vertex::new_color(center + offset, color);
                 let vertex_b = Vertex::new_color(center - offset, color);

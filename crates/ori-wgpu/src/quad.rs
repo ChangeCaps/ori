@@ -1,7 +1,10 @@
 use std::{mem, num::NonZeroU64};
 
 use bytemuck::{Pod, Zeroable};
-use ori_graphics::{math::Vec2, prelude::Mat2, Affine, Color, ImageHandle, Quad, Rect};
+use ori_graphics::{
+    math::{Mat2, Vec2},
+    Affine, Color, ImageHandle, Quad, Rect,
+};
 use wgpu::{
     include_wgsl,
     util::{BufferInitDescriptor, DeviceExt, StagingBelt},

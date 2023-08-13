@@ -1,4 +1,10 @@
-use std::{any::Any, collections::HashMap, hash::BuildHasher, sync::Arc};
+use std::{
+    any::Any,
+    collections::HashMap,
+    fmt::{Debug, Display},
+    hash::BuildHasher,
+    sync::Arc,
+};
 
 use crate::{Key, Style};
 
@@ -19,9 +25,44 @@ impl BuildHasher for ThemeHasher {
 type ArcStr = Arc<str>;
 type ArcValue = Arc<dyn Any + Send + Sync>;
 
+#[derive(Clone)]
+enum ThemeEntry {
+    Style(Style<ArcValue>),
+    Map {
+        key: ArcStr,
+        map: Arc<dyn Fn(&ArcValue) -> ArcValue + Send + Sync>,
+    },
+}
+
+impl Debug for ThemeEntry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ThemeEntry::Style(style) => f.debug_tuple("Style").field(style).finish(),
+            ThemeEntry::Map { key, .. } => f.debug_tuple("Map").field(key).finish(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum ThemeGetError {
+    NotFound(ArcStr),
+    MaxDepth,
+    Downcast,
+}
+
+impl Display for ThemeGetError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ThemeGetError::NotFound(name) => write!(f, "missing theme value for key '{}'", name),
+            ThemeGetError::MaxDepth => write!(f, "maximum theme depth exceeded"),
+            ThemeGetError::Downcast => write!(f, "failed to downcast theme value"),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct Theme {
-    values: HashMap<ArcStr, Style<ArcValue>, ThemeHasher>,
+    values: HashMap<ArcStr, ThemeEntry, ThemeHasher>,
 }
 
 impl Theme {
@@ -43,14 +84,14 @@ impl Theme {
         let name = ArcStr::from(key.name());
         let value: Style<ArcValue> = Style::Concrete(value);
 
-        self.values.insert(name, value);
+        self.values.insert(name, ThemeEntry::Style(value));
     }
 
     pub fn set_key<T: Value>(&mut self, key: Key<T>, value: Key<T>) {
         let name = ArcStr::from(key.name());
         let value: Style<ArcValue> = Style::Key(value.cast());
 
-        self.values.insert(name, value);
+        self.values.insert(name, ThemeEntry::Style(value));
     }
 
     pub fn set<T: Value>(&mut self, key: Key<T>, value: impl Into<Style<T>>) {
@@ -64,6 +105,27 @@ impl Theme {
         }
     }
 
+    pub fn map<T: Value, U: Value>(
+        &mut self,
+        key: Key<U>,
+        source: Key<T>,
+        map: impl Fn(&T) -> U + Send + Sync + 'static,
+    ) {
+        let name = ArcStr::from(key.name());
+        let map = Arc::new(move |value: &ArcValue| {
+            let value = value.downcast_ref::<T>().unwrap();
+            Arc::new(map(value)) as ArcValue
+        });
+
+        self.values.insert(
+            name,
+            ThemeEntry::Map {
+                key: ArcStr::from(source.name()),
+                map,
+            },
+        );
+    }
+
     pub fn extend(&mut self, other: Self) {
         self.values.extend(other.values);
     }
@@ -72,27 +134,44 @@ impl Theme {
         self.values.clear();
     }
 
-    pub fn try_get<T: Clone + Value>(&self, mut key: Key<T>) -> Option<T> {
+    fn try_get_value(&self, mut key: &str) -> Result<ArcValue, ThemeGetError> {
         let mut depth = 0;
 
-        while let Some(value) = self.values.get(key.name()) {
+        while let Some(value) = self.values.get(key) {
             if depth >= Self::MAX_DEPTH {
-                panic!("maximum theme depth exceeded ({}), this is likely because of a cyclic dependency", Self::MAX_DEPTH);
+                return Err(ThemeGetError::MaxDepth);
             }
 
             depth += 1;
 
             match value {
-                Style::Concrete(value) => return value.downcast_ref::<T>().cloned(),
-                Style::Key(other) => key = other.cast(),
+                ThemeEntry::Style(style) => match style {
+                    Style::Concrete(value) => return Ok(value.clone()),
+                    Style::Key(other) => key = other.name(),
+                },
+                ThemeEntry::Map { key, map } => {
+                    let value = self.try_get_value(key)?;
+                    return Ok(map(&value));
+                }
             }
         }
 
-        None
+        Err(ThemeGetError::NotFound(ArcStr::from(key)))
+    }
+
+    pub fn try_get<T: Clone + Value>(&self, key: Key<T>) -> Result<T, ThemeGetError> {
+        let value = self.try_get_value(key.name())?;
+        (value.downcast_ref::<T>().cloned()).ok_or(ThemeGetError::Downcast)
     }
 
     pub fn get<T: Clone + Default + Value>(&self, key: Key<T>) -> T {
-        self.try_get(key).unwrap_or_default()
+        match self.try_get(key) {
+            Ok(value) => value,
+            Err(err) => {
+                tracing::warn!("{}", err);
+                T::default()
+            }
+        }
     }
 
     pub fn style<T: Clone + Default + Value>(&self, style: &Style<T>) -> T {

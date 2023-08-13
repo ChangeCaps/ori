@@ -1,5 +1,6 @@
 //! The core crate for the Ori UI framework.
 
+mod border;
 mod context;
 mod default_theme;
 mod event;
@@ -19,6 +20,7 @@ mod view;
 pub mod views;
 mod window;
 
+pub use border::*;
 pub use context::*;
 pub use event::*;
 pub use layout::*;
@@ -34,7 +36,7 @@ pub use ui::*;
 pub use view::*;
 pub use window::*;
 
-pub use glam as math;
+pub use ori_graphics::math;
 pub use tracing;
 
 pub mod prelude {
@@ -47,8 +49,9 @@ pub mod prelude {
     };
     pub use crate::function::*;
     pub use crate::layout::*;
+    pub use crate::math::*;
     pub use crate::node::Node;
-    pub use crate::palette::{ACCENT, BACKGROUND, PRIMARY, SECONDARY, TEXT};
+    pub use crate::palette::Palette;
     pub use crate::style::{Key, Style, Styled};
     pub use crate::theme::Theme;
     pub use crate::ui::UiBuilder;
@@ -59,6 +62,5 @@ pub mod prelude {
 
     pub use ori_macro::reactive;
 
-    pub use glam::*;
     pub use tracing::{debug, error, info, trace, warn};
 }

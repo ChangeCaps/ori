@@ -1,59 +1,57 @@
-use glam::Vec2;
+use ori_graphics::math::Vec2;
 use ori_reactive::Event;
 
-use crate::{AvailableSpace, DrawContext, EventContext, LayoutContext, Tree, View};
+use crate::{AvailableSpace, Context, DrawContext, EventContext, LayoutContext, View};
 
 #[allow(unused_variables)]
-pub trait StateView: Send + Sync + 'static {
+pub trait StateView: Send + 'static {
     type State: Send + Sync + 'static;
 
-    fn build(&self) -> Self::State;
+    fn build(&mut self, cx: &mut Context<'_>) -> Self::State;
 
-    fn event(&self, state: &mut Self::State, cx: &mut EventContext<'_>, event: &Event) {}
+    fn event(&mut self, state: &mut Self::State, cx: &mut EventContext<'_>, event: &Event);
 
     fn layout(
-        &self,
+        &mut self,
         state: &mut Self::State,
         cx: &mut LayoutContext<'_>,
         space: AvailableSpace,
-    ) -> Vec2 {
-        space.min
-    }
+    ) -> Vec2;
 
-    fn draw(&self, state: &mut Self::State, cx: &mut DrawContext<'_>) {}
+    fn draw(&mut self, state: &mut Self::State, cx: &mut DrawContext<'_>);
 }
 
-fn take_state<V: StateView>(view: &V, tree: &mut Tree) -> Box<V::State> {
-    let Some(state) = tree.take_view_state() else {
-        return Box::new(view.build());
+fn take_state<V: StateView>(view: &mut V, cx: &mut Context<'_>) -> Box<V::State> {
+    let Some(state) = cx.tree.take_view_state() else {
+        return Box::new(view.build(cx));
     };
 
     match state.downcast::<V::State>() {
         Ok(state) => state,
         Err(_) => {
-            tree.children.clear();
-            Box::new(view.build())
+            cx.tree.children.clear();
+            Box::new(view.build(cx))
         }
     }
 }
 
 impl<T: StateView> View for T {
-    fn event(&self, cx: &mut EventContext<'_>, event: &Event) {
-        let mut state = take_state(self, cx.tree);
+    fn event(&mut self, cx: &mut EventContext<'_>, event: &Event) {
+        let mut state = take_state(self, cx);
         self.event(&mut state, cx, event);
         cx.tree.set_view_state(state);
     }
 
-    fn layout(&self, cx: &mut LayoutContext<'_>, space: AvailableSpace) -> Vec2 {
-        let mut state = take_state(self, cx.tree);
+    fn layout(&mut self, cx: &mut LayoutContext<'_>, space: AvailableSpace) -> Vec2 {
+        let mut state = take_state(self, cx);
         let size = self.layout(&mut state, cx, space);
         cx.tree.set_view_state(state);
 
         size
     }
 
-    fn draw(&self, cx: &mut DrawContext<'_>) {
-        let mut state = take_state(self, cx.tree);
+    fn draw(&mut self, cx: &mut DrawContext<'_>) {
+        let mut state = take_state(self, cx);
         self.draw(&mut state, cx);
         cx.tree.set_view_state(state);
     }

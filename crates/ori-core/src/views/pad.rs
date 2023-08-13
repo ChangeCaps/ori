@@ -1,9 +1,9 @@
-use glam::Vec2;
+use ori_graphics::math::Vec2;
 use ori_reactive::Event;
 
 use crate::{AvailableSpace, DrawContext, EventContext, LayoutContext, Node, Padding, View};
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Pad {
     pub content: Node,
     pub padding: Padding,
@@ -19,15 +19,15 @@ impl Pad {
 }
 
 impl View for Pad {
-    fn event(&self, cx: &mut EventContext<'_>, event: &Event) {
+    fn event(&mut self, cx: &mut EventContext<'_>, event: &Event) {
         self.content.event_padded(cx, event, self.padding);
     }
 
-    fn layout(&self, cx: &mut LayoutContext<'_>, space: AvailableSpace) -> Vec2 {
+    fn layout(&mut self, cx: &mut LayoutContext<'_>, space: AvailableSpace) -> Vec2 {
         self.content.layout_padded(cx, space, self.padding)
     }
 
-    fn draw(&self, cx: &mut DrawContext<'_>) {
+    fn draw(&mut self, cx: &mut DrawContext<'_>) {
         self.content.draw_padded(cx, self.padding);
     }
 }

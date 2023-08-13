@@ -3,8 +3,8 @@ use std::{any::Any, future::Future, mem, sync::Arc};
 use parking_lot::Mutex;
 
 use crate::{
-    context::Contexts, Callback, Emitter, Event, EventSink, OwnedSignal, ReadSignal, Resource,
-    Runtime, ScopeId, Signal, Task,
+    context::Contexts, Callback, Emitter, Event, EventSink, EventTask, OwnedSignal, ReadSignal,
+    Resource, Runtime, ScopeId, Signal,
 };
 
 use super::effect;
@@ -128,7 +128,7 @@ impl Scope {
 
     /// Emits an event.
     pub fn emit(self, event: impl Any + Send + Sync) {
-        self.event_sink().emit(event);
+        self.event_sink().send(event);
     }
 
     /// Registers a callback to be called when an event is emitted.
@@ -199,7 +199,7 @@ impl Scope {
     /// It will be polled once, when spawned, and when awakened will emit a [`Task`] to the
     /// [`EventSink`] of this scope.
     pub fn spawn(self, future: impl Future<Output = ()> + Send + 'static) {
-        Task::spawn(self.event_sink(), future);
+        EventTask::spawn(self.event_sink(), future);
     }
 
     /// Creates a [`Signal`] that will be managed by this scope.

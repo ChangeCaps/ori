@@ -1,4 +1,8 @@
-use std::{fmt::Display, io};
+use std::{
+    fmt::Display,
+    hash::{Hash, Hasher},
+    io,
+};
 
 use crate::ImageData;
 
@@ -95,6 +99,15 @@ impl From<&[u8]> for ImageSource {
 }
 
 impl ImageSource {
+    /// Returns the ID of the image.
+    ///
+    /// This is a simple hash of the image source.
+    pub fn id(&self) -> u64 {
+        let mut hasher = seahash::SeaHasher::new();
+        self.hash(&mut hasher);
+        hasher.finish()
+    }
+
     /// Tries to load the [`ImageData`] from the source.
     pub fn try_load(self) -> Result<ImageData, ImageLoadError> {
         match self {

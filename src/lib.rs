@@ -35,6 +35,9 @@ pub use ori_core as core;
 pub use ori_graphics as graphics;
 pub use ori_reactive as reactive;
 
+#[cfg(feature = "font-awesome")]
+pub use ori_font_awesome as font_awesome;
+
 #[cfg(feature = "winit")]
 pub use ori_winit as winit;
 
@@ -48,6 +51,8 @@ pub mod prelude {
     pub use ori_graphics::prelude::*;
     pub use ori_reactive::prelude::*;
 
+    #[cfg(feature = "font-awesome")]
+    pub use ori_font_awesome::prelude::*;
     #[cfg(feature = "wgpu")]
     pub use ori_wgpu::prelude::*;
     #[cfg(feature = "winit")]

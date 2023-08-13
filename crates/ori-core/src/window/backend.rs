@@ -1,7 +1,6 @@
 use std::fmt::Debug;
 
-use glam::UVec2;
-use ori_graphics::ImageData;
+use ori_graphics::{math::UVec2, ImageData};
 use ori_reactive::EventSink;
 
 use crate::{Cursor, Window, WindowId};

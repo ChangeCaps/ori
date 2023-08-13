@@ -6,6 +6,7 @@ use ori::prelude::*;
 fn ui(cx: Scope) -> impl View {
     // create a signal that will hold the state of the counter
     let counter = signal(cx, 0);
+    let checked = signal(cx, true);
 
     // we use the reactive! macro to create a reactive ui component
     let text = reactive!(format!("Clicked {} times", counter.get()));
@@ -14,7 +15,7 @@ fn ui(cx: Scope) -> impl View {
     let button = Button::new(text).on_press(move |_| *counter.modify() += 1);
 
     // we center the button in the window
-    Align::center(button)
+    Align::center(hstack![button, CheckBox::new(checked)])
 }
 
 fn main() {

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use ori_graphics::{
-    prelude::{UVec2, Vec2},
+    math::{UVec2, Vec2},
     Color, Frame, ImageData, ImageFilter, ImageHandle, Primitive, PrimitiveKind, Renderer,
 };
 use wgpu::{

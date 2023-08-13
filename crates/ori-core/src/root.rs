@@ -1,7 +1,6 @@
 use std::time::Duration;
 
-use glam::Vec2;
-use ori_graphics::{Affine, Fonts, Frame, ImageCache, Renderer};
+use ori_graphics::{math::Vec2, Affine, Fonts, Frame, ImageCache, Renderer};
 use ori_reactive::{Event, EventSink, Signal};
 
 use crate::{
@@ -11,7 +10,7 @@ use crate::{
 impl Node {
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn event_root(
-        &self,
+        &mut self,
         fonts: &mut Fonts,
         renderer: &dyn Renderer,
         image_cache: &mut ImageCache,
@@ -38,7 +37,7 @@ impl Node {
 
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn layout_root(
-        &self,
+        &mut self,
         fonts: &mut Fonts,
         renderer: &dyn Renderer,
         image_cache: &mut ImageCache,
@@ -65,7 +64,7 @@ impl Node {
 
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn draw_root(
-        &self,
+        &mut self,
         fonts: &mut Fonts,
         renderer: &dyn Renderer,
         image_cache: &mut ImageCache,

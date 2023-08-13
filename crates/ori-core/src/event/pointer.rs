@@ -1,4 +1,4 @@
-use glam::Vec2;
+use ori_graphics::math::Vec2;
 
 use crate::Modifiers;
 

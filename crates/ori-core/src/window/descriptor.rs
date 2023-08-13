@@ -1,5 +1,4 @@
-use glam::UVec2;
-use ori_graphics::{Color, ImageData, ImageSource};
+use ori_graphics::{math::UVec2, Color, ImageData, ImageSource};
 
 use crate::{Cursor, WindowId};
 

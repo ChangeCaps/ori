@@ -1,8 +1,7 @@
 use std::any::{Any, TypeId};
 
 use deref_derive::{Deref, DerefMut};
-use glam::Vec2;
-use ori_graphics::{Affine, Frame, Glyphs, Primitive, PrimitiveKind, Rect};
+use ori_graphics::{math::Vec2, Affine, Frame, Glyphs, Primitive, PrimitiveKind, Rect};
 use ori_reactive::Event;
 
 use crate::{AvailableSpace, Context, Padding};
@@ -17,6 +16,13 @@ pub struct EventContext<'a> {
 impl<'a> EventContext<'a> {
     pub(crate) fn new(context: Context<'a>, transform: Affine) -> Self {
         Self { context, transform }
+    }
+
+    pub fn borrow(&mut self) -> EventContext<'_> {
+        EventContext {
+            context: self.context.borrow(),
+            transform: self.transform,
+        }
     }
 
     pub fn size(&self) -> Vec2 {
@@ -80,6 +86,12 @@ impl<'a> LayoutContext<'a> {
     pub(crate) fn new(context: Context<'a>) -> Self {
         Self { context }
     }
+
+    pub fn borrow(&mut self) -> LayoutContext<'_> {
+        LayoutContext {
+            context: self.context.borrow(),
+        }
+    }
 }
 
 #[derive(Deref, DerefMut)]
@@ -92,6 +104,13 @@ pub struct DrawContext<'a> {
 impl<'a> DrawContext<'a> {
     pub(crate) fn new(context: Context<'a>, frame: &'a mut Frame) -> Self {
         Self { context, frame }
+    }
+
+    pub fn borrow(&mut self) -> DrawContext<'_> {
+        DrawContext {
+            context: self.context.borrow(),
+            frame: self.frame,
+        }
     }
 
     pub fn size(&self) -> Vec2 {
@@ -190,15 +209,12 @@ impl<T: View> IntoView for T {
     }
 }
 
-#[allow(unused_variables)]
-pub trait View: Any + Send + Sync {
-    fn event(&self, cx: &mut EventContext<'_>, event: &Event) {}
+pub trait View: Any + Send {
+    fn event(&mut self, cx: &mut EventContext<'_>, event: &Event);
 
-    fn layout(&self, cx: &mut LayoutContext<'_>, space: AvailableSpace) -> Vec2 {
-        space.min
-    }
+    fn layout(&mut self, cx: &mut LayoutContext<'_>, space: AvailableSpace) -> Vec2;
 
-    fn draw(&self, cx: &mut DrawContext<'_>) {}
+    fn draw(&mut self, cx: &mut DrawContext<'_>);
 }
 
 impl dyn View {
@@ -221,4 +237,12 @@ impl dyn View {
     }
 }
 
-impl View for () {}
+impl View for () {
+    fn event(&mut self, _cx: &mut EventContext<'_>, _event: &Event) {}
+
+    fn layout(&mut self, _cx: &mut LayoutContext<'_>, space: AvailableSpace) -> Vec2 {
+        space.min
+    }
+
+    fn draw(&mut self, _cx: &mut DrawContext<'_>) {}
+}

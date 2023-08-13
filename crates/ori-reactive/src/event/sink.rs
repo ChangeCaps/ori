@@ -70,7 +70,7 @@ impl EventSink {
     }
 
     /// Sends an event to the application.
-    pub fn emit(&self, event: impl Any + Send + Sync) {
+    pub fn send(&self, event: impl Any + Send + Sync) {
         self.emitter.lock().send_event(Event::new(event));
     }
 }

@@ -1,12 +1,12 @@
-use glam::Vec2;
+use ori_graphics::math::Vec2;
 use ori_reactive::Event;
 
 use crate::{
-    AlignContent, AlignItems, AlignSelf, AvailableSpace, Axis, DrawContext, EventContext,
+    AlignContent, AlignItems, AlignSelf, AvailableSpace, Axis, Context, DrawContext, EventContext,
     JustifyContent, LayoutContext, Length, Node, Size, StateView, Unit,
 };
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Flex {
     pub content: Node,
     pub flex: f32,
@@ -47,7 +47,7 @@ impl Flex {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Stack {
     pub content: Vec<Flex>,
     pub size: Size,
@@ -151,7 +151,7 @@ impl Stack {
     }
 
     fn measure_fixed(
-        &self,
+        &mut self,
         state: &mut StackState,
         cx: &mut LayoutContext<'_>,
         gap_major: f32,
@@ -166,7 +166,7 @@ impl Stack {
 
         let mut start = 0;
 
-        for (i, child) in self.content.iter().enumerate() {
+        for (i, child) in self.content.iter_mut().enumerate() {
             flex_sum += child.flex;
 
             let size = child.content.layout_indexed(i, cx, space);
@@ -209,7 +209,7 @@ impl Stack {
     }
 
     fn measure_flex(
-        &self,
+        &mut self,
         state: &mut StackState,
         cx: &mut LayoutContext<'_>,
         min_major: f32,
@@ -229,7 +229,7 @@ impl Stack {
             };
 
             for i in line.start..line.end {
-                let child = &self.content[i];
+                let child = &mut self.content[i];
 
                 let is_stretch = self.align_items.is_stretch() || child.is_stretch();
 
@@ -312,12 +312,12 @@ impl StackState {
 impl StateView for Stack {
     type State = StackState;
 
-    fn build(&self) -> Self::State {
+    fn build(&mut self, _cx: &mut Context<'_>) -> Self::State {
         StackState::new(self.content.len())
     }
 
-    fn event(&self, state: &mut Self::State, cx: &mut EventContext<'_>, event: &Event) {
-        for (i, child) in self.content.iter().enumerate() {
+    fn event(&mut self, state: &mut Self::State, cx: &mut EventContext<'_>, event: &Event) {
+        for (i, child) in self.content.iter_mut().enumerate() {
             let position = state.positions[i];
 
             cx.with_translation(position, |cx| {
@@ -327,7 +327,7 @@ impl StateView for Stack {
     }
 
     fn layout(
-        &self,
+        &mut self,
         state: &mut Self::State,
         cx: &mut LayoutContext<'_>,
         space: AvailableSpace,
@@ -382,8 +382,8 @@ impl StateView for Stack {
         size
     }
 
-    fn draw(&self, state: &mut Self::State, cx: &mut DrawContext<'_>) {
-        for (i, child) in self.content.iter().enumerate() {
+    fn draw(&mut self, state: &mut Self::State, cx: &mut DrawContext<'_>) {
+        for (i, child) in self.content.iter_mut().enumerate() {
             let position = state.positions[i];
 
             cx.with_translation(position, |cx| {

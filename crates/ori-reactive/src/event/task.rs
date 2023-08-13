@@ -14,9 +14,15 @@ use crate::EventSink;
 /// When a task is awoken, it will be sent to the event loop, through the
 /// provided [`EventSink`] to be polled again. Is is therefore the job of the
 /// application shell to ensure that the task is polled.
-pub struct Task(Arc<TaskInner>);
+pub struct EventTask {
+    inner: Arc<TaskInner>,
+}
 
-impl Task {
+impl EventTask {
+    fn from_inner(inner: Arc<TaskInner>) -> Self {
+        Self { inner }
+    }
+
     /// Spawns a `future` on the event loop. The future will be polled once and
     /// the waker will send the task to the event loop when it is awoken.
     pub fn spawn(event_sink: EventSink, future: impl Future<Output = ()> + Send + 'static) {
@@ -24,6 +30,7 @@ impl Task {
 
         let task_inner = Arc::new(TaskInner {
             future: Mutex::new(Some(Box::pin(future))),
+
             event_sink,
         });
 
@@ -34,7 +41,7 @@ impl Task {
     pub fn poll(&self) {
         tracing::trace!("polling task");
 
-        Self::poll_inner(&self.0);
+        Self::poll_inner(&self.inner);
     }
 
     fn poll_inner(inner: &Arc<TaskInner>) {
@@ -59,11 +66,11 @@ struct TaskInner {
 
 impl Wake for TaskInner {
     fn wake(self: Arc<Self>) {
-        self.event_sink.emit(Task(self.clone()));
+        self.event_sink.send(EventTask::from_inner(self.clone()));
     }
 
     fn wake_by_ref(self: &Arc<Self>) {
-        self.event_sink.emit(Task(self.clone()));
+        self.event_sink.send(EventTask::from_inner(self.clone()));
     }
 }
 

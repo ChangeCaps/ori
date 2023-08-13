@@ -18,7 +18,6 @@ ori-reactive = { path = "../ori-reactive", version = "0.1.0-alpha.1" }
 
 # Other dependencies
 deref-derive = "0.1"
-glam = "0.24"
 parking_lot = "0.12"
 seahash = "4.1"
 smallvec = { version = "1.10", features = ["union", "const_generics", "const_new"] }

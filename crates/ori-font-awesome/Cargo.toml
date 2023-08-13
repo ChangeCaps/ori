@@ -1,0 +1,15 @@
+[package]
+name = "ori-font-awesome"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[build-dependencies]
+json = "0.12"
+
+[dependencies]
+# Ori dependencies
+ori-core = { path = "../ori-core", version = "0.1.0-alpha.0" }
+ori-graphics = { path = "../ori-graphics", version = "0.1.0-alpha.0" }
+ori-reactive = { path = "../ori-reactive", version = "0.1.0-alpha.0" }

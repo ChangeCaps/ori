@@ -1,4 +1,4 @@
-use glam::Vec2;
+use ori_graphics::math::Vec2;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct AvailableSpace {
@@ -17,7 +17,7 @@ impl AvailableSpace {
         Self::new(size, size)
     }
 
-    pub fn constrain(self, size: Vec2) -> Vec2 {
+    pub fn fit(self, size: Vec2) -> Vec2 {
         size.clamp(self.min, self.max)
     }
 

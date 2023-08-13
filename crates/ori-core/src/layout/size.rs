@@ -1,4 +1,4 @@
-use glam::Vec2;
+use ori_graphics::math::Vec2;
 
 use crate::{AvailableSpace, Context, Length};
 
@@ -34,7 +34,7 @@ impl Size {
         let width = self.width.get(cx, content.x, space.max.x);
         let height = self.height.get(cx, content.y, space.max.y);
 
-        space.constrain(Vec2::new(width, height))
+        space.fit(Vec2::new(width, height))
     }
 
     pub fn content_space(&self, cx: &Context<'_>, space: AvailableSpace) -> AvailableSpace {

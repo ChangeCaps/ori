@@ -1,16 +1,11 @@
 use std::any::{Any, TypeId};
 
-use glam::Vec2;
-
-#[derive(Default)]
-pub struct TreeState {
-    pub(crate) view_state: Option<Box<dyn Any>>,
-    pub(crate) layout_size: Option<Vec2>,
-}
+use ori_graphics::math::Vec2;
 
 #[derive(Default)]
 pub struct Tree {
-    pub(crate) state: TreeState,
+    pub(crate) view_state: Option<Box<dyn Any>>,
+    pub(crate) layout_size: Option<Vec2>,
     pub(crate) children: Vec<Tree>,
 }
 
@@ -19,32 +14,28 @@ impl Tree {
         Self::default()
     }
 
-    pub fn state(&self) -> &TreeState {
-        &self.state
-    }
-
     pub fn view_state_type_id(&self) -> Option<TypeId> {
-        Some(<dyn Any>::type_id(self.state.view_state.as_ref()?))
+        Some(<dyn Any>::type_id(self.view_state.as_ref()?))
     }
 
     pub fn set_view_state(&mut self, state: Box<dyn Any>) {
-        self.state.view_state = Some(state);
+        self.view_state = Some(state);
     }
 
     pub fn take_view_state(&mut self) -> Option<Box<dyn Any>> {
-        self.state.view_state.take()
+        self.view_state.take()
     }
 
     pub fn view_state_mut(&mut self) -> Option<&mut dyn Any> {
-        self.state.view_state.as_mut().map(|state| state.as_mut())
+        self.view_state.as_mut().map(|state| state.as_mut())
     }
 
     pub fn size(&self) -> Option<Vec2> {
-        self.state.layout_size
+        self.layout_size
     }
 
     pub fn set_size(&mut self, size: Vec2) {
-        self.state.layout_size = Some(size);
+        self.layout_size = Some(size);
     }
 
     pub fn child(&mut self, index: usize) -> &mut Tree {

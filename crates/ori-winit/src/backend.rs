@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use ori_core::{Cursor, Window, WindowBackend, WindowId};
-use ori_graphics::{prelude::UVec2, ImageData};
+use ori_graphics::{math::UVec2, ImageData};
 use ori_reactive::{Event, EventEmitter, EventSink};
 use raw_window_handle::{
     HasRawDisplayHandle, HasRawWindowHandle, RawDisplayHandle, RawWindowHandle,

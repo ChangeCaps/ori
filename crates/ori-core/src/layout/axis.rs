@@ -1,4 +1,4 @@
-use glam::Vec2;
+use ori_graphics::math::Vec2;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Axis {

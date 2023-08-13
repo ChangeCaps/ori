@@ -41,6 +41,7 @@ pub mod prelude {
     pub use crate::curve::Curve;
     pub use crate::image;
     pub use crate::image::{ImageData, ImageHandle, ImageLoadError, ImageSource};
+    pub use crate::math;
     pub use crate::mesh::{Mesh, Vertex};
     pub use crate::quad::Quad;
     pub use crate::rect::Rect;
@@ -48,6 +49,4 @@ pub mod prelude {
     pub use crate::text::{
         font, FontFamily, FontStretch, FontStyle, FontWeight, TextAlign, TextSection, TextWrap,
     };
-
-    pub use glam::*;
 }

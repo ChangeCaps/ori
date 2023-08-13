@@ -1,8 +1,7 @@
-use std::{any::Any, time::Duration};
+use std::{any::Any, future::Future, time::Duration};
 
-use glam::Vec2;
-use ori_graphics::{Fonts, ImageCache, Renderer};
-use ori_reactive::{EventSink, Signal};
+use ori_graphics::{math::Vec2, Fonts, ImageCache, Renderer};
+use ori_reactive::{EventSink, EventTask, Signal};
 
 use crate::{RequestRedrawEvent, Theme, Tree, Unit, Window};
 
@@ -42,16 +41,8 @@ impl<'a> Context<'a> {
     }
 
     pub(crate) fn child<T>(&mut self, index: usize, f: impl FnOnce(Context<'_>) -> T) -> T {
-        let context = Context {
-            fonts: self.fonts,
-            renderer: self.renderer,
-            image_cache: self.image_cache,
-            theme: self.theme,
-            window: self.window,
-            delta_time: self.delta_time,
-            event_sink: self.event_sink,
-            tree: self.tree.child(index),
-        };
+        let mut context = self.borrow();
+        context.tree = context.tree.child(index);
 
         f(context)
     }
@@ -66,13 +57,36 @@ impl<'a> Context<'a> {
         }
     }
 
+    pub fn borrow(&mut self) -> Context<'_> {
+        Context {
+            fonts: self.fonts,
+            renderer: self.renderer,
+            image_cache: self.image_cache,
+            theme: self.theme,
+            window: self.window,
+            delta_time: self.delta_time,
+            event_sink: self.event_sink,
+            tree: self.tree,
+        }
+    }
+
+    /// Get the event sink for this context.
+    pub fn event_sink(&self) -> &EventSink {
+        self.event_sink
+    }
+
+    /// Spawn a future on the event loop.
+    pub fn spawn_future(&self, future: impl Future<Output = ()> + Send + 'static) {
+        EventTask::spawn(self.event_sink.clone(), future);
+    }
+
     pub fn unit(&self, unit: Unit) -> f32 {
         let window = self.window.get();
         unit.resolve(window.scale, window.size.as_vec2())
     }
 
     pub fn emit(&self, event: impl Any + Send + Sync) {
-        self.event_sink.emit(event);
+        self.event_sink.send(event);
     }
 
     pub fn request_redraw(&self) {

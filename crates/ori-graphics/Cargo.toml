@@ -17,6 +17,7 @@ ori-macro = { path = "../ori-macro", version = "0.1.0-alpha.1" }
 # Other dependencies
 bytemuck = { version = "1.13", features = ["derive"] }
 glam = { version = "0.24.0", features = ["bytemuck"] }
+seahash = { version = "4.1" }
 tracing = { version = "0.1", default-features = false }
 
 # Optional dependencies

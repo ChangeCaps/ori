@@ -1,4 +1,8 @@
-use ori_reactive::{effect::current_effect, prelude::emit, Modify, Scope, Signal};
+use std::sync::mpsc::channel;
+
+use ori_reactive::{
+    effect::current_effect, function::effect_scoped, prelude::emit, Modify, Scope, Signal,
+};
 
 use crate::{
     BuildUi, CloseWindow, DragWindow, OpenWindow, ReactiveNode, RequestAnimationFrame,
@@ -71,8 +75,13 @@ pub fn request_animation_frame(cx: Scope) {
 
 /// Creates a new reactive [`View`](crate::View) from a Ui function.
 pub fn reactive<V>(cx: Scope, mut f: impl BuildUi<V>) -> ReactiveNode {
-    ReactiveNode::new(cx.owned_memo_scoped(move |cx| {
+    let (tx, rx) = channel();
+
+    effect_scoped(cx, move |cx| {
+        let node = f.build(cx);
+        let _ = tx.send(node);
         request_layout(cx);
-        f.build(cx)
-    }))
+    });
+
+    ReactiveNode::new(rx)
 }
