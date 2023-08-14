@@ -1,7 +1,9 @@
-use ori_graphics::{Color, FontFamily, FontStretch, FontStyle, FontWeight, TextAlign, TextWrap};
+use ori_graphics::{
+    Color, FontFamily, FontStretch, FontStyle, FontWeight, ImageFilter, TextAlign, TextWrap,
+};
 
 use crate::{
-    views::{Button, CheckBox, Placeholder, Radio, Text, TextInput},
+    views::{Button, CheckBox, Image, Placeholder, Radio, Text, TextInput},
     BorderRadius, BorderWidth, Key, Palette, Theme, Unit,
 };
 
@@ -69,6 +71,10 @@ fn builtin_radio_theme(theme: &mut Theme) {
     theme.set(Radio::BORDER_COLOR, Palette::TEXT_BRIGHTER);
 }
 
+fn builtin_image_theme(theme: &mut Theme) {
+    theme.set(Image::FILTER, ImageFilter::Linear);
+}
+
 pub fn builtin_theme() -> Theme {
     let mut theme = Theme::new();
 
@@ -79,6 +85,7 @@ pub fn builtin_theme() -> Theme {
     builtin_check_box_theme(&mut theme);
     builtin_placeholder_theme(&mut theme);
     builtin_radio_theme(&mut theme);
+    builtin_image_theme(&mut theme);
 
     theme
 }

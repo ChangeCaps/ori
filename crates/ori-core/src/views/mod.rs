@@ -26,9 +26,4 @@ pub use text::*;
 pub use text_input::*;
 pub use themed::*;
 
-use std::sync::Arc;
-
-use crate::PointerEvent;
-
-pub type EventCallback<T> = Arc<dyn Fn(&T) + Send + Sync>;
-pub type PointerCallback = EventCallback<PointerEvent>;
+type EventCallback<T> = Box<dyn FnMut(&T) + Send>;

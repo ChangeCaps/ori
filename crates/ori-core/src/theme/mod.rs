@@ -126,7 +126,10 @@ impl Theme {
         self.values.clear();
     }
 
-    fn try_get_value(&self, mut key: &str) -> Result<ArcValue, ThemeError> {
+    /// Try to get a value.
+    ///
+    /// This is almost never useful and should be avoided.
+    pub fn try_get_value(&self, mut key: &str) -> Result<ArcValue, ThemeError> {
         let mut depth = 0;
 
         while let Some(value) = self.values.get(key) {
@@ -170,18 +173,23 @@ impl Theme {
         }
     }
 
+    /// Try to resolve the value of a [`Style`].
+    pub fn try_style<T: Clone + Value>(&self, style: &Style<T>) -> Result<T, ThemeError> {
+        match style {
+            Style::Concrete(value) => Ok(value.clone()),
+            Style::Key(key) => self.try_get(*key),
+            Style::Any(any) => any.get(self),
+        }
+    }
+
     /// Resolves the value of a [`Style`].
     pub fn style<T: Clone + Default + Value>(&self, style: &Style<T>) -> T {
-        match style {
-            Style::Concrete(value) => value.clone(),
-            Style::Key(key) => self.get(*key),
-            Style::Any(any) => match any.get(self) {
-                Ok(value) => value,
-                Err(err) => {
-                    tracing::warn!("{}", err);
-                    T::default()
-                }
-            },
+        match self.try_style(style) {
+            Ok(value) => value,
+            Err(err) => {
+                tracing::warn!("{}", err);
+                T::default()
+            }
         }
     }
 }

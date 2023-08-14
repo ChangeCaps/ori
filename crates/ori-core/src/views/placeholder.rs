@@ -6,12 +6,20 @@ use crate::{
     Length, Size, Style, View,
 };
 
+/// A placeholder view.
+///
+/// This is useful for testing layouts.
 #[derive(Clone, Debug)]
 pub struct Placeholder {
+    /// The size of the placeholder.
     pub size: Size,
+    /// The color of the placeholder.
     pub color: Style<Color>,
+    /// The border width of the placeholder.
     pub border_width: Style<BorderWidth>,
+    /// The border radius of the placeholder.
     pub border_radius: Style<BorderRadius>,
+    /// The border color of the placeholder.
     pub border_color: Style<Color>,
 }
 
@@ -33,40 +41,48 @@ impl Placeholder {
     pub const BORDER_RADIUS: Key<BorderRadius> = Key::new("placeholder.border-radius");
     pub const BORDER_COLOR: Key<Color> = Key::new("placeholder.border-color");
 
+    /// Create a new placeholder view.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Set the size.
     pub fn size(mut self, size: impl Into<Size>) -> Self {
         self.size = size.into();
         self
     }
 
+    /// Set the width.
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.size.width = width.into();
         self
     }
 
+    /// Set the height.
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.size.height = height.into();
         self
     }
 
+    /// Set the color.
     pub fn color(mut self, color: impl Into<Style<Color>>) -> Self {
         self.color = color.into();
         self
     }
 
+    /// Set the border width.
     pub fn border_width(mut self, border_width: impl Into<Style<BorderWidth>>) -> Self {
         self.border_width = border_width.into();
         self
     }
 
+    /// Set the border radius.
     pub fn border_radius(mut self, border_radius: impl Into<Style<BorderRadius>>) -> Self {
         self.border_radius = border_radius.into();
         self
     }
 
+    /// Set the border color.
     pub fn border_color(mut self, border_color: impl Into<Style<Color>>) -> Self {
         self.border_color = border_color.into();
         self

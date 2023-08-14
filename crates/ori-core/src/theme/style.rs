@@ -159,6 +159,53 @@ impl<T> Style<T> {
         Self::Key(Key::new(name))
     }
 
+    /// Create a new style from the given function.
+    pub fn try_any(style: impl Fn(&Theme) -> Result<T, ThemeError> + Send + Sync + 'static) -> Self
+    where
+        T: Send + Sync + 'static,
+    {
+        Self::Any(Arc::new(style))
+    }
+
+    /// Create a new style from the given function.
+    pub fn any(style: impl Fn(&Theme) -> T + Send + Sync + 'static) -> Self
+    where
+        T: Send + Sync + 'static,
+    {
+        Self::try_any(move |theme| Ok(style(theme)))
+    }
+
+    /// Create a new style from the given function.
+    ///
+    /// Mapping one key another value.
+    pub fn try_map<U: Value>(from: Key<U>, map: impl Fn(&U) -> T + Send + Sync + 'static) -> Self
+    where
+        T: Clone + Value,
+    {
+        Self::try_any(move |theme| {
+            let value = theme.try_get_value(from.name())?;
+            Ok(map(value.downcast_ref().ok_or(ThemeError::Downcast)?))
+        })
+    }
+
+    /// Create a new style from the given function.
+    ///
+    /// Mapping one key another value.
+    pub fn map<U: Value>(from: Key<U>, map: impl Fn(&U) -> T + Send + Sync + 'static) -> Self
+    where
+        T: Clone + Value,
+    {
+        Self::try_map(from, move |value| map(value))
+    }
+
+    /// Try to get the value from a theme.
+    pub fn try_get(&self, theme: &Theme) -> Result<T, ThemeError>
+    where
+        T: Clone + Value,
+    {
+        theme.try_style(self)
+    }
+
     /// Get the value from a theme.
     pub fn get(&self, theme: &Theme) -> T
     where

@@ -33,18 +33,30 @@ impl<T: ToString> From<T> for Text {
     }
 }
 
+/// A text view.
 #[derive(Clone, Debug)]
 pub struct Text {
+    /// The text to display.
     pub text: String,
+    /// The font size of the text.
     pub font_size: Style<Unit>,
+    /// The font family of the text.
     pub font_family: Style<FontFamily>,
+    /// The font weight of the text.
     pub font_weight: Style<FontWeight>,
+    /// The font stretch of the text.
     pub font_stretch: Style<FontStretch>,
+    /// The font style of the text.
     pub font_style: Style<FontStyle>,
+    /// The color of the text.
     pub color: Style<Color>,
+    /// The vertical alignment of the text.
     pub v_align: Style<TextAlign>,
+    /// The horizontal alignment of the text.
     pub h_align: Style<TextAlign>,
+    /// The line height of the text.
     pub line_height: Style<f32>,
+    /// The text wrap of the text.
     pub wrap: Style<TextWrap>,
 }
 
@@ -78,60 +90,66 @@ impl Text {
     pub const LINE_HEIGHT: Key<f32> = Key::new("text.line-height");
     pub const WRAP: Key<TextWrap> = Key::new("text.wrap");
 
+    /// Create a new text view.
     pub fn new(text: impl Into<Text>) -> Self {
         text.into()
     }
 
-    pub fn text(mut self, text: impl Into<String>) -> Self {
-        self.text = text.into();
-        self
-    }
-
+    /// Set the font size.
     pub fn font_size(mut self, font_size: impl Styled<Unit>) -> Self {
         self.font_size = font_size.style();
         self
     }
 
+    /// Set the font family.
     pub fn font_family(mut self, font_family: impl Styled<FontFamily>) -> Self {
         self.font_family = font_family.style();
         self
     }
 
+    /// Set the font weight.
     pub fn font_weight(mut self, font_weight: impl Styled<FontWeight>) -> Self {
         self.font_weight = font_weight.style();
         self
     }
 
+    /// Set the font stretch.
     pub fn font_stretch(mut self, font_stretch: impl Styled<FontStretch>) -> Self {
         self.font_stretch = font_stretch.style();
         self
     }
 
+    /// Set the font style.
     pub fn font_style(mut self, font_style: impl Styled<FontStyle>) -> Self {
         self.font_style = font_style.style();
         self
     }
 
+    /// Set the color.
     pub fn color(mut self, color: impl Styled<Color>) -> Self {
         self.color = color.style();
         self
     }
 
+    /// Set the vertical alignment.
     pub fn v_align(mut self, v_align: impl Styled<TextAlign>) -> Self {
         self.v_align = v_align.style();
         self
     }
 
+    /// Set the horizontal alignment.
     pub fn h_align(mut self, h_align: impl Styled<TextAlign>) -> Self {
         self.h_align = h_align.style();
         self
     }
 
+    /// Set the line height.
     pub fn line_height(mut self, line_height: impl Styled<f32>) -> Self {
         self.line_height = line_height.style();
         self
     }
 
+    /// Set the text wrap.
     pub fn wrap(mut self, wrap: impl Styled<TextWrap>) -> Self {
         self.wrap = wrap.style();
         self

@@ -2,19 +2,25 @@ use ori_graphics::{math::Vec2, ImageFilter, ImageHandle, ImageSource, Mesh};
 use ori_reactive::Event;
 
 use crate::{
-    AvailableSpace, Context, DrawContext, EventContext, Key, LayoutContext, Size, StateView, Style,
+    AvailableSpace, Context, DrawContext, EventContext, Key, LayoutContext, Length, Size,
+    StateView, Style,
 };
 
+/// An image view.
 #[derive(Clone, Debug, Default)]
 pub struct Image {
+    /// The source of the image to display.
     pub image: ImageSource,
+    /// The size of the image.
     pub size: Size,
+    /// The filter of the image.
     pub filter: Style<ImageFilter>,
 }
 
 impl Image {
     pub const FILTER: Key<ImageFilter> = Key::new("image.filter");
 
+    /// Create a new image view.
     pub fn new(image: impl Into<ImageSource>) -> Self {
         Self {
             image: image.into(),
@@ -23,11 +29,25 @@ impl Image {
         }
     }
 
+    /// Set the size.
     pub fn size(mut self, size: impl Into<Size>) -> Self {
         self.size = size.into();
         self
     }
 
+    /// Set the width.
+    pub fn width(mut self, width: impl Into<Length>) -> Self {
+        self.size.width = width.into();
+        self
+    }
+
+    /// Set the height.
+    pub fn height(mut self, height: impl Into<Length>) -> Self {
+        self.size.height = height.into();
+        self
+    }
+
+    /// Set the filter.
     pub fn filter(mut self, filter: impl Into<Style<ImageFilter>>) -> Self {
         self.filter = filter.into();
         self

@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use ori_graphics::{math::Vec2, Color, Quad};
 use ori_reactive::Event;
 
@@ -8,16 +6,16 @@ use crate::{
     LayoutContext, Node, Padding, PointerEvent, StateView, Style, Styled, Transition, Unit,
 };
 
-type OnPointerEvent = Arc<dyn Fn(&PointerEvent) + Send + Sync>;
+use super::EventCallback;
 
 /// A button view.
 pub struct Button {
     /// The content of the button.
     pub content: Node,
     /// The event to fire when the button is pressed.
-    pub on_press: Option<OnPointerEvent>,
+    pub on_press: Option<EventCallback<PointerEvent>>,
     /// The event to fire when the button is released.
-    pub on_release: Option<OnPointerEvent>,
+    pub on_release: Option<EventCallback<PointerEvent>>,
     /// The time it takes for the button to transition between states.
     pub trans: Transition,
     /// The padding of the button.
@@ -55,15 +53,10 @@ impl Default for Button {
 }
 
 impl Button {
-    /// The floating distance of the button.
     pub const FLOAT: Key<Unit> = Key::new("button.float");
-    /// The color of the button.
     pub const COLOR: Key<Color> = Key::new("button.color");
-    /// The border width of the button.
     pub const BORDER_WIDTH: Key<BorderWidth> = Key::new("button.border-width");
-    /// The border radius of the button.
     pub const BORDER_RADIUS: Key<BorderRadius> = Key::new("button.border-radius");
-    /// The border color of the button.
     pub const BORDER_COLOR: Key<Color> = Key::new("button.border-color");
 
     /// Create a new button view.
@@ -80,17 +73,14 @@ impl Button {
     }
 
     /// Set the on press callback of the button.
-    pub fn on_press(mut self, on_press: impl Fn(&PointerEvent) + Send + Sync + 'static) -> Self {
-        self.on_press = Some(Arc::new(on_press));
+    pub fn on_press(mut self, on_press: impl Fn(&PointerEvent) + Send + 'static) -> Self {
+        self.on_press = Some(Box::new(on_press));
         self
     }
 
     /// Set the on release callback of the button.
-    pub fn on_release(
-        mut self,
-        on_release: impl Fn(&PointerEvent) + Send + Sync + 'static,
-    ) -> Self {
-        self.on_release = Some(Arc::new(on_release));
+    pub fn on_release(mut self, on_release: impl Fn(&PointerEvent) + Send + 'static) -> Self {
+        self.on_release = Some(Box::new(on_release));
         self
     }
 
@@ -143,7 +133,7 @@ impl Button {
     }
 
     fn handle_pointer_event(
-        &self,
+        &mut self,
         state: &mut ButtonState,
         cx: &mut EventContext<'_>,
         event: &PointerEvent,
@@ -162,7 +152,7 @@ impl Button {
             state.pressed = true;
             cx.request_redraw();
 
-            if let Some(ref on_press) = self.on_press {
+            if let Some(ref mut on_press) = self.on_press {
                 on_press(event);
                 handled = true;
             }
@@ -170,7 +160,7 @@ impl Button {
             state.pressed = false;
             cx.request_redraw();
 
-            if let Some(ref on_release) = self.on_release {
+            if let Some(ref mut on_release) = self.on_release {
                 on_release(event);
                 handled = true;
             }

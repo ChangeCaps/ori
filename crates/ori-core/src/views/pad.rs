@@ -3,13 +3,17 @@ use ori_reactive::Event;
 
 use crate::{AvailableSpace, DrawContext, EventContext, LayoutContext, Node, Padding, View};
 
+/// A view that adds padding to its content.
 #[derive(Debug)]
 pub struct Pad {
+    /// The content of the view.
     pub content: Node,
+    /// The padding of the view.
     pub padding: Padding,
 }
 
 impl Pad {
+    /// Create a new pad view.
     pub fn new(padding: impl Into<Padding>, view: impl Into<Node>) -> Self {
         Self {
             content: view.into(),

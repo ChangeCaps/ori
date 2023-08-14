@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use ori_graphics::{math::Vec2, Color, Quad, Rect};
 use ori_reactive::{Event, OwnedSignal};
 
@@ -8,17 +6,16 @@ use crate::{
     StateView, Style, Styled, Transition, Unit,
 };
 
-use super::PointerCallback;
+use super::EventCallback;
 
 /// A radio button view.
-#[derive(Clone)]
 pub struct Radio {
     /// The content of the button.
     pub selected: OwnedSignal<bool>,
     /// The event to fire when the button is pressed.
-    pub on_press: Option<PointerCallback>,
+    pub on_press: Option<EventCallback<PointerEvent>>,
     /// The event to fire when the button is released.
-    pub on_release: Option<PointerCallback>,
+    pub on_release: Option<EventCallback<PointerEvent>>,
     /// The transition of the button.
     pub trans: Transition,
     /// The radius of the button.
@@ -65,17 +62,14 @@ impl Radio {
     }
 
     /// Set the on press callback.
-    pub fn on_press(mut self, on_press: impl Fn(&PointerEvent) + Send + Sync + 'static) -> Self {
-        self.on_press = Some(Arc::new(on_press));
+    pub fn on_press(mut self, on_press: impl FnMut(&PointerEvent) + Send + 'static) -> Self {
+        self.on_press = Some(Box::new(on_press));
         self
     }
 
     /// Set the on release callback.
-    pub fn on_release(
-        mut self,
-        on_release: impl Fn(&PointerEvent) + Send + Sync + 'static,
-    ) -> Self {
-        self.on_release = Some(Arc::new(on_release));
+    pub fn on_release(mut self, on_release: impl FnMut(&PointerEvent) + Send + 'static) -> Self {
+        self.on_release = Some(Box::new(on_release));
         self
     }
 
@@ -116,7 +110,7 @@ impl Radio {
     }
 
     fn handle_pointer_event(
-        &self,
+        &mut self,
         state: &mut RadioState,
         cx: &mut EventContext<'_>,
         event: &PointerEvent,
@@ -136,7 +130,7 @@ impl Radio {
             cx.request_redraw();
             handled = true;
 
-            if let Some(on_press) = &self.on_press {
+            if let Some(ref mut on_press) = self.on_press {
                 on_press(event);
             }
         } else if state.pressed && event.is_release() {
@@ -144,7 +138,7 @@ impl Radio {
             cx.request_redraw();
             handled = true;
 
-            if let Some(on_release) = &self.on_release {
+            if let Some(ref mut on_release) = self.on_release {
                 on_release(event);
             }
         }

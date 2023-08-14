@@ -10,22 +10,43 @@ use crate::{
     Styled, Unit,
 };
 
-#[derive(Clone)]
+use super::EventCallback;
+
+/// A text input view.
 pub struct TextInput {
+    /// The text of the input.
     pub text: OwnedSignal<String>,
+    /// Placeholder text to display when the input is empty.
     pub placeholder: String,
+    /// Whether the input is multi-line.
+    ///
+    /// When disabled (the default), the input will only accept a single line of text.
     pub multiline: bool,
+    /// The size of the input.
     pub size: Size,
-    pub on_submit: Option<Callback<'static, str>>,
+    /// The event to fire when the input is submitted.
+    pub on_submit: Option<EventCallback<str>>,
+    /// The event to fire when an input event occurs.
+    pub on_input: Option<EventCallback<KeyboardEvent>>,
+    /// The font size of the text.
     pub font_size: Style<Unit>,
+    /// The font family of the text.
     pub font_family: Style<FontFamily>,
+    /// The font weight of the text.
     pub font_weight: Style<FontWeight>,
+    /// The font stretch of the text.
     pub font_stretch: Style<FontStretch>,
+    /// The font style of the text.
     pub font_style: Style<FontStyle>,
+    /// The color of the text.
     pub color: Style<Color>,
+    /// The vertical alignment of the text.
     pub v_align: Style<TextAlign>,
+    /// The horizontal alignment of the text.
     pub h_align: Style<TextAlign>,
+    /// The line height of the text.
     pub line_height: Style<f32>,
+    /// The text wrap of the text.
     pub wrap: Style<TextWrap>,
 }
 
@@ -37,6 +58,7 @@ impl Default for TextInput {
             multiline: false,
             size: Size::content(),
             on_submit: None,
+            on_input: None,
             font_size: Style::new(Self::FONT_SIZE),
             font_family: Style::new(Self::FONT_FAMILY),
             font_weight: Style::new(Self::FONT_WEIGHT),
@@ -63,6 +85,7 @@ impl TextInput {
     pub const LINE_HEIGHT: Key<f32> = Key::new("text-input.line-height");
     pub const WRAP: Key<TextWrap> = Key::new("text-input.wrap");
 
+    /// Create a new text input view.
     pub fn new(text: impl Into<OwnedSignal<String>>) -> Self {
         Self {
             text: text.into(),
@@ -70,81 +93,103 @@ impl TextInput {
         }
     }
 
+    /// Set the placeholder text.
     pub fn placeholder(mut self, placeholder: impl Into<String>) -> Self {
         self.placeholder = placeholder.into();
         self
     }
 
+    /// Set whether the input is multi-line.
     pub fn multiline(mut self, multiline: bool) -> Self {
         self.multiline = multiline;
         self
     }
 
+    /// Set the size.
     pub fn size(mut self, size: impl Into<Size>) -> Self {
         self.size = size.into();
         self
     }
 
+    /// Set the width, [`Size::width`].
     pub fn width(mut self, width: impl Into<Length>) -> Self {
         self.size.width = width.into();
         self
     }
 
+    /// Set the height, [`Size::height`].
     pub fn height(mut self, height: impl Into<Length>) -> Self {
         self.size.height = height.into();
         self
     }
 
+    /// Set the event to fire when the input is submitted.
     pub fn on_submit(mut self, on_submit: impl FnMut(&str) + Send + 'static) -> Self {
-        self.on_submit = Some(on_submit.into());
+        self.on_submit = Some(Box::new(on_submit));
         self
     }
 
+    /// Set the event to fire when an input event occurs.
+    pub fn on_input(mut self, on_key_press: impl FnMut(&KeyboardEvent) + Send + 'static) -> Self {
+        self.on_input = Some(Box::new(on_key_press));
+        self
+    }
+
+    /// Set the font size.
     pub fn font_size(mut self, font_size: impl Styled<Unit>) -> Self {
         self.font_size = font_size.style();
         self
     }
 
+    /// Set the font family.
     pub fn font_family(mut self, font_family: impl Styled<FontFamily>) -> Self {
         self.font_family = font_family.style();
         self
     }
 
+    /// Set the font weight.
     pub fn font_weight(mut self, font_weight: impl Styled<FontWeight>) -> Self {
         self.font_weight = font_weight.style();
         self
     }
 
+    /// Set the font stretch.
     pub fn font_stretch(mut self, font_stretch: impl Styled<FontStretch>) -> Self {
         self.font_stretch = font_stretch.style();
         self
     }
 
+    /// Set the font style.
     pub fn font_style(mut self, font_style: impl Styled<FontStyle>) -> Self {
         self.font_style = font_style.style();
         self
     }
 
+    /// Set the color.
     pub fn color(mut self, color: impl Styled<Color>) -> Self {
         self.color = color.style();
         self
     }
 
+    /// Set the vertical alignment.
     pub fn v_align(mut self, v_align: impl Styled<TextAlign>) -> Self {
         self.v_align = v_align.style();
         self
     }
 
+    /// Set the horizontal alignment.
     pub fn h_align(mut self, h_align: impl Styled<TextAlign>) -> Self {
         self.h_align = h_align.style();
         self
     }
 
+    /// Set the line height.
     pub fn line_height(mut self, line_height: impl Styled<f32>) -> Self {
         self.line_height = line_height.style();
         self
     }
 
+    /// Set the text wrap.
     pub fn wrap(mut self, wrap: impl Styled<TextWrap>) -> Self {
         self.wrap = wrap.style();
         self
@@ -278,13 +323,14 @@ impl TextInput {
     }
 
     fn input_key(
-        &self,
+        &mut self,
         state: &mut TextInputState,
         cx: &EventContext,
         modifiers: Modifiers,
         key: Code,
     ) -> bool {
         match key {
+            Code::Escape => state.focused = false,
             Code::Backspace => self.input_backspace(state, cx),
             Code::Enter => self.input_enter(state, modifiers),
             Code::Left => self.input_left(state, cx),
@@ -295,7 +341,7 @@ impl TextInput {
         true
     }
 
-    fn input_backspace(&self, state: &mut TextInputState, cx: &EventContext<'_>) {
+    fn input_backspace(&mut self, state: &mut TextInputState, cx: &EventContext<'_>) {
         let mut text = self.text.modify();
         let Some(prev_char) = self.prev_char(state) else { return };
         text.remove(state.cursor_index - prev_char.len_utf8());
@@ -305,27 +351,27 @@ impl TextInput {
         cx.request_layout();
     }
 
-    fn input_enter(&self, state: &mut TextInputState, modifiers: Modifiers) {
+    fn input_enter(&mut self, state: &mut TextInputState, modifiers: Modifiers) {
         let text = self.text.get();
 
         if self.multiline && state.cursor_index < text.len() || modifiers.shift {
             return;
         }
 
-        if let Some(ref on_submit) = self.on_submit {
-            on_submit.emit(&text);
+        if let Some(ref mut on_submit) = self.on_submit {
+            on_submit(&text);
             state.focused = false;
         }
     }
 
-    fn input_left(&self, state: &mut TextInputState, _cx: &EventContext<'_>) {
+    fn input_left(&mut self, state: &mut TextInputState, _cx: &EventContext<'_>) {
         if let Some(prev_char) = self.prev_char(state) {
             state.cursor_index -= prev_char.len_utf8();
             state.cursor_blink = 0.0;
         }
     }
 
-    fn input_right(&self, state: &mut TextInputState, _cx: &EventContext<'_>) {
+    fn input_right(&mut self, state: &mut TextInputState, _cx: &EventContext<'_>) {
         if let Some(next_char) = self.next_char(state) {
             state.cursor_index += next_char.len_utf8();
             state.cursor_blink = 0.0;
@@ -333,13 +379,19 @@ impl TextInput {
     }
 
     fn handle_keyboard_event(
-        &self,
+        &mut self,
         state: &mut TextInputState,
         cx: &EventContext<'_>,
         event: &KeyboardEvent,
     ) -> bool {
         if !state.focused {
             return false;
+        }
+
+        if event.is_press() {
+            if let Some(ref mut on_input) = self.on_input {
+                on_input(event);
+            }
         }
 
         if let Some(ref text) = event.text {
