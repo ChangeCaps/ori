@@ -38,7 +38,7 @@ impl Affine {
     }
 
     /// Creates a new affine transformation from a translation.
-    pub const fn translation(translation: Vec2) -> Self {
+    pub const fn translate(translation: Vec2) -> Self {
         Self {
             translation,
             matrix: Mat2::IDENTITY,

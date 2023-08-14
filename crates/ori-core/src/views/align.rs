@@ -1,9 +1,8 @@
-use ori_graphics::{math::Vec2, Rect};
+use ori_graphics::{math::Vec2, Affine};
 use ori_reactive::Event;
 
 use crate::{
-    Alignment, AvailableSpace, Context, DrawContext, EventContext, LayoutContext, Length, Node,
-    Size, StateView,
+    Alignment, AvailableSpace, DrawContext, EventContext, LayoutContext, Length, Node, Size, View,
 };
 
 /// A view that aligns its content.
@@ -119,38 +118,24 @@ impl Align {
         self.alignment = alignment.into();
         self
     }
-
-    fn contet_offset(&self, state: &mut Vec2, rect: Rect) -> Vec2 {
-        (rect.size() - *state) * self.alignment
-    }
 }
 
-impl StateView for Align {
-    type State = Vec2;
-
-    fn build(&mut self, _cx: &mut Context<'_>) -> Self::State {
-        Vec2::ZERO
+impl View for Align {
+    fn event(&mut self, cx: &mut EventContext<'_>, event: &Event) {
+        self.content.event(cx, event);
     }
 
-    fn event(&mut self, state: &mut Self::State, cx: &mut EventContext<'_>, event: &Event) {
-        cx.with_translation(self.contet_offset(state, cx.rect()), |cx| {
-            self.content.event(cx, event);
-        });
+    fn layout(&mut self, cx: &mut LayoutContext<'_>, space: AvailableSpace) -> Vec2 {
+        let content_size = self.content.layout(cx, self.size.content_space(cx, space));
+        let size = space.fit(self.size.resolve(cx, content_size, space));
+
+        let transform = Affine::translate(self.alignment.align(content_size, size));
+        self.content.set_transform(transform);
+
+        size
     }
 
-    fn layout(
-        &mut self,
-        state: &mut Self::State,
-        cx: &mut LayoutContext<'_>,
-        space: AvailableSpace,
-    ) -> Vec2 {
-        *state = self.content.layout(cx, self.size.content_space(cx, space));
-        space.fit(self.size.resolve(cx, *state, space))
-    }
-
-    fn draw(&mut self, state: &mut Self::State, cx: &mut DrawContext<'_>) {
-        cx.with_translation(self.contet_offset(state, cx.rect()), |cx| {
-            self.content.draw(cx);
-        });
+    fn draw(&mut self, cx: &mut DrawContext<'_>) {
+        self.content.draw(cx);
     }
 }

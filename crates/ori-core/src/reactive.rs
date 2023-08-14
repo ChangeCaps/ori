@@ -34,7 +34,6 @@ impl ReactiveNode {
 
 impl View for ReactiveNode {
     fn event(&mut self, cx: &mut EventContext<'_>, event: &Event) {
-        self.recv();
         self.content.event(cx, event);
     }
 
@@ -44,7 +43,6 @@ impl View for ReactiveNode {
     }
 
     fn draw(&mut self, cx: &mut DrawContext<'_>) {
-        self.recv();
         self.content.draw(cx);
     }
 }

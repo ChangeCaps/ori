@@ -17,6 +17,10 @@ impl AvailableSpace {
         Self::new(size, size)
     }
 
+    pub fn loosen(self) -> AvailableSpace {
+        AvailableSpace::new(Vec2::ZERO, self.max)
+    }
+
     pub fn fit(self, size: Vec2) -> Vec2 {
         size.clamp(self.min, self.max)
     }

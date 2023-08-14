@@ -129,24 +129,19 @@ impl CheckBox {
         self
     }
 
-    fn handle_pointer_event(
-        &mut self,
-        state: &mut CheckBoxState,
-        cx: &mut EventContext<'_>,
-        event: &PointerEvent,
-    ) -> bool {
+    fn handle_pointer_event(&mut self, cx: &mut EventContext<'_>, event: &PointerEvent) -> bool {
         let local = cx.local(event.position);
         let mut handled = false;
 
         let hovered = cx.rect().contains(local) && !event.left;
 
-        if state.hovered != hovered {
-            state.hovered = hovered;
+        if cx.is_hovered() != hovered {
+            cx.set_hovered(hovered);
             cx.request_redraw();
         }
 
-        if state.hovered && event.is_press() {
-            state.pressed = true;
+        if cx.is_hovered() && event.is_press() {
+            cx.set_active(true);
             cx.request_redraw();
             handled = true;
 
@@ -155,8 +150,8 @@ impl CheckBox {
             if let Some(ref mut on_press) = self.on_press {
                 on_press(event);
             }
-        } else if state.pressed && event.is_release() {
-            state.pressed = false;
+        } else if cx.is_active() && event.is_release() {
+            cx.set_active(false);
             cx.request_redraw();
             handled = true;
 
@@ -172,9 +167,7 @@ impl CheckBox {
 #[doc(hidden)]
 #[derive(Default)]
 pub struct CheckBoxState {
-    pub hovered: bool,
-    pub pressed: bool,
-    pub trans: f32,
+    pub t: f32,
 }
 
 impl StateView for CheckBox {
@@ -184,13 +177,13 @@ impl StateView for CheckBox {
         CheckBoxState::default()
     }
 
-    fn event(&mut self, state: &mut Self::State, cx: &mut EventContext<'_>, event: &Event) {
+    fn event(&mut self, _state: &mut Self::State, cx: &mut EventContext<'_>, event: &Event) {
         if event.is_handled() {
             return;
         }
 
         if let Some(event) = event.get::<PointerEvent>() {
-            self.handle_pointer_event(state, cx, event);
+            self.handle_pointer_event(cx, event);
         }
     }
 
@@ -212,7 +205,7 @@ impl StateView for CheckBox {
         let border = self.border_color.get(cx.theme);
         let border_alt = border.brighten(0.2);
 
-        if self.trans.update(&mut state.trans, state.hovered, cx.dt()) {
+        if self.trans.update(&mut state.t, cx.is_hovered(), cx.dt()) {
             cx.request_redraw();
         }
 
@@ -222,7 +215,7 @@ impl StateView for CheckBox {
             background_image: None,
             border_radius: self.border_radius.get(cx.theme).get(cx),
             border_width: self.border_width.get(cx.theme).get(cx),
-            border_color: border.mix(border_alt, self.trans.get(state.trans)),
+            border_color: border.mix(border_alt, self.trans.get(state.t)),
         });
 
         if checked {

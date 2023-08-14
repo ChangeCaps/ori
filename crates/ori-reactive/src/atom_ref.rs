@@ -47,10 +47,18 @@ pub struct AtomRef<T: 'static> {
 }
 
 impl<T> AtomRef<T> {
+    /// Creates a new [`AtomRef`] with the given value.
+    pub fn new(value: T) -> Self {
+        Self {
+            inner: OnceLock::from(AtomRefInner::new(value)),
+            init: || unreachable!(),
+        }
+    }
+
     /// Creates a new [`AtomRef`] with the given initializer.
     ///
     /// See [`atom!`](crate::atom!) for more information.
-    pub const fn new(init: fn() -> T) -> Self {
+    pub const fn init(init: fn() -> T) -> Self {
         Self {
             inner: OnceLock::new(),
             init,

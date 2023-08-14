@@ -13,7 +13,7 @@ fn ui(cx: Scope) -> impl View {
     let counter = signal(cx, 0);
 
     // we use the reactive! macro to create a reactive ui component
-    let text = reactive!(format!("Clicked {} times", counter.get()));
+    let text = react!(format!("Clicked {} times", counter.get()));
 
     // we create a button that increments the counter when pressed
     let button = Button::new(text).on_press(move |_| *counter.modify() += 1);

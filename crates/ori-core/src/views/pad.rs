@@ -24,7 +24,7 @@ impl Pad {
 
 impl View for Pad {
     fn event(&mut self, cx: &mut EventContext<'_>, event: &Event) {
-        self.content.event_padded(cx, event, self.padding);
+        self.content.event(cx, event);
     }
 
     fn layout(&mut self, cx: &mut LayoutContext<'_>, space: AvailableSpace) -> Vec2 {
@@ -32,6 +32,6 @@ impl View for Pad {
     }
 
     fn draw(&mut self, cx: &mut DrawContext<'_>) {
-        self.content.draw_padded(cx, self.padding);
+        self.content.draw(cx);
     }
 }

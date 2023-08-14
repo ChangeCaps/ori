@@ -169,7 +169,6 @@ impl Container {
 #[doc(hidden)]
 #[derive(Default)]
 pub struct ContainerState {
-    content_size: Vec2,
     background_image: Option<ImageHandle>,
 }
 
@@ -178,47 +177,43 @@ impl StateView for Container {
 
     fn build(&mut self, cx: &mut Context<'_>) -> Self::State {
         ContainerState {
-            content_size: Vec2::ZERO,
             background_image: self.image_handle(cx),
         }
     }
 
-    fn event(&mut self, state: &mut Self::State, cx: &mut EventContext<'_>, event: &Event) {
-        let align = self.alignment.align(state.content_size, cx.size());
-        let transform = Affine::translation(align) * self.transform;
-
-        cx.with_transform(transform, |cx| {
-            self.content.event_padded(cx, event, self.padding);
-        });
+    fn event(&mut self, _state: &mut Self::State, cx: &mut EventContext<'_>, event: &Event) {
+        self.content.event(cx, event);
     }
 
     fn layout(
         &mut self,
-        state: &mut Self::State,
+        _state: &mut Self::State,
         cx: &mut LayoutContext<'_>,
         space: AvailableSpace,
     ) -> Vec2 {
         let padded_space = space.shrink(self.padding.size(cx));
         let content_space = self.size.content_space(cx, padded_space);
-        state.content_size = self.content.layout_padded(cx, content_space, self.padding);
-        self.size.resolve(cx, state.content_size, space)
+        let content_size = self.content.layout_padded(cx, content_space, self.padding);
+        let size = self.size.resolve(cx, content_size, space);
+
+        let align = self.alignment.align(content_size, size);
+        let padding = self.padding.offset(cx);
+        let transform = Affine::translate(align + padding) * self.transform;
+        self.content.set_transform(transform);
+
+        size
     }
 
     fn draw(&mut self, state: &mut Self::State, cx: &mut DrawContext<'_>) {
-        let align = self.alignment.align(state.content_size, cx.size());
-        let transform = Affine::translation(align) * self.transform;
-
-        cx.with_transform(transform, |cx| {
-            cx.draw(Quad {
-                rect: cx.rect(),
-                background_color: self.background_color.get(cx.theme),
-                background_image: state.background_image.clone(),
-                border_radius: self.border_radius.get(cx.theme).get(cx),
-                border_width: self.border_width.get(cx.theme).get(cx),
-                border_color: self.border_color.get(cx.theme),
-            });
-
-            self.content.draw_padded(cx, self.padding);
+        cx.draw(Quad {
+            rect: cx.rect(),
+            background_color: self.background_color.get(cx.theme),
+            background_image: state.background_image.clone(),
+            border_radius: self.border_radius.get(cx.theme).get(cx),
+            border_width: self.border_width.get(cx.theme).get(cx),
+            border_color: self.border_color.get(cx.theme),
         });
+
+        self.content.draw(cx);
     }
 }

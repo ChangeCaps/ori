@@ -209,7 +209,7 @@ impl Stack {
         for (i, child) in self.content.iter_mut().enumerate() {
             flex_sum += child.flex;
 
-            let size = child.content.layout_indexed(i, cx, space);
+            let size = child.content.layout(cx, space.loosen());
             let (child_major, child_minor) = self.axis.unpack(size);
             state.majors[i] = child_major;
             state.minors[i] = child_minor;
@@ -291,7 +291,7 @@ impl Stack {
                     )
                 };
 
-                let size = child.content.layout_indexed(i, cx, space);
+                let size = child.content.layout(cx, space);
                 let (child_major, child_minor) = self.axis.unpack(size);
 
                 line.major += child_major - state.majors[i];
@@ -347,6 +347,12 @@ impl StackState {
             minors: vec![0.0; len],
         }
     }
+
+    pub fn resize(&mut self, len: usize) {
+        self.positions.resize(len, Vec2::ZERO);
+        self.majors.resize(len, 0.0);
+        self.minors.resize(len, 0.0);
+    }
 }
 
 impl StateView for Stack {
@@ -357,11 +363,13 @@ impl StateView for Stack {
     }
 
     fn event(&mut self, state: &mut Self::State, cx: &mut EventContext<'_>, event: &Event) {
+        state.resize(self.content.len());
+
         for (i, child) in self.content.iter_mut().enumerate() {
             let position = state.positions[i];
 
             cx.with_translation(position, |cx| {
-                child.content.event_indexed(i, cx, event);
+                child.content.event(cx, event);
             });
         }
     }
@@ -372,6 +380,8 @@ impl StateView for Stack {
         cx: &mut LayoutContext<'_>,
         space: AvailableSpace,
     ) -> Vec2 {
+        state.resize(self.content.len());
+
         let content_space = self.size.content_space(cx, space);
 
         let (max_major, max_minor) = self.axis.unpack(content_space.max);
@@ -423,11 +433,13 @@ impl StateView for Stack {
     }
 
     fn draw(&mut self, state: &mut Self::State, cx: &mut DrawContext<'_>) {
+        state.resize(self.content.len());
+
         for (i, child) in self.content.iter_mut().enumerate() {
             let position = state.positions[i];
 
             cx.with_translation(position, |cx| {
-                child.content.draw_indexed(i, cx);
+                child.content.draw(cx);
             });
         }
     }

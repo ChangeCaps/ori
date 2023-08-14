@@ -83,7 +83,7 @@ impl Suspense {
 
 impl View for Suspense {
     fn event(&mut self, cx: &mut EventContext<'_>, event: &Event) {
-        self.prepare(cx);
+        self.spawn_content(cx);
         self.content.event(cx, event);
     }
 
@@ -93,7 +93,7 @@ impl View for Suspense {
     }
 
     fn draw(&mut self, cx: &mut DrawContext<'_>) {
-        self.prepare(cx);
+        self.spawn_content(cx);
         self.content.draw(cx);
     }
 }

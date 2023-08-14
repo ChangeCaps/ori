@@ -1,16 +1,16 @@
 mod derive_style;
 mod font;
 mod krate;
-mod reactive;
+mod react;
 
-/// Includes a font from a file, or directory.
+/// Include a font from a file, or directory.
 #[manyhow::manyhow]
 #[proc_macro]
 pub fn font(input: proc_macro::TokenStream) -> manyhow::Result<proc_macro::TokenStream> {
     font::font(input)
 }
 
-/// Includes a style sheet from a file, or directory.
+/// Include a style sheet from a file, or directory.
 ///
 /// This macro will load the style sheet from the given path if it exists, otherwise it will
 /// include the style sheet as a string literal. The path is relative to the `CARGO_MANIFEST_DIR`.
@@ -20,8 +20,8 @@ pub fn derive_style(input: proc_macro::TokenStream) -> manyhow::Result<proc_macr
     derive_style::derive_style(input)
 }
 
-/// Creates a dynamic node.
+/// Create a reactive node.
 #[proc_macro]
-pub fn reactive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    reactive::reactive(input)
+pub fn react(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    react::react(input)
 }

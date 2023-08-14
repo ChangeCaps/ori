@@ -31,7 +31,7 @@ impl JustifyContent {
         }
 
         let total_gap = gap * (sizes.len() - 1) as f32;
-        let total_size = sizes.clone().sum::<f32>() + total_gap;
+        let total_size = sizes.clone().sum::<f32>();
 
         match self {
             JustifyContent::Start => {
@@ -43,7 +43,7 @@ impl JustifyContent {
                 }
             }
             JustifyContent::Center => {
-                let mut position = (size - total_size) / 2.0;
+                let mut position = (size - total_size - total_gap) / 2.0;
 
                 for (i, size) in sizes.enumerate() {
                     set_position(i, position);
@@ -51,7 +51,7 @@ impl JustifyContent {
                 }
             }
             JustifyContent::End => {
-                let mut position = size - total_size;
+                let mut position = size - total_size - total_gap;
 
                 for (i, size) in sizes.enumerate() {
                     set_position(i, position);
@@ -77,12 +77,12 @@ impl JustifyContent {
                 }
             }
             JustifyContent::SpaceEvenly => {
-                let gap = (size - total_size) / (sizes.len() + 1) as f32;
-                let mut position = gap;
+                let gap = size / (sizes.len() + 1) as f32;
+                let mut position = gap / 2.0;
 
-                for (i, size) in sizes.enumerate() {
+                for (i, _) in sizes.enumerate() {
                     set_position(i, position);
-                    position += size + gap;
+                    position += gap;
                 }
             }
         }

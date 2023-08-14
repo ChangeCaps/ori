@@ -109,32 +109,27 @@ impl Radio {
         self
     }
 
-    fn handle_pointer_event(
-        &mut self,
-        state: &mut RadioState,
-        cx: &mut EventContext<'_>,
-        event: &PointerEvent,
-    ) -> bool {
+    fn handle_pointer_event(&mut self, cx: &mut EventContext<'_>, event: &PointerEvent) -> bool {
         let local = cx.local(event.position);
         let mut handled = false;
 
         let hovered = cx.rect().contains(local) && !event.left;
 
-        if state.hovered != hovered {
-            state.hovered = hovered;
+        if cx.is_hovered() != hovered {
+            cx.set_hovered(hovered);
             handled = true;
         }
 
-        if state.hovered && event.is_press() {
-            state.pressed = true;
+        if cx.is_hovered() && event.is_press() {
+            cx.set_active(true);
             cx.request_redraw();
             handled = true;
 
             if let Some(ref mut on_press) = self.on_press {
                 on_press(event);
             }
-        } else if state.pressed && event.is_release() {
-            state.pressed = false;
+        } else if cx.is_active() && event.is_release() {
+            cx.set_active(false);
             cx.request_redraw();
             handled = true;
 
@@ -150,9 +145,7 @@ impl Radio {
 #[doc(hidden)]
 #[derive(Default)]
 pub struct RadioState {
-    pressed: bool,
-    hovered: bool,
-    trans: f32,
+    t: f32,
 }
 
 impl StateView for Radio {
@@ -162,13 +155,13 @@ impl StateView for Radio {
         RadioState::default()
     }
 
-    fn event(&mut self, state: &mut Self::State, cx: &mut EventContext<'_>, event: &Event) {
+    fn event(&mut self, _state: &mut Self::State, cx: &mut EventContext<'_>, event: &Event) {
         if event.is_handled() {
             return;
         }
 
         if let Some(pointer_event) = event.get::<PointerEvent>() {
-            if self.handle_pointer_event(state, cx, pointer_event) {
+            if self.handle_pointer_event(cx, pointer_event) {
                 event.handle();
             }
         }
@@ -193,7 +186,7 @@ impl StateView for Radio {
         let border = self.border_color.get(cx.theme);
         let border_alt = border.brighten(0.2);
 
-        if self.trans.update(&mut state.trans, state.hovered, cx.dt()) {
+        if self.trans.update(&mut state.t, cx.is_hovered(), cx.dt()) {
             cx.request_redraw();
         }
 
@@ -206,7 +199,7 @@ impl StateView for Radio {
             background_image: None,
             border_radius: [radius; 4],
             border_width: [border_width; 4],
-            border_color: border.mix(border_alt, self.trans.get(state.trans)),
+            border_color: border.mix(border_alt, self.trans.get(state.t)),
         });
 
         if selected {

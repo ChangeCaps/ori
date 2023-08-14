@@ -11,11 +11,11 @@ use ori_graphics::{
 use ori_reactive::{Emitter, Event, EventSink, EventTask, Scope, WeakCallback};
 
 use crate::{
-    function::{reactive, window},
-    AvailableSpace, CloseWindow, Code, DragWindow, KeyboardEvent, Metrics, Modifiers, Node,
-    OpenWindow, Palette, PointerButton, PointerEvent, RequestAnimationFrame, RequestLayoutEvent,
-    RequestRedrawEvent, Theme, Tree, Window, WindowBackend, WindowClosedEvent, WindowId,
-    WindowResizedEvent,
+    function::{react, window},
+    AvailableSpace, CloseWindow, Code, Context, Cursor, DragWindow, KeyboardEvent, Metrics,
+    Modifiers, Node, OpenWindow, Palette, PointerButton, PointerEvent, RequestAnimationFrame,
+    RequestLayoutEvent, RequestRedrawEvent, Theme, Window, WindowBackend, WindowClosedEvent,
+    WindowId, WindowResizedEvent,
 };
 
 const TEXT_FONT: &[u8] = include_bytes!("../fonts/NotoSans-Medium.ttf");
@@ -47,7 +47,6 @@ struct WindowUi<R: Renderer> {
     window: Window,
     root: Node,
     scope: Scope,
-    tree: Tree,
     event_sink: EventSink,
     event_emitter: Emitter<Event>,
     modifiers: Modifiers,
@@ -98,11 +97,14 @@ impl<R: Renderer> WindowUi<R> {
         }
     }
 
-    fn update_cursor(&mut self) {
-        let cursor = self.tree.get_cursor();
+    fn update_cursor(&self, cursor: Cursor) {
+        let window = window(self.scope);
+        let window_cursor = window.get_untracked().cursor;
 
-        if window(self.scope).get_untracked().cursor != cursor {
-            window(self.scope).modify().cursor = cursor;
+        let window_set = window_cursor != self.window.cursor;
+
+        if window_cursor != cursor && !window_set {
+            window.modify().cursor = cursor;
         }
     }
 
@@ -353,14 +355,13 @@ where
         scope.with_context(scope.signal(window.clone()));
 
         // create the root view
-        let root = Node::new(reactive(scope, ui));
+        let root = Node::new(react(scope, ui));
 
         let window_ui = WindowUi {
             renderer,
             window: window.clone(),
             root,
             scope,
-            tree: Tree::new(),
             event_sink,
             event_emitter,
             modifiers: Modifiers::default(),
@@ -687,33 +688,36 @@ where
     fn event_inner(&mut self, id: WindowId, event: &Event, update_window: bool) {
         tracing::trace!("Event for window {:?}: {:?}", id, event.type_name());
 
-        if let Some(ui) = self.window_ui.get_mut(&id) {
-            ui.event_emitter.emit(event);
-            ui.query_window(&mut self.window_backend);
+        let Some(ui) = self.window_ui.get_mut(&id) else { return };
+        ui.event_emitter.emit(event);
+        ui.query_window(&mut self.window_backend);
 
-            let window = window(ui.scope);
+        let window = window(ui.scope);
+        let mut cursor = window.get().cursor;
 
-            let delta_time = ui.event_delta();
-            let start = Instant::now();
-            ori_reactive::effect::delay_effects(|| {
-                ui.root.event_root(
-                    &mut self.fonts,
-                    &ui.renderer,
-                    &mut self.image_cache,
-                    &self.theme,
-                    &window.get(),
-                    delta_time,
-                    &ui.event_sink,
-                    &mut ui.tree,
-                    event,
-                );
-            });
-            self.metrics.event.event(start.elapsed());
+        let delta_time = ui.event_delta();
+        let start = Instant::now();
+        ori_reactive::effect::delay_effects(|| {
+            let context = Context {
+                fonts: &mut self.fonts,
+                renderer: &ui.renderer,
+                image_cache: &mut self.image_cache,
+                theme: &self.theme,
+                window: &window.get(),
+                delta_time,
+                cursor: &mut cursor,
+                view_state: &mut Default::default(),
+                event_sink: &ui.event_sink,
+            };
 
-            if update_window {
-                ui.update_cursor();
-                ui.update_window(&mut self.window_backend, &window.get());
-            }
+            ui.root.event_root(context, event);
+        });
+        self.metrics.event.event(start.elapsed());
+
+        ui.update_cursor(cursor);
+
+        if update_window {
+            ui.update_window(&mut self.window_backend, &window.get());
         }
     }
 
@@ -727,26 +731,31 @@ where
             ui.query_window(&mut self.window_backend);
             let window = window(ui.scope);
             let size = window.get_untracked().size.as_vec2();
+            let mut cursor = window.get().cursor;
 
             let delta_time = ui.layout_delta();
             let start = Instant::now();
             ori_reactive::effect::delay_effects(|| {
-                ui.root.layout_root(
-                    &mut self.fonts,
-                    &ui.renderer,
-                    &mut self.image_cache,
-                    &self.theme,
-                    &window.get(),
+                let context = Context {
+                    fonts: &mut self.fonts,
+                    renderer: &ui.renderer,
+                    image_cache: &mut self.image_cache,
+                    theme: &self.theme,
+                    window: &window.get(),
                     delta_time,
-                    &ui.event_sink,
-                    &mut ui.tree,
-                    AvailableSpace::new(Vec2::ZERO, size),
-                );
+                    cursor: &mut cursor,
+                    view_state: &mut Default::default(),
+                    event_sink: &ui.event_sink,
+                };
+
+                let space = AvailableSpace::new(Vec2::ZERO, size);
+                ui.root.layout_root(context, space);
             });
             self.metrics.layout.event(start.elapsed());
 
+            ui.update_cursor(cursor);
+
             if update_window {
-                ui.update_cursor();
                 ui.update_window(&mut self.window_backend, &window.get());
             }
         }
@@ -775,25 +784,28 @@ where
             self.frame.clear();
 
             let window = window(ui.scope);
+            let mut cursor = window.get().cursor;
 
             let delta_time = ui.draw_delta();
             let start = Instant::now();
             ori_reactive::effect::delay_effects(|| {
-                ui.root.draw_root(
-                    &mut self.fonts,
-                    &ui.renderer,
-                    &mut self.image_cache,
-                    &self.theme,
-                    &window.get(),
+                let context = Context {
+                    fonts: &mut self.fonts,
+                    renderer: &ui.renderer,
+                    image_cache: &mut self.image_cache,
+                    theme: &self.theme,
+                    window: &window.get(),
                     delta_time,
-                    &ui.event_sink,
-                    &mut ui.tree,
-                    &mut self.frame,
-                );
+                    cursor: &mut cursor,
+                    view_state: &mut Default::default(),
+                    event_sink: &ui.event_sink,
+                };
+
+                ui.root.draw_root(context, &mut self.frame);
             });
             self.metrics.draw.event(start.elapsed());
 
-            ui.update_cursor();
+            ui.update_cursor(cursor);
             ui.update_window(&mut self.window_backend, &window.get());
 
             let clear_color = window.get().clear_color;

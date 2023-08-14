@@ -289,21 +289,23 @@ impl TextInput {
 
         let hovered = cx.rect().contains(local);
 
-        if !state.hovered && hovered {
-            cx.set_cursor(Some(Cursor::Text));
-        } else {
-            cx.set_cursor(None);
+        if !cx.is_hovered() && hovered {
+            cx.set_cursor(Cursor::Text);
+        } else if cx.is_hovered() && !hovered {
+            cx.set_cursor(Cursor::Default);
         }
 
+        cx.set_hovered(hovered);
+
         if event.is_press() && hovered {
-            state.focused = true;
+            cx.set_active(true);
             self.cursor_select(state, cx, local);
             cx.request_redraw();
             return true;
         }
 
         if event.is_press() && !hovered {
-            state.focused = false;
+            cx.set_active(false);
             return false;
         }
 
@@ -349,14 +351,14 @@ impl TextInput {
     fn input_key(
         &mut self,
         state: &mut TextInputState,
-        cx: &EventContext,
+        cx: &mut EventContext,
         modifiers: Modifiers,
         key: Code,
     ) -> bool {
         match key {
-            Code::Escape => state.focused = false,
+            Code::Escape => cx.set_active(false),
             Code::Backspace => self.input_backspace(state, cx),
-            Code::Enter => self.input_enter(state, modifiers),
+            Code::Enter => self.input_enter(state, cx, modifiers),
             Code::Left => self.input_left(state, cx),
             Code::Right => self.input_right(state, cx),
             _ => return false,
@@ -375,7 +377,12 @@ impl TextInput {
         cx.request_layout();
     }
 
-    fn input_enter(&mut self, state: &mut TextInputState, modifiers: Modifiers) {
+    fn input_enter(
+        &mut self,
+        state: &mut TextInputState,
+        cx: &mut EventContext<'_>,
+        modifiers: Modifiers,
+    ) {
         let text = self.text.get();
 
         if self.multiline && state.cursor_index < text.len() || modifiers.shift {
@@ -384,7 +391,7 @@ impl TextInput {
 
         if let Some(ref mut on_submit) = self.on_submit {
             on_submit(&text);
-            state.focused = false;
+            cx.set_active(false);
         }
     }
 
@@ -405,10 +412,10 @@ impl TextInput {
     fn handle_keyboard_event(
         &mut self,
         state: &mut TextInputState,
-        cx: &EventContext<'_>,
+        cx: &mut EventContext<'_>,
         event: &KeyboardEvent,
     ) -> bool {
-        if !state.focused {
+        if !cx.is_active() {
             return false;
         }
 
@@ -455,8 +462,6 @@ impl TextInput {
 #[derive(Default, Debug)]
 pub struct TextInputState {
     glyphs: Option<Glyphs>,
-    hovered: bool,
-    focused: bool,
     cursor_blink: f32,
     cursor_index: usize,
     callback: Callback<'static>,
@@ -532,7 +537,7 @@ impl StateView for TextInput {
 
         cx.draw_text(glyphs, cx.rect());
 
-        if !state.focused {
+        if !cx.is_active() {
             return;
         }
 

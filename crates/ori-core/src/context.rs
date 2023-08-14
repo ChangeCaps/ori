@@ -3,7 +3,7 @@ use std::{any::Any, future::Future, time::Duration};
 use ori_graphics::{math::Vec2, Fonts, ImageCache, Renderer};
 use ori_reactive::{EventSink, EventTask};
 
-use crate::{Cursor, RequestLayoutEvent, RequestRedrawEvent, Theme, Tree, Unit, Window};
+use crate::{Cursor, RequestLayoutEvent, RequestRedrawEvent, Theme, Unit, ViewState, Window};
 
 pub struct Context<'a> {
     pub fonts: &'a mut Fonts,
@@ -12,49 +12,34 @@ pub struct Context<'a> {
     pub theme: &'a Theme,
     pub window: &'a Window,
     pub delta_time: Duration,
+    pub cursor: &'a mut Cursor,
+    pub(crate) view_state: &'a mut ViewState,
     pub(crate) event_sink: &'a EventSink,
-    pub(crate) tree: &'a mut Tree,
 }
 
 impl<'a> Context<'a> {
-    #[allow(clippy::too_many_arguments)]
-    pub(crate) fn new(
-        fonts: &'a mut Fonts,
-        renderer: &'a dyn Renderer,
-        image_cache: &'a mut ImageCache,
-        theme: &'a Theme,
-        window: &'a Window,
-        delta_time: Duration,
-        event_sink: &'a EventSink,
-        tree: &'a mut Tree,
-    ) -> Self {
-        Self {
-            fonts,
-            renderer,
-            image_cache,
-            theme,
-            window,
-            delta_time,
-            event_sink,
-            tree,
-        }
-    }
-
-    pub(crate) fn child<T>(&mut self, index: usize, f: impl FnOnce(Context<'_>) -> T) -> T {
-        let mut context = self.borrow();
-        context.tree = context.tree.child(index);
-
-        f(context)
-    }
-
     pub(crate) fn size(&self) -> Vec2 {
-        match self.tree.size() {
-            Some(size) => size,
-            None => {
-                tracing::error!("Node hasn't been laid out");
-                Vec2::ZERO
-            }
-        }
+        self.view_state.size
+    }
+
+    /// Set whether the view is active.
+    pub fn set_active(&mut self, active: bool) {
+        self.view_state.set_active(active);
+    }
+
+    /// Set whether the view is hovered.
+    pub fn set_hovered(&mut self, hovered: bool) {
+        self.view_state.set_hovered(hovered);
+    }
+
+    /// Get whether the view is active.
+    pub fn is_active(&self) -> bool {
+        self.view_state.active
+    }
+
+    /// Get whether the view is hovered.
+    pub fn is_hovered(&self) -> bool {
+        self.view_state.hovered
     }
 
     pub fn borrow(&mut self) -> Context<'_> {
@@ -65,8 +50,9 @@ impl<'a> Context<'a> {
             theme: self.theme,
             window: self.window,
             delta_time: self.delta_time,
+            cursor: self.cursor,
+            view_state: self.view_state,
             event_sink: self.event_sink,
-            tree: self.tree,
         }
     }
 
@@ -80,8 +66,8 @@ impl<'a> Context<'a> {
         EventTask::spawn(self.event_sink.clone(), future);
     }
 
-    pub fn set_cursor(&mut self, cursor: Option<Cursor>) {
-        self.tree.set_cursor(cursor);
+    pub fn set_cursor(&mut self, cursor: Cursor) {
+        *self.cursor = cursor;
     }
 
     pub fn unit(&self, unit: Unit) -> f32 {

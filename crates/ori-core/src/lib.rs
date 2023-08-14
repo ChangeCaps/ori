@@ -1,6 +1,5 @@
 //! The core crate for the Ori UI framework.
 
-mod border;
 mod context;
 mod draw;
 mod event;
@@ -12,13 +11,11 @@ mod reactive;
 mod root;
 mod state;
 mod theme;
-mod tree;
 mod ui;
 mod view;
 pub mod views;
 mod window;
 
-pub use border::*;
 pub use context::*;
 pub use draw::*;
 pub use event::*;
@@ -28,7 +25,6 @@ pub use node::*;
 pub use reactive::*;
 pub use state::*;
 pub use theme::*;
-pub use tree::*;
 pub use ui::*;
 pub use view::*;
 pub use window::*;
@@ -40,6 +36,7 @@ pub mod prelude {
     //! A collection of commonly used types and traits.
 
     pub use crate::context::Context;
+    pub use crate::draw::*;
     pub use crate::event::{
         CloseWindow, Code, Cursor, DragWindow, KeyboardEvent, Modifiers, OpenWindow, PointerButton,
         PointerEvent, RequestRedrawEvent, WindowClosedEvent, WindowResizedEvent,
@@ -55,7 +52,7 @@ pub mod prelude {
     pub use crate::window::{Window, WindowBuilder, WindowId};
     pub use crate::{hstack, vstack};
 
-    pub use ori_macro::reactive;
+    pub use ori_macro::react;
 
     pub use tracing::{debug, error, info, trace, warn};
 }

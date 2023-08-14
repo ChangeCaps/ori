@@ -132,38 +132,33 @@ impl Button {
         self
     }
 
-    fn handle_pointer_event(
-        &mut self,
-        state: &mut ButtonState,
-        cx: &mut EventContext<'_>,
-        event: &PointerEvent,
-    ) -> bool {
+    fn handle_pointer_event(&mut self, cx: &mut EventContext<'_>, event: &PointerEvent) -> bool {
         let local = cx.local(event.position);
         let mut handled = false;
 
         let hovered = cx.rect().contains(local) && !event.left;
 
-        if state.hovered != hovered {
-            state.hovered = hovered;
+        if cx.is_hovered() != hovered {
+            cx.set_hovered(hovered);
             cx.request_redraw();
 
-            if state.hovered {
-                cx.set_cursor(Some(Cursor::Pointer));
+            if hovered {
+                cx.set_cursor(Cursor::Pointer);
             } else {
-                cx.set_cursor(None);
+                cx.set_cursor(Cursor::Default);
             }
         }
 
-        if state.hovered && event.is_press() {
-            state.pressed = true;
+        if cx.is_hovered() && event.is_press() {
+            cx.set_active(true);
             cx.request_redraw();
 
             if let Some(ref mut on_press) = self.on_press {
                 on_press(event);
                 handled = true;
             }
-        } else if state.pressed && event.is_release() {
-            state.pressed = false;
+        } else if cx.is_active() && event.is_release() {
+            cx.set_active(false);
             cx.request_redraw();
 
             if let Some(ref mut on_release) = self.on_release {
@@ -179,24 +174,17 @@ impl Button {
         match self.float {
             Some(ref float) => {
                 let float = float.get(cx.theme).get(cx);
-                Vec2::new(0.0, -self.trans.get(state.trans) * float)
+                Vec2::new(0.0, -self.trans.get(state.t) * float)
             }
             None => Vec2::ZERO,
         }
-    }
-
-    fn translation(&self, state: &ButtonState, cx: &Context<'_>) -> Vec2 {
-        let float = self.float_offset(state, cx);
-        self.padding.offset(cx) + float
     }
 }
 
 #[doc(hidden)]
 #[derive(Default)]
 pub struct ButtonState {
-    pub pressed: bool,
-    pub hovered: bool,
-    pub trans: f32,
+    pub t: f32,
 }
 
 impl StateView for Button {
@@ -207,7 +195,7 @@ impl StateView for Button {
     }
 
     fn event(&mut self, state: &mut Self::State, cx: &mut EventContext<'_>, event: &Event) {
-        cx.with_translation(self.translation(state, cx), |cx| {
+        cx.with_translation(self.float_offset(state, cx), |cx| {
             self.content.event(cx, event);
         });
 
@@ -216,7 +204,7 @@ impl StateView for Button {
         }
 
         if let Some(pointer) = event.get::<PointerEvent>() {
-            if self.handle_pointer_event(state, cx, pointer) {
+            if self.handle_pointer_event(cx, pointer) {
                 event.handle();
             }
         }
@@ -238,12 +226,12 @@ impl StateView for Button {
             None => color.brighten(0.05),
         };
 
-        let active = state.hovered && !state.pressed;
-        if self.trans.update(&mut state.trans, active, cx.dt()) {
+        let active = cx.is_hovered() && !cx.is_active();
+        if self.trans.update(&mut state.t, active, cx.dt()) {
             cx.request_redraw();
         }
 
-        if self.float.is_some() && state.trans > 0.0 {
+        if self.float.is_some() && state.t > 0.0 {
             cx.draw(Quad {
                 rect: cx.rect(),
                 background_color: color.darken(0.1),
@@ -256,14 +244,14 @@ impl StateView for Button {
 
         cx.draw(Quad {
             rect: cx.rect() + self.float_offset(state, cx),
-            background_color: color.mix(hover, state.trans),
+            background_color: color.mix(hover, state.t),
             background_image: None,
             border_radius: self.border_radius.get(cx.theme).get(cx),
             border_width: self.border_width.get(cx.theme).get(cx),
             border_color: self.border_color.get(cx.theme),
         });
 
-        cx.with_translation(self.translation(state, cx), |cx| {
+        cx.with_translation(self.float_offset(state, cx), |cx| {
             self.content.draw(cx);
         });
     }

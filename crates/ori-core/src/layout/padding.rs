@@ -4,26 +4,20 @@ use crate::{Context, Unit};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Padding {
-    pub left: Unit,
-    pub right: Unit,
     pub top: Unit,
+    pub right: Unit,
     pub bottom: Unit,
-}
-
-impl From<Unit> for Padding {
-    fn from(value: Unit) -> Self {
-        Self::all(value)
-    }
+    pub left: Unit,
 }
 
 impl Padding {
     /// Create a new padding.
-    pub const fn new(left: Unit, right: Unit, top: Unit, bottom: Unit) -> Self {
+    pub const fn new(top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
         Self {
-            left,
-            right,
             top,
+            right,
             bottom,
+            left,
         }
     }
 
@@ -43,5 +37,23 @@ impl Padding {
     /// Get the translation of the padding, i.e. `left` and `top`.
     pub fn offset(self, cx: &Context<'_>) -> Vec2 {
         Vec2::new(self.left.get(cx), self.top.get(cx))
+    }
+}
+
+impl From<(Unit, Unit, Unit, Unit)> for Padding {
+    fn from((top, right, bottom, left): (Unit, Unit, Unit, Unit)) -> Self {
+        Self::new(top, right, bottom, left)
+    }
+}
+
+impl From<(Unit, Unit)> for Padding {
+    fn from((horizontal, vertical): (Unit, Unit)) -> Self {
+        Self::new(vertical, horizontal, vertical, horizontal)
+    }
+}
+
+impl From<Unit> for Padding {
+    fn from(size: Unit) -> Self {
+        Self::all(size)
     }
 }

@@ -72,6 +72,12 @@ impl From<Vec2> for Alignment {
     }
 }
 
+impl From<(f32, f32)> for Alignment {
+    fn from((x, y): (f32, f32)) -> Self {
+        Self::new(x, y)
+    }
+}
+
 impl Mul<Alignment> for Vec2 {
     type Output = Self;
 

@@ -5,7 +5,7 @@ fn toggle_multiline(_cx: Scope, multiline: Signal<bool>) -> impl View {
 }
 
 fn input(cx: Scope, text: Signal<String>, multiline: Signal<bool>) -> impl View {
-    reactive! {
+    react! {
         let input = TextInput::new(text)
             .min_width(Em(10.0))
             .multiline(multiline.get())

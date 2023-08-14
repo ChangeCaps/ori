@@ -63,7 +63,7 @@ impl<'a> EventContext<'a> {
         translation: Vec2,
         f: impl FnOnce(&mut EventContext<'_>) -> T,
     ) -> T {
-        self.with_transform(Affine::translation(translation), f)
+        self.with_transform(Affine::translate(translation), f)
     }
 
     /// Pads the context for the duration of the closure.
@@ -150,7 +150,7 @@ impl<'a> DrawContext<'a> {
         translation: Vec2,
         f: impl FnOnce(&mut DrawContext<'_>) -> T,
     ) -> T {
-        self.with_transform(Affine::translation(translation), f)
+        self.with_transform(Affine::translate(translation), f)
     }
 
     pub fn with_padding<T>(

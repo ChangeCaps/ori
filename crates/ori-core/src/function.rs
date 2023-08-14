@@ -74,7 +74,7 @@ pub fn request_animation_frame(cx: Scope) {
 }
 
 /// Creates a new reactive [`View`](crate::View) from a Ui function.
-pub fn reactive<V>(cx: Scope, mut f: impl BuildUi<V>) -> ReactiveNode {
+pub fn react<V>(cx: Scope, mut f: impl BuildUi<V>) -> ReactiveNode {
     let (tx, rx) = channel();
 
     effect_scoped(cx, move |cx| {

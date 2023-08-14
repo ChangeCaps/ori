@@ -57,7 +57,7 @@ fn builtin_check_box_theme(theme: &mut Theme) {
     theme.set(CheckBox::SIZE, Unit::Em(1.5));
     theme.set(CheckBox::COLOR, Palette::TEXT_BRIGHTER);
     theme.set(CheckBox::STROKE, Unit::Px(1.0));
-    theme.set(CheckBox::BACKGROUND, Palette::BACKGROUND);
+    theme.set(CheckBox::BACKGROUND, Color::TRANSPARENT);
     theme.set(CheckBox::BORDER_WIDTH, BorderWidth::all(Unit::Px(1.5)));
     theme.set(CheckBox::BORDER_RADIUS, BorderRadius::all(Unit::Em(0.4)));
     theme.set(CheckBox::BORDER_COLOR, Palette::TEXT_BRIGHTER);

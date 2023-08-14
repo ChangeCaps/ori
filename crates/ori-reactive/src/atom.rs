@@ -32,10 +32,21 @@ pub struct Atom<T: 'static> {
 }
 
 impl<T> Atom<T> {
+    /// Creates a new [`Atom`] with the given value.
+    pub fn new(value: T) -> Self
+    where
+        T: Send + Sync,
+    {
+        Self {
+            signal: OnceLock::from(OwnedSignal::new(value)),
+            init: || unreachable!(),
+        }
+    }
+
     /// Creates a new [`Atom`] with the given initializer.
     ///
     /// See [`atom!`](crate::atom!) for more information.
-    pub const fn new(init: fn() -> T) -> Self {
+    pub const fn init(init: fn() -> T) -> Self {
         Self {
             signal: OnceLock::new(),
             init,
@@ -75,9 +86,9 @@ impl<T: Send + Sync> Deref for Atom<T> {
 #[macro_export]
 macro_rules! atom {
     ($init:expr) => {
-        $crate::Atom::new(|| $init)
+        $crate::Atom::init(|| $init)
     };
     (ref $init:expr) => {
-        $crate::AtomRef::new(|| $init)
+        $crate::AtomRef::init(|| $init)
     };
 }
