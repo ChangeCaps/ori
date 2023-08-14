@@ -7,6 +7,8 @@ mod event;
 pub mod function;
 mod layout;
 mod metrics;
+#[cfg(feature = "network")]
+mod network;
 mod node;
 mod reactive;
 mod root;
@@ -24,6 +26,8 @@ pub use draw::*;
 pub use event::*;
 pub use layout::*;
 pub use metrics::*;
+#[cfg(feature = "network")]
+pub use network::*;
 pub use node::*;
 pub use reactive::*;
 pub use state::*;
@@ -47,6 +51,8 @@ pub mod prelude {
     pub use crate::function::*;
     pub use crate::layout::*;
     pub use crate::math::*;
+    #[cfg(feature = "network")]
+    pub use crate::network::*;
     pub use crate::node::Node;
     pub use crate::theme::{Key, Palette, Style, Styled, Theme};
     pub use crate::ui::UiBuilder;

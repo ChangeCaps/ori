@@ -14,6 +14,11 @@ license = "MIT OR Apache-2.0"
 [workspace]
 members = ["crates/*"]
 
+[dev-dependencies.ori]
+path = "." 
+version = "0.1.0-alpha.1"
+features = ["winit-wgpu", "image", "font-awesome", "network"]
+
 [dependencies]
 # Ori dependencies
 ori-core = { path = "crates/ori-core", version = "0.1.0-alpha.1" }
@@ -26,10 +31,11 @@ ori-wgpu = { path = "crates/ori-wgpu", version = "0.1.0-alpha.1", optional = tru
 ori-winit = { path = "crates/ori-winit", version = "0.1.0-alpha.1", optional = true }
 
 [features]
-default = ["winit-wgpu", "font-awesome"]
+default = ["winit-wgpu"]
 tracy = ["ori-winit/tracy"]
-image = ["ori-graphics/image"]
+image = ["ori-core/image"]
 font-awesome = ["dep:ori-font-awesome"]
+network = ["ori-core/network"]
 
 # Backend features
 wgpu = ["ori-wgpu"]

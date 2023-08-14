@@ -43,7 +43,7 @@ features = [
 ]
 
 [features]
-default = ["image", "text"]
+default = ["text"]
 image = ["dep:image"]
 serde = ["dep:serde"]
 text = ["dep:etagere", "dep:fontdb", "dep:fontdue"]

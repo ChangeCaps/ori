@@ -38,9 +38,9 @@ impl Debug for Suspense {
 
 impl Suspense {
     /// Create a new suspense view.
-    pub fn new(content: impl Future<Output = Node> + Send + 'static) -> Self {
+    pub fn new(content: impl Future<Output = impl Into<Node>> + Send + 'static) -> Self {
         Self {
-            future: Mutex::new(Some(Box::pin(content))),
+            future: Mutex::new(Some(Box::pin(async { content.await.into() }))),
             receiver: None,
             content: Default::default(),
         }
@@ -62,14 +62,16 @@ impl Suspense {
                 let content = content.await;
                 let _ = tx.send(content);
                 event_sink.send(RequestLayoutEvent);
+                println!("done");
             });
         }
     }
 
     fn recv(&mut self) {
-        if let Some(rx) = self.receiver.take() {
+        if let Some(ref mut rx) = self.receiver {
             if let Ok(content) = rx.try_recv() {
                 self.content = content;
+                self.receiver = None;
             }
         }
     }

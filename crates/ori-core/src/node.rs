@@ -13,6 +13,15 @@ impl<T: View> From<T> for Node {
     }
 }
 
+impl<T: View, U: Debug> From<Result<T, U>> for Node {
+    fn from(value: Result<T, U>) -> Self {
+        match value {
+            Ok(value) => Node::new(value),
+            Err(err) => Node::new(format!("{:?}", err)),
+        }
+    }
+}
+
 pub struct Node {
     view: Box<dyn View>,
 }
