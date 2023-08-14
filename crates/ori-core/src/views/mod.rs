@@ -3,6 +3,7 @@
 mod align;
 mod button;
 mod check_box;
+mod decorate;
 mod image;
 mod pad;
 mod placeholder;
@@ -16,6 +17,7 @@ mod themed;
 pub use align::*;
 pub use button::*;
 pub use check_box::*;
+pub use decorate::*;
 pub use image::*;
 pub use pad::*;
 pub use placeholder::*;

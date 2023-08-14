@@ -3,7 +3,7 @@ use ori_graphics::{
 };
 
 use crate::{
-    views::{Button, CheckBox, Image, Placeholder, Radio, Text, TextInput},
+    views::{Button, CheckBox, Decorate, Image, Placeholder, Radio, Text, TextInput},
     BorderRadius, BorderWidth, Key, Palette, Theme, Unit,
 };
 
@@ -46,6 +46,13 @@ fn builtin_button_theme(theme: &mut Theme) {
     theme.set(Button::BORDER_COLOR, Color::TRANSPARENT);
 }
 
+fn builtin_decorate_theme(theme: &mut Theme) {
+    theme.set(Decorate::BACKGROUND_COLOR, Palette::BACKGROUND);
+    theme.set(Decorate::BORDER_WIDTH, BorderWidth::ZERO);
+    theme.set(Decorate::BORDER_RADIUS, BorderRadius::all(Unit::Em(0.5)));
+    theme.set(Decorate::BORDER_COLOR, Color::TRANSPARENT);
+}
+
 fn builtin_check_box_theme(theme: &mut Theme) {
     theme.set(CheckBox::SIZE, Unit::Em(1.5));
     theme.set(CheckBox::COLOR, Palette::TEXT_BRIGHTER);
@@ -82,6 +89,7 @@ pub fn builtin_theme() -> Theme {
     builtin_text_input_theme(&mut theme);
     builtin_icon_theme(&mut theme);
     builtin_button_theme(&mut theme);
+    builtin_decorate_theme(&mut theme);
     builtin_check_box_theme(&mut theme);
     builtin_placeholder_theme(&mut theme);
     builtin_radio_theme(&mut theme);

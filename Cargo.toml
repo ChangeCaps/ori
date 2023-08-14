@@ -17,7 +17,7 @@ members = ["crates/*"]
 [dev-dependencies.ori]
 path = "." 
 version = "0.1.0-alpha.1"
-features = ["winit-wgpu", "image", "font-awesome", "network"]
+features = ["winit-wgpu", "image", "font-awesome"]
 
 [dependencies]
 # Ori dependencies
@@ -35,7 +35,6 @@ default = ["winit-wgpu"]
 tracy = ["ori-winit/tracy"]
 image = ["ori-core/image"]
 font-awesome = ["dep:ori-font-awesome"]
-network = ["ori-core/network"]
 
 # Backend features
 wgpu = ["ori-wgpu"]

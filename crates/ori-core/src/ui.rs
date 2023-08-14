@@ -409,6 +409,13 @@ where
         }
     }
 
+    /// Forces all elements to be redrawn.
+    pub fn request_redraw(&mut self) {
+        for id in self.window_ids() {
+            self.window_backend.request_redraw(id);
+        }
+    }
+
     /// Forces all elements to be relaid out.
     pub fn request_layout(&mut self) {
         for (&id, ui) in self.window_ui.iter_mut() {

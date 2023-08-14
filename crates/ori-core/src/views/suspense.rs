@@ -62,7 +62,6 @@ impl Suspense {
                 let content = content.await;
                 let _ = tx.send(content);
                 event_sink.send(RequestLayoutEvent);
-                println!("done");
             });
         }
     }

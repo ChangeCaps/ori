@@ -23,11 +23,9 @@ seahash = "4.1"
 tracing = { version = "0.1", default-features = false, features = ["attributes"] }
 
 # Optional dependencies
-isahc = { version = "1.7", optional = true }
 serde = { version = "1.0", features = ["derive"], optional = true }
 
 [features]
 default = []
 image = ["ori-graphics/image"]
-network = ["dep:isahc"]
 serde = ["dep:serde"]
