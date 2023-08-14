@@ -54,13 +54,13 @@ impl Placeholder {
 
     /// Set the width.
     pub fn width(mut self, width: impl Into<Length>) -> Self {
-        self.size.width = width.into();
+        self.size.set_width(width);
         self
     }
 
     /// Set the height.
     pub fn height(mut self, height: impl Into<Length>) -> Self {
-        self.size.height = height.into();
+        self.size.set_height(height);
         self
     }
 
@@ -93,7 +93,7 @@ impl View for Placeholder {
     fn event(&mut self, _cx: &mut EventContext<'_>, _event: &Event) {}
 
     fn layout(&mut self, cx: &mut LayoutContext<'_>, space: AvailableSpace) -> Vec2 {
-        self.size.get(cx, Vec2::ZERO, space)
+        self.size.resolve(cx, Vec2::ZERO, space)
     }
 
     fn draw(&mut self, cx: &mut DrawContext<'_>) {

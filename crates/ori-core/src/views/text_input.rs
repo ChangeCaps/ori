@@ -111,15 +111,39 @@ impl TextInput {
         self
     }
 
-    /// Set the width, [`Size::width`].
+    /// Set the width.
     pub fn width(mut self, width: impl Into<Length>) -> Self {
-        self.size.width = width.into();
+        self.size.set_width(width);
         self
     }
 
-    /// Set the height, [`Size::height`].
+    /// Set the height.
     pub fn height(mut self, height: impl Into<Length>) -> Self {
-        self.size.height = height.into();
+        self.size.set_height(height);
+        self
+    }
+
+    /// Set the min width.
+    pub fn min_width(mut self, min_width: impl Into<Length>) -> Self {
+        self.size.min_width = min_width.into();
+        self
+    }
+
+    /// Set the max width.
+    pub fn max_width(mut self, max_width: impl Into<Length>) -> Self {
+        self.size.max_width = max_width.into();
+        self
+    }
+
+    /// Set the min height.
+    pub fn min_height(mut self, min_height: impl Into<Length>) -> Self {
+        self.size.min_height = min_height.into();
+        self
+    }
+
+    /// Set the max height.
+    pub fn max_height(mut self, max_height: impl Into<Length>) -> Self {
+        self.size.max_height = max_height.into();
         self
     }
 
@@ -500,7 +524,7 @@ impl StateView for TextInput {
 
         state.glyphs = cx.fonts.layout_glyphs(&section);
         let content_size = state.glyphs.as_ref().map_or(Vec2::ZERO, Glyphs::size);
-        self.size.get(cx, content_size, space)
+        self.size.resolve(cx, content_size, space)
     }
 
     fn draw(&mut self, state: &mut Self::State, cx: &mut DrawContext<'_>) {

@@ -1,4 +1,5 @@
 mod align;
+mod alignment;
 mod axis;
 mod justify;
 mod length;
@@ -8,6 +9,7 @@ mod space;
 mod unit;
 
 pub use align::*;
+pub use alignment::*;
 pub use axis::*;
 pub use justify::*;
 pub use length::*;

@@ -50,7 +50,7 @@ pub mod prelude {
     pub use crate::node::Node;
     pub use crate::theme::{Key, Palette, Style, Styled, Theme};
     pub use crate::ui::UiBuilder;
-    pub use crate::view::{DrawContext, EventContext, IntoView, LayoutContext, View};
+    pub use crate::view::{DrawContext, EventContext, LayoutContext, View};
     pub use crate::views::*;
     pub use crate::window::{Window, WindowBuilder, WindowId};
     pub use crate::{hstack, vstack};

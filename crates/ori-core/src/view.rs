@@ -199,25 +199,15 @@ impl<'a> DrawContext<'a> {
     }
 }
 
-pub trait IntoView: Sized {
-    type View: View;
-
-    fn into_view(self) -> Self::View;
-}
-
-impl<T: View> IntoView for T {
-    type View = Self;
-
-    fn into_view(self) -> Self::View {
-        self
-    }
-}
-
+/// A view is a widget that can be drawn on the screen.
 pub trait View: Any + Send {
+    /// Handle an event.
     fn event(&mut self, cx: &mut EventContext<'_>, event: &Event);
 
+    /// Compute the layout of the view.
     fn layout(&mut self, cx: &mut LayoutContext<'_>, space: AvailableSpace) -> Vec2;
 
+    /// Draw the view.
     fn draw(&mut self, cx: &mut DrawContext<'_>);
 }
 
@@ -249,4 +239,40 @@ impl View for () {
     }
 
     fn draw(&mut self, _cx: &mut DrawContext<'_>) {}
+}
+
+impl View for Box<dyn View> {
+    fn event(&mut self, cx: &mut EventContext<'_>, event: &Event) {
+        self.as_mut().event(cx, event);
+    }
+
+    fn layout(&mut self, cx: &mut LayoutContext<'_>, space: AvailableSpace) -> Vec2 {
+        self.as_mut().layout(cx, space)
+    }
+
+    fn draw(&mut self, cx: &mut DrawContext<'_>) {
+        self.as_mut().draw(cx);
+    }
+}
+
+impl<T: View> View for Option<T> {
+    fn event(&mut self, cx: &mut EventContext<'_>, event: &Event) {
+        if let Some(this) = self {
+            this.event(cx, event);
+        }
+    }
+
+    fn layout(&mut self, cx: &mut LayoutContext<'_>, space: AvailableSpace) -> Vec2 {
+        if let Some(this) = self {
+            this.layout(cx, space)
+        } else {
+            space.min
+        }
+    }
+
+    fn draw(&mut self, cx: &mut DrawContext<'_>) {
+        if let Some(this) = self {
+            this.draw(cx);
+        }
+    }
 }

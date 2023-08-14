@@ -222,10 +222,11 @@ pub struct UiConfig {
     pub reduce_pointer_events: bool,
 }
 
+#[allow(clippy::derivable_impls)]
 impl Default for UiConfig {
     fn default() -> Self {
         Self {
-            reduce_pointer_events: true,
+            reduce_pointer_events: false,
         }
     }
 }

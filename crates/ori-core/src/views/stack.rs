@@ -132,13 +132,13 @@ impl Stack {
 
     /// Set the width of the stack.
     pub fn width(mut self, width: impl Into<Length>) -> Self {
-        self.size.width = width.into();
+        self.size.set_width(width);
         self
     }
 
     /// Set the height of the stack.
     pub fn height(mut self, height: impl Into<Length>) -> Self {
-        self.size.height = height.into();
+        self.size.set_height(height);
         self
     }
 
@@ -389,7 +389,7 @@ impl StateView for Stack {
         let content_minor = state.minor(gap_minor).max(min_minor);
 
         let content_size = self.axis.pack(content_major, content_minor);
-        let size = self.size.get(cx, content_size, space);
+        let size = self.size.resolve(cx, content_size, space);
 
         let (major, minor) = self.axis.unpack(size);
 

@@ -2,7 +2,7 @@ use ori_graphics::{math::Vec2, Color, Quad};
 use ori_reactive::Event;
 
 use crate::{
-    AvailableSpace, BorderRadius, BorderWidth, Context, DrawContext, EventContext, Key,
+    AvailableSpace, BorderRadius, BorderWidth, Context, Cursor, DrawContext, EventContext, Key,
     LayoutContext, Node, Padding, PointerEvent, StateView, Style, Styled, Transition, Unit,
 };
 
@@ -67,8 +67,8 @@ impl Button {
         }
     }
 
-    /// Creates a new floating button.
-    pub fn floating(content: impl Into<Node>) -> Self {
+    /// Creates a new fancy button.
+    pub fn fancy(content: impl Into<Node>) -> Self {
         Self::new(content).float(Style::new(Self::FLOAT))
     }
 
@@ -146,6 +146,12 @@ impl Button {
         if state.hovered != hovered {
             state.hovered = hovered;
             cx.request_redraw();
+
+            if state.hovered {
+                cx.set_cursor(Some(Cursor::Pointer));
+            } else {
+                cx.set_cursor(None);
+            }
         }
 
         if state.hovered && event.is_press() {
